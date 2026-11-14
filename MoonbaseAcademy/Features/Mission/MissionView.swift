@@ -948,29 +948,55 @@ struct AttemptLine: View {
 // MARK: Playback (Phase 1: the player's pace)
 
 /// How the test is watched. Both choices show exactly the same result.
+/// Drawn as a two-option toggle (not game buttons) so it never looks like it starts the test.
 struct PlaybackModePicker: View {
     let session: MissionSession
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("How do you want to watch?")
+            Text("First, choose how to watch:")
                 .font(.system(.subheadline, design: .rounded).weight(.heavy))
                 .foregroundStyle(Theme.inkSecondary)
-            HStack(spacing: 8) {
+            HStack(spacing: 4) {
                 ForEach(PlaybackMode.allCases, id: \.self) { mode in
-                    let selected = session.playbackMode == mode
-                    Button {
-                        session.setPlaybackMode(mode)
-                    } label: {
-                        Label(mode == .automatic ? "Watch" : "Step by step",
-                              systemImage: mode == .automatic ? "play.circle.fill" : "hand.point.right.fill")
-                    }
-                    .buttonStyle(GameButtonStyle(bevel: selected ? GamePalette.energy : GamePalette.steel, height: 44, font: .game(.subheadline)))
-                    .accessibilityLabel(mode.label)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    option(mode)
                 }
             }
+            .padding(4)
+            .background(Capsule().fill(Theme.panel))
+            .overlay(Capsule().strokeBorder(Theme.inkSecondary.opacity(0.25), lineWidth: 1))
+            Text(session.playbackMode == .automatic
+                 ? "The test plays by itself. You can pause any time."
+                 : "You tap Next to move to each step.")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func option(_ mode: PlaybackMode) -> some View {
+        let selected = session.playbackMode == mode
+        return Button {
+            if !selected { Haptics.tap() }
+            withAnimation(.easeOut(duration: 0.15)) { session.setPlaybackMode(mode) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 16, weight: .bold))
+                Text(mode == .automatic ? "Plays by itself" : "Step by step")
+                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .foregroundStyle(selected ? Color.white : Theme.ink)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(Capsule().fill(selected ? Theme.energyInk : Color.clear))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(mode.label)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
