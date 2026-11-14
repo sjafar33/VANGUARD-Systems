@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "N1",
+      "title": "Life Support Baseline Values and Assumptions Document (NASA/TP-2015-218570/REV2), February 2022",
+      "agency": "NASA",
+      "url": "https://ntrs.nasa.gov/citations/20210024855",
+      "documentID": "NTRS 20210024855",
+      "context": "Adult reference metabolic profile used for life-support design studies. It is not a child's requirement and not an exact constant for every astronaut."
+    },
+    {
+      "id": "N2",
+      "title": "Veggie fact sheet",
+      "agency": "NASA",
+      "url": "https://science.nasa.gov/wp-content/uploads/2023/04/veggie_fact_sheet_508.pdf",
+      "documentID": null,
+      "context": "Hardware and growth history from the International Space Station. Using it for a fictional lunar greenhouse is a training adaptation."
+    },
+    {
+      "id": "N3",
+      "title": "CCMC SEP Scoreboard archived solar energetic particle events",
+      "agency": "NASA",
+      "url": "https://ccmc.gsfc.nasa.gov/challenges/sep/events/",
+      "documentID": "SEP event 2017-09-10, GOES-13, >10 MeV, 10 pfu threshold",
+      "context": "Observations by a satellite near Earth. They are not a radiation dose measurement on the Moon."
+    },
+    {
+      "id": "N4",
+      "title": "Moon Facts",
+      "agency": "NASA",
+      "url": "https://science.nasa.gov/moon/facts/",
+      "documentID": null,
+      "context": "Average distance. The real distance changes during each orbit."
+    },
+    {
+      "id": "S1",
+      "title": "The International System of Units (SI): defining constant c",
+      "agency": "BIPM",
+      "url": "https://www.bipm.org/en/publications/si-brochure",
+      "documentID": null,
+      "context": "The speed of light in vacuum is fixed by definition. It is not a NASA measurement."
+    }
+  ],
+  "values": [
+    {
+      "id": "bvad.oxygenConsumption",
+      "label": "Oxygen one adult crew member uses each day",
+      "value": 0.895,
+      "unit": "kg/person/day",
+      "category": "nasaReference",
+      "sourceID": "N1",
+      "locator": "Table 3-31, Summary of Nominal Human Metabolic Interface Values, Section 3.3.5 (table of contents lists printed page 58)",
+      "formula": null,
+      "notes": "Nominal reference value for an adult crew member."
+    },
+    {
+      "id": "bvad.foodDryMass",
+      "label": "Dry food one adult crew member eats each day",
+      "value": 0.8,
+      "unit": "kg/person/day",
+      "category": "nasaReference",
+      "sourceID": "N1",
+      "locator": "Table 3-31, row Food Solids; Mass (without packaging)",
+      "formula": null,
+      "notes": "Dry mass without packaging or water."
+    },
+    {
+      "id": "veggie.growthDays",
+      "label": "Days the VEG-01 lettuce grew on the space station",
+      "value": 33,
+      "unit": "day",
+      "category": "nasaReference",
+      "sourceID": "N2",
+      "locator": "VEG-01 A (May 8 to June 10, 2014) and VEG-01 B (July 8 to Aug. 10, 2015)",
+      "formula": null,
+      "notes": "A reference example, not proof that every crop takes 33 days on the Moon."
+    },
+    {
+      "id": "veggie.operatingPower",
+      "label": "Power the Veggie garden uses while running",
+      "value": 70,
+      "unit": "W",
+      "category": "nasaReference",
+      "sourceID": "N2",
+      "locator": "Section The System: about 70 watts for lights, fans and control electronics",
+      "formula": null,
+      "notes": "Approximate magnitude for the ISS unit."
+    },
+    {
+      "id": "moon.averageDistance",
+      "label": "Average distance from Earth to the Moon",
+      "value": 384400,
+      "unit": "km",
+      "category": "nasaReference",
+      "sourceID": "N4",
+      "locator": "Section Size and Distance: an average of 238,855 miles (384,400 kilometers) away",
+      "formula": null,
+      "notes": "Average value, not today's exact distance."
+    },
+    {
+      "id": "si.lightSpeed",
+      "label": "Speed of light (and radio signals) in space",
+      "value": 299792.458,
+      "unit": "km/s",
+      "category": "physicalConstant",
+      "sourceID": "S1",
+      "locator": "SI defining constant c = 299 792 458 m/s",
+      "formula": null,
+      "notes": "Exact by definition."
+    }
+  ],
+  "events": [
+    {
+      "id": "sep.2017-09-10",
+      "label": "Solar particle event of September 10, 2017",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date 2017-09-10, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2017-09-10T16:45:00Z",
+      "peakUTC": "2017-09-11T11:45:00Z",
+      "endUTC": "2017-09-14T18:50:00Z",
+      "maxFluxPfu": 1493.5,
+      "notes": "End time uses the table's 0.85 x 10 pfu criterion. The table lists the duration as 98.08 hours (rounded); the game derives durations from the timestamps."
+    }
+  ],
+  "verification": [
+    { "sourceID": "N1", "date": "2026-11-14", "method": "Official NTRS PDF text retrieved by automated fetch; Table 3-31 values read from the extracted text (oxygen 0.895, food solids 0.800 kg/CM-d). The extraction placed the table on report page 59; the table of contents lists page 58.", "status": "valuesConfirmed" },
+    { "sourceID": "N2", "date": "2026-11-14", "method": "Official NASA PDF text retrieved by automated fetch; about 70 W and both 33-day VEG-01 date ranges read from the extracted text.", "status": "valuesConfirmed" },
+    { "sourceID": "N3", "date": "2026-11-14", "method": "Official CCMC archive table retrieved by automated fetch; the GOES-13 row for 2017-09-10 transcribed by hand into this file. The linked raw JSON was not downloaded or parsed.", "status": "valuesConfirmed" },
+    { "sourceID": "N4", "date": "2026-11-14", "method": "Official NASA page retrieved by automated fetch; 384,400 km read from the Size and Distance section.", "status": "valuesConfirmed" },
+    { "sourceID": "S1", "date": "2026-11-14", "method": "Defined constant; not fetched.", "status": "definedConstant" }
+  ]
+}
