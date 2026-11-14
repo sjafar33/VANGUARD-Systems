@@ -11,6 +11,8 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
     case greenhouse
     case shelter
     case dish
+    /// An old landing pad that starts as a ruin. It is repaired, never bought, and it opens "Test My Base".
+    case landingStation
 
     var id: String { rawValue }
 
@@ -22,6 +24,7 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .greenhouse: return "Greenhouse"
         case .shelter: return "Storm shelter"
         case .dish: return "Radio dish"
+        case .landingStation: return "Landing station"
         }
     }
 
@@ -33,6 +36,7 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .greenhouse: return "leaf.fill"
         case .shelter: return "shield.lefthalf.filled"
         case .dish: return "antenna.radiowaves.left.and.right"
+        case .landingStation: return "arrow.down.circle.fill"
         }
     }
 
@@ -44,6 +48,7 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .greenhouse: return "Grows fresh lettuce for the crew."
         case .shelter: return "A safe place to wait out a solar storm."
         case .dish: return "Talks to Mission Control on Earth."
+        case .landingStation: return "An old landing pad from an earlier mission. Fix it up to test your real base."
         }
     }
 
@@ -51,7 +56,7 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
     var footprint: (w: Int, h: Int) {
         switch self {
         case .habitat: return (3, 3)
-        case .greenhouse, .shelter: return (2, 2)
+        case .greenhouse, .shelter, .landingStation: return (2, 2)
         case .solarArray, .battery, .dish: return (1, 1)
         }
     }
@@ -59,7 +64,7 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
     /// The drill this building helps unlock.
     var drill: MissionID? {
         switch self {
-        case .habitat: return nil
+        case .habitat, .landingStation: return nil
         case .solarArray, .battery: return .lightsOut
         case .greenhouse: return .livingBase
         case .shelter: return .stormDrill
@@ -76,6 +81,12 @@ struct PlacedBuilding: Codable, Equatable, Sendable, Identifiable {
     var x: Int
     var y: Int
     var level: Int
+    /// True while the building is a ruin that has not been repaired. Optional so older saves still load;
+    /// missing means working.
+    var damaged: Bool?
+
+    /// A damaged building is only scenery: it gives nothing to any test until it is repaired.
+    var isWorking: Bool { damaged != true }
 
     var footprintTiles: [BoardTile] {
         let size = kind.footprint
@@ -183,12 +194,16 @@ struct BaseState: Codable, Equatable, Sendable {
     var lessons: [String: LessonRecord]
     /// Guide goals whose bonus has been paid. Optional so earlier base saves still load.
     var claimedGoals: [String]?
+    /// The most recent "Test My Base" results, oldest first. Optional so earlier base saves still load.
+    var baseTests: [BaseTestRecord]?
+    /// True once a base test has passed (its one-time coin reward was paid). Optional for older saves.
+    var baseTestPassed: Bool?
 
     // MARK: Rules (game rules, not science)
 
     static func buildCost(_ kind: BuildingKind) -> Int {
         switch kind {
-        case .habitat: return 0
+        case .habitat, .landingStation: return 0
         case .solarArray, .battery: return 40
         case .greenhouse: return 120
         case .shelter: return 150
@@ -203,6 +218,7 @@ struct BaseState: Codable, Equatable, Sendable {
         case .habitat: return level == 1 ? 150 : 300
         case .solarArray, .battery: return level == 1 ? 60 : 100
         case .greenhouse, .shelter, .dish: return level == 1 ? 120 : 200
+        case .landingStation: return nil
         }
     }
 
@@ -241,6 +257,8 @@ struct BaseState: Codable, Equatable, Sendable {
             return progress.isCompleted(.livingBase) ? .available : .locked("Finish The Living Base drill to unlock it.")
         case .dish:
             return progress.isCompleted(.stormDrill) ? .available : .locked("Finish the Storm Drill to unlock it.")
+        case .landingStation:
+            return .locked("The landing station is already on your base. Tap it to fix it up.")
         }
     }
 
@@ -334,6 +352,82 @@ struct BaseState: Codable, Equatable, Sendable {
         return .ok
     }
 
+    // MARK: Landing station (game rules)
+
+    /// Coins to repair the landing station. A game rule, not a NASA number.
+    static let repairCost = 60
+    /// Where the ruin appears when that corner of the board is free.
+    static let stationPreferredTile = BoardTile(x: 4, y: 4)
+
+    var landingStation: PlacedBuilding? { buildings.first { $0.kind == .landingStation } }
+    var stationRestored: Bool { landingStation?.isWorking == true }
+
+    /// Buildings of a kind that are in working order. Only these count in "Test My Base".
+    func workingCount(_ kind: BuildingKind) -> Int { buildings.filter { $0.kind == kind && $0.isWorking }.count }
+
+    /// Puts the ruined landing station on the board once. It never covers another building: it takes the
+    /// free spot nearest its corner. Returns true when it was added.
+    @discardableResult
+    mutating func seedLandingStation() -> Bool {
+        guard landingStation == nil else { return false }
+        let want = Self.stationPreferredTile
+        var spots: [BoardTile] = []
+        for x in Self.minCoord...Self.maxCoord {
+            for y in Self.minCoord...Self.maxCoord { spots.append(BoardTile(x: x, y: y)) }
+        }
+        spots.sort { a, b in
+            let da = abs(a.x - want.x) + abs(a.y - want.y)
+            let db = abs(b.x - want.x) + abs(b.y - want.y)
+            return da == db ? (a.x, a.y) < (b.x, b.y) : da < db
+        }
+        guard let spot = spots.first(where: { canPlace(.landingStation, x: $0.x, y: $0.y) }) else { return false }
+        buildings.append(PlacedBuilding(id: "landingStation", kind: .landingStation, x: spot.x, y: spot.y,
+                                        level: 1, damaged: true))
+        return true
+    }
+
+    /// Repairs a damaged building. Charged once: repairing something already fixed costs nothing and
+    /// changes nothing, so a double tap or a retry can never charge twice.
+    mutating func repair(_ id: String) -> BaseActionResult {
+        guard let index = buildings.firstIndex(where: { $0.id == id }) else { return .blocked }
+        guard buildings[index].damaged == true else { return .ok }
+        guard coins >= Self.repairCost else { return .notEnoughCoins(needed: Self.repairCost - coins) }
+        coins -= Self.repairCost
+        buildings[index].damaged = nil
+        return .ok
+    }
+
+    // MARK: Test My Base (game rules around a real simulation)
+
+    /// The base can run its own shadow test: the station is repaired and there is power gear to test.
+    var baseTestReady: Bool { baseTestNeeds == nil }
+
+    /// What is still missing before the base can be tested, in words. Nil when it is ready.
+    var baseTestNeeds: String? {
+        guard let station = landingStation else { return "The landing station is missing from this base." }
+        if !station.isWorking { return "Fix the landing station first. Tap it on your base." }
+        var missing: [String] = []
+        if workingCount(.solarArray) == 0 { missing.append("a solar array") }
+        if workingCount(.battery) == 0 { missing.append("a battery") }
+        return missing.isEmpty ? nil : "Build \(missing.joined(separator: " and ")) first, so there is something to test."
+    }
+
+    static let maxStoredBaseTests = 4
+
+    /// Saves a finished base test. Returns true the first time a test passes; that is the only time it pays.
+    /// A failed test costs nothing and never removes or damages a building.
+    @discardableResult
+    mutating func recordBaseTest(_ record: BaseTestRecord) -> Bool {
+        var list = baseTests ?? []
+        list.append(record)
+        if list.count > Self.maxStoredBaseTests { list.removeFirst(list.count - Self.maxStoredBaseTests) }
+        baseTests = list
+        guard record.success, baseTestPassed != true else { return false }
+        baseTestPassed = true
+        coins += BaseExperiment.firstPassCoins
+        return true
+    }
+
     mutating func buyCosmetic(_ id: String) -> BaseActionResult {
         guard let item = CosmeticCatalog.item(id) else { return .blocked }
         if ownedCosmetics.contains(id) { return .ok }
@@ -408,6 +502,7 @@ struct BaseState: Codable, Equatable, Sendable {
         }
         if progress.isCompleted(.stormDrill) { add(.shelter, -2, 2) }
         if progress.isCompleted(.signalLag) { add(.dish, 2, 2) }
+        state.seedLandingStation()
         return state
     }
 }

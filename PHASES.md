@@ -12,3 +12,71 @@ Source brief: `Moonbase_Academy_V2_Phased_Coding_Prompt.md` (owner, 2026-11-14).
 | 5 World presentation | pending | |
 | 6 Release verification | pending | |
 | 7 Submission materials | pending | |
+
+---
+
+# Base-builder brief — phase tracker
+
+Source brief: `Moonbase_Academy_Base_Builder_Feedback_Prompt.md` (owner, 2026-11-14). Branch `base-builder`. Supersedes the V2 table above for new work; V2 Phases 1–3 stay as built.
+
+| Phase | Status | Notes |
+|---|---|---|
+| 0 Audit and bounded design | complete 2026-11-14 (audit + design only; awaiting owner review) | See "Phase 0 checkpoint" below |
+| 1 Restoration objective (landing station) | code complete 2026-11-14; NOT yet compiled or run (owner build needed) | See "Phases 1-2 checkpoint" |
+| 2 Test My Base (shadow/power) | code complete 2026-11-14; NOT yet compiled or run (owner build needed) | See "Phases 1-2 checkpoint" |
+| 3 Learning presets | not started | |
+| 4 Presentation and personalization | not started | |
+| 5 Five-theme campaign | not started | |
+| 6 Balance, verify, handoff | not started | |
+
+## Phase 0 checkpoint (2026-11-14, about 15:20 Toronto)
+
+**Verification facts (read from DerivedData, not assumed):**
+- App target: `Build succeeded` at 19:32:01 UTC, destination SJ iPad, Debug-iphoneos, one minute after commit `b635419`. So base-builder rounds 1–2 DO compile (NEW_CHAT_HANDOFF.md section 6 says "never compiled"; that is out of date).
+- Test targets: NOT compiled or run since before V2. `TestResults/last-run.txt` is the 56/56 run from 14:47 UTC (pre-V2). `Logs/Test/` is empty. The source now has 114 test methods; Xcode's test navigator still lists 57. Compile errors in `BaseBuilderTests`, `FocusAccessibilityTests`, `RewardAndNarrationTests`, `PlaybackTests` are possible.
+- Tooling this session: device shell is Linux (no xcodebuild/swift). Xcode is reachable by computer use at "click" tier only: Product menu commands are refused, and plain clicks on the off-Space Xcode window did not start a test run. Owner must press Cmd-U.
+- Working tree clean at `68502af` before this note.
+
+**What exists vs. what the brief needs:**
+- Exists: board, placement/move/upgrade, coins, 12-goal guide with Show me, EarnAdvisor, style preview (non-spending), one lesson, four reference drills + variants, accessibility/pacing work, optional-field save compatibility.
+- Missing: any repairable/ruin object; any link from the real base to a simulation (drills take `MissionCatalog` definitions only; `BaseDecor` is cosmetic); learning presets; non-recolor customization; contextual lessons.
+
+**Design for the first slice (Phases 1–2), pending owner approval:**
+- Landing station: new `BuildingKind.landingStation`, 2x2, seeded once as a ruin (new optional `PlacedBuilding.damaged: Bool?`), preferred tile (4,4), else the free 2x2 nearest that corner. Never overlaps; cannot be built from the shop. States: damaged -> restored. Repair = one centralized `BaseState.repair(id)` transaction, 60 coins (game rule), immediate, idempotent.
+- Purpose when restored: it is the "test pad" that opens **Test My Base: Shadow Test**. Game-fiction, labelled as a game rule. No free oxygen/energy/comms.
+- Test My Base adapter (`Core/Base/BaseExperiment.swift`, new): `BaseState` snapshot -> counts of functional (non-damaged) solar arrays and batteries -> a separate `MissionDefinition` (id `lightsOut.myBase`, same phases/assumptions as the six-hour reference drill, cargo fixed to the base's counts) -> the unchanged `ResourceEngine`. Player chooses only the air-maker and observation settings (the trade-off). Levels and cosmetics have no effect (stated in the UI). Result stored in a new optional `BaseState.baseTests` (inputs + compact outcome, last two) for before/after comparison; it never touches drill completion, stars or `attempts`.
+- Hand-calculated expectations to be pinned by tests in Phase 2 (not yet run): 1 array + 1 battery, full air both phases -> energy shortage in shadow; same base with half air in shadow -> passes but spends oxygen reserve; adding a 2nd battery alone -> still fails (nothing extra to store); adding a 2nd array -> passes at full air.
+- Guide: insert `restoreStation` and `testMyBase` after `playLightsOut`. Saves: all new fields optional; station seeded on load when absent; tests decode a pre-change save fixture.
+- Coins (game rules): repair 60; first passed base test +40; later passes 0 (no farming).
+
+**NASA coverage today:** power (Lights Out) playable; life support (Lights Out oxygen reserve, Living Base) playable; food (Living Base, N2) playable; radiation shielding (Storm Drill, N3, no dose model) playable; comms delay (Signal Lag, N4/S1) playable. All as reference drills only; none yet uses the child's real base. After Phases 1–2: power + life support also via Test My Base.
+
+## Phases 1-2 checkpoint (2026-11-14, about 16:30 Toronto) — built together at the owner's request
+
+**Status: written, bracket-checked, committed. Not compiled, not run, not seen on a device by the author.**
+
+**Player-visible changes**
+- A ruined **landing station** (2x2, wrench badge) stands on the base board. Tap it: a panel says what it is, what repairing unlocks, and the price. **Repair** (60 coins, game rule) is instant, charged once, and the ruin pops back to life with dust and sparkles (static with reduced motion).
+- The repaired station is the **test pad**. "Test my base" (station panel, Drills sheet, or the goal's Show me) opens **Test My Base**: the Lights Out shadow with the child's own working solar arrays and batteries. No lander, no crates; the tray shows "Your base" instead of build cards. The child chooses the air-maker and observation settings, predicts, watches, and gets a result that says what to change back at the base (another array vs another battery is decided from the trace).
+- The result card shows the base's equipment, the last saved test, what changed on the base since then, and the game rules that turn buildings into numbers.
+- Guide: two new goals after Lights Out: "Fix the old landing station", "Test your real base" (14 goals total). Trying the test completes the goal even if it fails.
+
+**Science inputs/assumptions (all labelled game rules in the UI and in SCIENCE_AND_DATA.md)**
+- Each working solar array = the Lights Out array (1 kW in sunlight); each working battery = the Lights Out battery (4 kWh, starts empty). Same phases, demands, crew, oxygen tank and success rule as the six-hour reference drill; same `ResourceEngine`.
+- Building level, colour, position and robot have no effect. A damaged building counts for nothing. At most 4 of each kind.
+- Repair cost 60 coins; first passed base test +40 coins, later passes 0. Coins never enter the simulation.
+- No NASA value changed. Reference drills, their variants and fixtures are untouched (`testTheReferenceDrillIsLeftAlone`).
+
+**Save/economy compatibility**
+- New optional fields only: `PlacedBuilding.damaged`, `BaseState.baseTests`, `BaseState.baseTestPassed`. New enum case `BuildingKind.landingStation`.
+- Existing saves get the ruin on load at tile (4,4) or the nearest free 2x2; nothing else moves; coins unchanged (`testASaveFromBeforeTheStationKeepsEverythingAndGainsTheRuin`).
+- Base tests are stored apart from drills: no completion, stars, attempts or drafts.
+
+**Files**
+- New: `Core/Base/BaseExperiment.swift`, `MoonbaseAcademyTests/BaseExperimentTests.swift` (17 tests).
+- Changed: `BaseBuilder.swift`, `Guide.swift`, `AppModel.swift`, `MissionSession.swift`, `MissionView.swift`, `GameCopy.swift`, `MissionContent.swift`, `BaseView.swift`, `BaseBuilderViews.swift`, `BoardArt.swift`, `BoardScene.swift`, `BaseBuilderTests.swift`.
+
+**To continue**
+1. Owner: Cmd-U on the iPad Air 11-inch (M4) simulator. Compile errors: `gunzip -c DerivedData/MoonbaseAcademy/Logs/Build/<newest>.xcactivitylog | tr '\r' '\n' | grep -a "error:"`.
+2. Play-test from Settings -> Reset All Progress: array -> battery -> Lights Out -> fix station -> test base (fails at full air with 1+1) -> turn air to Half in the shadow or build a second array -> pass.
+3. Not done from the brief: Phases 3-6 (learning presets, non-recolour customization, base tests for food/storm/comms, balance and submission docs).

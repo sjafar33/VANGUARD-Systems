@@ -57,6 +57,13 @@ struct StarResult: Equatable {
     }
 }
 
+/// Set when the session is a "Test My Base" run: the equipment snapshot taken from the board when the
+/// test opened, and the last saved result to compare with.
+struct BaseTestContext: Equatable {
+    var inputs: BaseTestInputs
+    var previous: BaseTestRecord?
+}
+
 struct AttemptSummary: Equatable {
     var success: Bool
     var headline: String
@@ -71,6 +78,8 @@ final class MissionSession {
     let science: ScienceInputs
     let copy: MissionCopy
     let gameCopy: GameCopy
+    /// Non-nil for "Test My Base". The equipment is then fixed to the player's real base.
+    let baseTest: BaseTestContext?
     private(set) var stage: MissionStage = .briefing
     private(set) var configuration: ResourceConfiguration
     private(set) var roverConfiguration: RoverConfiguration
@@ -116,6 +125,7 @@ final class MissionSession {
     init(definition: MissionDefinition, science: ScienceInputs, world: WorldCoordinator, decor: BaseDecor,
          reduceMotion: Bool, firstVisit: Bool, playbackMode: PlaybackMode = .automatic,
          onModeChange: @escaping (PlaybackMode) -> Void = { _ in },
+         baseTest: BaseTestContext? = nil,
          onRecord: @escaping (AttemptRecord, String?, Set<Achievement>) -> Bool) {
         self.definition = definition
         self.science = science
@@ -127,7 +137,12 @@ final class MissionSession {
         self.onRecord = onRecord
         self.onModeChange = onModeChange
         self.playbackMode = playbackMode
-        self.configuration = MissionCatalog.defaultConfiguration(for: definition)
+        self.baseTest = baseTest
+        if let baseTest {
+            self.configuration = BaseExperiment.configuration(for: definition, inputs: baseTest.inputs)
+        } else {
+            self.configuration = MissionCatalog.defaultConfiguration(for: definition)
+        }
         self.roverConfiguration = RoverConfiguration(mode: .earthControl,
                                                      observedMarkerM: definition.rover?.markerChoicesM.first)
         self.tutorial = (definition.missionID == .lightsOut && definition.variant == nil && firstVisit) ? .placeFirstArray : .done
@@ -141,6 +156,8 @@ final class MissionSession {
 
     var isRover: Bool { definition.kind == .rover }
     var isVariant: Bool { definition.variant != nil }
+    var isBaseTest: Bool { baseTest != nil }
+    static let baseGearNotice = "This test uses your real base. To change it, build at your base, then test again."
 
     var cargoCost: Int {
         definition.catalog.reduce(0) { total, item in
@@ -254,6 +271,11 @@ final class MissionSession {
             placeFirstArray()
             return true
         }
+        if isBaseTest {
+            notice = Self.baseGearNotice
+            shakeToken += 1
+            return false
+        }
         guard canAdd(kind) else {
             let atMax = count(kind) >= (definition.item(kind)?.maxCount ?? 0)
             notice = atMax ? "That's all the \(CargoCopy.name(kind).lowercased()) pads we have." : "The lander is full! Remove something to make room."
@@ -309,6 +331,10 @@ final class MissionSession {
 
     func setCount(_ kind: CargoKind, _ value: Int) {
         guard stage == .planning, let item = definition.item(kind) else { return }
+        if isBaseTest {
+            notice = Self.baseGearNotice
+            return
+        }
         let target = max(0, min(item.maxCount, value))
         let extra = (target - count(kind)) * item.cost
         if extra > 0 && cargoCost + extra > definition.cargoBudget {
@@ -765,6 +791,8 @@ final class MissionSession {
     /// While Nova briefs the drill, the scene changes with each line. Presentation only.
     private func applyBriefingBeat(_ w: inout WorldSnapshot) {
         guard stage == .briefing else { return }
+        // "Test My Base" has no lander story: the briefing simply shows the player's own equipment.
+        guard !isBaseTest else { return }
         let beats = SceneBeat.briefing(for: definition.missionID)
         let beat = beats[min(introIndex, beats.count - 1)]
         w.beat = beat
@@ -818,7 +846,7 @@ final class MissionSession {
         case .lightsOut:
             w.arrays = count(.solarArray)
             w.batteries = count(.battery)
-            w.padsVisible = stage == .planning
+            w.padsVisible = stage == .planning && !isBaseTest
             if tutorial == .placeFirstArray {
                 w.highlightedPads = [.array(0)]
             } else if stage == .planning {

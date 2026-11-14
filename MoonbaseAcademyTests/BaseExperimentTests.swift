@@ -1,0 +1,276 @@
+import XCTest
+@testable import MoonbaseAcademy
+
+/// The landing station (repair, save compatibility) and "Test My Base" (the bridge from the player's
+/// real base to the unchanged resource engine). The reference Lights Out drill must stay untouched.
+final class BaseExperimentTests: MoonbaseTestCase {
+    private var fresh: BaseState { BaseState.starting(from: CampaignProgress()) }
+
+    private func base(arrays: Int, batteries: Int, restored: Bool = true) -> BaseState {
+        var base = fresh
+        for i in 0..<arrays {
+            base.buildings.append(PlacedBuilding(id: "array\(i)", kind: .solarArray, x: -6 + i, y: -6, level: 1))
+        }
+        for i in 0..<batteries {
+            base.buildings.append(PlacedBuilding(id: "battery\(i)", kind: .battery, x: -6 + i, y: -5, level: 1))
+        }
+        if restored, let index = base.buildings.firstIndex(where: { $0.kind == .landingStation }) {
+            base.buildings[index].damaged = nil
+        }
+        return base
+    }
+
+    private func simulate(arrays: Int, batteries: Int, airSun: Double = 1, airShadow: Double = 1,
+                     observe: Bool = false) throws -> ResourceMissionResult {
+        let inputs = BaseTestInputs(arrays: arrays, batteries: batteries)
+        let d = BaseExperiment.shadowTest(inputs: inputs)
+        var config = BaseExperiment.configuration(for: d, inputs: inputs)
+        config.plans = [plan(airSun, research: observe ? 1 : 0), plan(airShadow)]
+        return simulateResourceMission(definition: d, configuration: config, science: try science())
+    }
+
+    // MARK: Landing station
+
+    func testTheStationIsARuinThatNeverOverlapsAndCannotBeBought() {
+        let base = fresh
+        let station = base.landingStation
+        XCTAssertNotNil(station)
+        XCTAssertEqual(station?.isWorking, false)
+        let tiles = base.buildings.flatMap(\.footprintTiles)
+        XCTAssertEqual(tiles.count, Set(tiles).count)
+        XCTAssertFalse(base.stationRestored)
+        if case .available = base.blueprint(.landingStation, progress: CampaignProgress()) {
+            XCTFail("The landing station is repaired, never bought")
+        }
+        var again = base
+        XCTAssertFalse(again.seedLandingStation(), "Seeding twice adds nothing")
+        XCTAssertEqual(again, base)
+    }
+
+    func testRepairChargesExactlyOnce() {
+        var base = fresh
+        let coins = base.coins
+        XCTAssertEqual(base.repair("landingStation"), .ok)
+        XCTAssertEqual(base.coins, coins - BaseState.repairCost)
+        XCTAssertTrue(base.stationRestored)
+        XCTAssertEqual(base.repair("landingStation"), .ok, "Tapping again is harmless")
+        XCTAssertEqual(base.coins, coins - BaseState.repairCost, "and never charges twice")
+        XCTAssertEqual(base.repair("nothing"), .blocked)
+    }
+
+    func testRepairWithTooFewCoinsChangesNothing() {
+        var base = fresh
+        base.coins = BaseState.repairCost - 10
+        XCTAssertEqual(base.repair("landingStation"), .notEnoughCoins(needed: 10))
+        XCTAssertEqual(base.coins, BaseState.repairCost - 10)
+        XCTAssertFalse(base.stationRestored)
+    }
+
+    func testASaveFromBeforeTheStationKeepsEverythingAndGainsTheRuin() throws {
+        // A base exactly as it was written before this feature: no `damaged`, no `baseTests`,
+        // and a solar array standing on the station's preferred corner.
+        let json = """
+        {"coins":77,"buildings":[{"id":"habitat","kind":"habitat","x":-2,"y":-2,"level":2},
+        {"id":"a1","kind":"solarArray","x":4,"y":4,"level":1}],
+        "ownedCosmetics":["habitat.white","board.dust","robot.nova","robot.sprout"],
+        "habitatColor":"habitat.white","boardTheme":"board.dust","robot":"robot.sprout","lessons":{}}
+        """
+        var base = try JSONDecoder().decode(BaseState.self, from: Data(json.utf8))
+        let before = base
+        XCTAssertNil(base.landingStation)
+        XCTAssertTrue(base.seedLandingStation())
+        XCTAssertEqual(base.coins, 77)
+        XCTAssertEqual(base.robot, "robot.sprout")
+        XCTAssertEqual(Array(base.buildings.prefix(2)), before.buildings, "Existing buildings are untouched")
+        let station = try XCTUnwrap(base.landingStation)
+        XCTAssertEqual(station.damaged, true)
+        let tiles = base.buildings.flatMap(\.footprintTiles)
+        XCTAssertEqual(tiles.count, Set(tiles).count, "The ruin takes a free spot, never an occupied one")
+        XCTAssertTrue(station.footprintTiles.allSatisfy {
+            (BaseState.minCoord...BaseState.maxCoord).contains($0.x) && (BaseState.minCoord...BaseState.maxCoord).contains($0.y)
+        })
+        // And it survives a save round trip, damaged flag included.
+        let data = try JSONEncoder().encode(base)
+        XCTAssertEqual(try JSONDecoder().decode(BaseState.self, from: data), base)
+    }
+
+    // MARK: The bridge from the base to the test
+
+    func testOnlyWorkingPowerGearBecomesTestInputs() {
+        var b = base(arrays: 2, batteries: 1)
+        XCTAssertEqual(BaseExperiment.inputs(from: b), BaseTestInputs(arrays: 2, batteries: 1))
+        b.buildings[b.buildings.firstIndex { $0.id == "array0" }!].damaged = true
+        XCTAssertEqual(BaseExperiment.inputs(from: b).arrays, 1, "A damaged building supplies nothing")
+    }
+
+    func testCosmeticsLevelsAndPositionsNeverChangeTheTest() {
+        var b = base(arrays: 1, batteries: 1)
+        b.coins = 10_000
+        let before = BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b))
+        XCTAssertEqual(b.buyCosmetic("board.night"), .ok)
+        XCTAssertTrue(b.equip("board.night"))
+        XCTAssertEqual(b.upgrade("array0"), .ok)
+        XCTAssertEqual(b.upgrade("battery0"), .ok)
+        XCTAssertEqual(b.upgrade("habitat"), .ok)
+        XCTAssertEqual(b.move("array0", x: 5, y: -6), .ok)
+        XCTAssertEqual(BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b)), before)
+    }
+
+    func testTheReferenceDrillIsLeftAlone() {
+        let reference = MissionCatalog.lightsOut()
+        let mine = BaseExperiment.shadowTest(inputs: BaseTestInputs(arrays: 3, batteries: 2))
+        XCTAssertNil(reference.variant)
+        XCTAssertEqual(reference.cargoBudget, 4)
+        XCTAssertEqual(reference.item(.solarArray)?.maxCount, 4)
+        XCTAssertNotEqual(mine.id, reference.id)
+        XCTAssertTrue(BaseExperiment.isBaseTest(mine))
+        XCTAssertFalse(BaseExperiment.isBaseTest(reference))
+        // Same physics and training numbers: only the equipment source differs.
+        XCTAssertEqual(mine.phases, reference.phases)
+        XCTAssertEqual(mine.assumptions, reference.assumptions)
+        XCTAssertEqual(mine.initial, reference.initial)
+        XCTAssertEqual(mine.success, reference.success)
+        XCTAssertEqual(mine.item(.battery)?.batteryCapacityKWh, reference.item(.battery)?.batteryCapacityKWh)
+    }
+
+    func testBaseTestNeedsSayWhatToDo() {
+        XCTAssertNotNil(base(arrays: 1, batteries: 1, restored: false).baseTestNeeds)
+        XCTAssertNotNil(base(arrays: 0, batteries: 1).baseTestNeeds)
+        XCTAssertNotNil(base(arrays: 1, batteries: 0).baseTestNeeds)
+        XCTAssertNil(base(arrays: 1, batteries: 1).baseTestNeeds)
+        XCTAssertTrue(base(arrays: 1, batteries: 1).baseTestReady)
+    }
+
+    // MARK: What the engine says about real bases
+
+    func testOneArrayOneBatteryRunsOutAtFullAir() throws {
+        let r = try simulate(arrays: 1, batteries: 1)
+        XCTAssertEqual(r.issues, [])
+        XCTAssertFalse(r.success)
+        XCTAssertEqual(r.failure?.constraint, .energyShortage)
+        XCTAssertEqual(r.failure?.phaseID, "shadow")
+        XCTAssertEqual(r.trace[0].after.batteryKWh, 2.4, accuracy: 1e-9)
+    }
+
+    func testTurningTheAirDownSavesPowerButSpendsOxygen() throws {
+        let r = try simulate(arrays: 1, batteries: 1, airShadow: 0.5)
+        XCTAssertTrue(r.success)
+        XCTAssertEqual(r.finalState.batteryKWh, 0.3, accuracy: 1e-9)
+        XCTAssertLessThan(r.finalState.oxygenKg, r.trace[0].after.oxygenKg, "The crew breathed from the tank in the shadow")
+        XCTAssertGreaterThanOrEqual(r.finalAirHours, 24)
+    }
+
+    func testAnotherBatteryAloneDoesNotHelpWhenThereIsNothingExtraToStore() throws {
+        let r = try simulate(arrays: 1, batteries: 2)
+        XCTAssertFalse(r.success)
+        XCTAssertEqual(r.failure?.constraint, .energyShortage)
+        XCTAssertEqual(r.trace[0].after.batteryKWh, 2.4, accuracy: 1e-9, "Same stored energy as with one battery")
+    }
+
+    func testAnotherArrayFixesItAtFullAir() throws {
+        let r = try simulate(arrays: 2, batteries: 1)
+        XCTAssertTrue(r.success)
+        XCTAssertEqual(r.trace[0].after.batteryKWh, 4, accuracy: 1e-9)
+        XCTAssertEqual(r.finalState.batteryKWh, 0.4, accuracy: 1e-9)
+        XCTAssertEqual(r.finalState.oxygenKg, 3.685, accuracy: 1e-9)
+    }
+
+    func testTheSameBaseAndPlanAlwaysGiveTheSameResult() throws {
+        XCTAssertEqual(try simulate(arrays: 2, batteries: 2, airShadow: 0.5, observe: true),
+                       try simulate(arrays: 2, batteries: 2, airShadow: 0.5, observe: true))
+    }
+
+    func testTheEquipmentCannotBeChangedInsideTheTest() throws {
+        let inputs = BaseTestInputs(arrays: 1, batteries: 1)
+        let d = BaseExperiment.shadowTest(inputs: inputs)
+        var config = BaseExperiment.configuration(for: d, inputs: inputs)
+        config.setCount(.solarArray, 3)
+        let r = simulateResourceMission(definition: d, configuration: config, science: try science())
+        XCTAssertFalse(r.wasSimulated, "More equipment than the base really has is rejected, not simulated")
+    }
+
+    // MARK: Rewards and records
+
+    func testTheFirstPassPaysOnceAndFailuresCostNothing() {
+        var b = base(arrays: 1, batteries: 1)
+        let coins = b.coins
+        let buildings = b.buildings
+        func record(_ success: Bool) -> BaseTestRecord {
+            BaseTestRecord(inputs: BaseTestInputs(arrays: 1, batteries: 1), airSunlight: 1, airShadow: 1,
+                           observation: false, success: success, headline: "", finalBatteryKWh: 0,
+                           finalAirHours: 30, date: Date())
+        }
+        XCTAssertFalse(b.recordBaseTest(record(false)))
+        XCTAssertEqual(b.coins, coins, "A failed test costs nothing")
+        XCTAssertEqual(b.buildings, buildings, "and never damages the base")
+        XCTAssertTrue(b.recordBaseTest(record(true)))
+        XCTAssertEqual(b.coins, coins + BaseExperiment.firstPassCoins)
+        XCTAssertFalse(b.recordBaseTest(record(true)))
+        XCTAssertEqual(b.coins, coins + BaseExperiment.firstPassCoins, "Passing again cannot be farmed")
+        for _ in 0..<10 { b.recordBaseTest(record(false)) }
+        XCTAssertEqual(b.baseTests?.count, BaseState.maxStoredBaseTests)
+    }
+
+    @MainActor
+    func testTheWholeLoopRestoreTestFailReviseAndPass() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("moonbase-basetest-\(UUID().uuidString)")
+        let store = SaveStore(fileURL: directory.appendingPathComponent("save.json"))
+        let model = AppModel(store: store)
+        model.startBuilding(.solarArray)
+        XCTAssertTrue(model.confirmPlacement())
+        model.startBuilding(.battery)
+        XCTAssertTrue(model.confirmPlacement())
+
+        // Not repaired yet: the test explains what to do instead of opening.
+        model.openBaseTest()
+        XCTAssertEqual(model.route, .base)
+        XCTAssertNotNil(model.baseMessage)
+
+        let beforeRepair = model.baseState.coins
+        XCTAssertTrue(model.repairBuilding("landingStation"))
+        XCTAssertEqual(model.baseState.coins, beforeRepair - BaseState.repairCost + GuideGoal.reward)
+        XCTAssertTrue(model.repairBuilding("landingStation"))
+        XCTAssertEqual(model.baseState.coins, beforeRepair - BaseState.repairCost + GuideGoal.reward, "No double charge, no double bonus")
+
+        // First test: the real base (1 array, 1 battery) at full air runs out of power.
+        let beforeTest = model.baseState.coins
+        model.openBaseTest()
+        XCTAssertEqual(model.route, .mission)
+        let session = try XCTUnwrap(model.session)
+        XCTAssertTrue(session.isBaseTest)
+        XCTAssertEqual(session.count(.solarArray), 1)
+        XCTAssertEqual(session.count(.battery), 1)
+        session.beginPlanning()
+        XCTAssertFalse(session.addCargo(.solarArray), "Equipment comes from the base, not from a lander")
+        XCTAssertEqual(session.count(.solarArray), 1)
+        session.goToPrediction()
+        session.run(predicting: .yes)
+        session.skipPlayback()
+        XCTAssertEqual(session.stage, .results)
+        XCTAssertEqual(model.baseState.baseTests?.count, 1)
+        XCTAssertEqual(model.baseState.baseTests?.last?.success, false)
+        XCTAssertEqual(model.baseState.coins, beforeTest + GuideGoal.reward, "Trying the test completes its goal; failing costs nothing")
+
+        // Revise the plan: half air in the shadow. Same base, different choice, different outcome.
+        session.retry()
+        session.setAir(1, 0.5)
+        session.goToPrediction()
+        session.run(predicting: .yes)
+        session.skipPlayback()
+        XCTAssertEqual(model.baseState.baseTests?.last?.success, true)
+        XCTAssertEqual(model.baseState.baseTests?.last?.airShadow, 0.5)
+        XCTAssertEqual(model.baseState.coins, beforeTest + GuideGoal.reward + BaseExperiment.firstPassCoins)
+
+        // A base test is never a drill: no completion, stars or drill attempts.
+        XCTAssertTrue(model.progress.completedMissions.isEmpty)
+        XCTAssertEqual(model.progress.totalStars, 0)
+        XCTAssertTrue(model.progress.attempts.isEmpty)
+        XCTAssertFalse(model.baseState.buildings.contains { $0.damaged == true })
+
+        model.leaveMission()
+        let reopened = AppModel(store: store)
+        XCTAssertTrue(reopened.baseState.stationRestored, "The repair survives a relaunch")
+        XCTAssertEqual(reopened.baseState.baseTests?.count, 2)
+        XCTAssertEqual(reopened.baseState.coins, model.baseState.coins)
+    }
+}

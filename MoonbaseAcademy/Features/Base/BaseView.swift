@@ -165,6 +165,13 @@ struct BaseView: View {
         case .buildShelter: model.startBuilding(.shelter)
         case .buildDish: model.startBuilding(.dish)
         case .playLightsOut: play(.lightsOut)
+        case .restoreStation: model.showLandingStation()
+        case .testBase:
+            if base.baseTestReady {
+                model.openBaseTest()
+            } else {
+                model.showLandingStation()
+            }
         case .playLivingBase: play(.livingBase)
         case .playStorm: play(.stormDrill)
         case .playSignal: play(.signalLag)
@@ -263,6 +270,9 @@ struct BaseView: View {
     @ViewBuilder private var bottomHUD: some View {
         if let placement = model.placement {
             PlacementBar(model: model, placement: placement)
+        } else if let id = model.selectedBuildingID, let building = base.buildings.first(where: { $0.id == id }),
+                  building.kind == .landingStation {
+            StationPanel(model: model, building: building)
         } else if let id = model.selectedBuildingID, let building = base.buildings.first(where: { $0.id == id }) {
             BuildingPanel(model: model, building: building,
                           onPlay: { mission in

@@ -14,7 +14,7 @@ struct BuildShopView: View {
                     Label("Tap a building on your base to upgrade or move it.", systemImage: "hand.tap.fill")
                         .font(.system(.subheadline, design: .rounded).weight(.heavy))
                         .foregroundStyle(.secondary)
-                    ForEach(BuildingKind.allCases.filter { $0 != .habitat }) { kind in
+                    ForEach(BuildingKind.allCases.filter { $0 != .habitat && $0 != .landingStation }) { kind in
                         BuildCardRow(model: model, kind: kind) {
                             model.startBuilding(kind)
                             if model.placement != nil { close() }
@@ -228,6 +228,99 @@ struct BuildingPanel: View {
     }
 }
 
+// MARK: Landing station
+
+/// The landing station's own panel. As a ruin it offers one clear action, Repair, and says what that
+/// unlocks. Once repaired it shows the base's real equipment and starts "Test My Base".
+struct StationPanel: View {
+    let model: AppModel
+    let building: PlacedBuilding
+
+    var body: some View {
+        let base = model.baseState
+        let gear = BaseExperiment.inputs(from: base)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(building.kind.name).font(.game(.title3)).foregroundStyle(Theme.ink)
+                    Label(building.isWorking ? "Repaired: test pad ready" : "Damaged: needs repair",
+                          systemImage: building.isWorking ? "checkmark.seal.fill" : "wrench.and.screwdriver.fill")
+                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                        .foregroundStyle(building.isWorking ? Theme.plantInk : Theme.amberInk)
+                }
+                Spacer()
+                RoundIconButton(symbol: "xmark", label: "Close", bevel: GamePalette.coral, size: 40) { model.selectBuilding(nil) }
+            }
+            if building.isWorking {
+                Text("Test your real base in a shadow with no sunlight. It uses what you built: \(gear.summary).")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let last = base.baseTests?.last {
+                    Label("Last test: \(last.inputs.summary). \(last.headline).",
+                          systemImage: last.success ? "checkmark.circle.fill" : "arrow.counterclockwise.circle.fill")
+                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                        .foregroundStyle(last.success ? Theme.plantInk : Theme.energyInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let needs = base.baseTestNeeds {
+                    Label(needs, systemImage: "hammer.fill")
+                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                        .foregroundStyle(Theme.amberInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                Text("An old landing pad from an earlier mission. Fix it up and it becomes your test pad: a place to test the base you really built.")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Label("Unlocks: Test My Base", systemImage: "lock.open.fill")
+                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                    .foregroundStyle(Theme.energyInk)
+                Text("Game rule: the repair costs Moon coins. It does not give free power, air or supplies.")
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { actions(coins: base.coins, ready: base.baseTestReady) }
+                VStack(spacing: 8) { actions(coins: base.coins, ready: base.baseTestReady) }
+            }
+        }
+        .padding(14)
+        .background(GameCardBackground(corner: 20))
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder private func actions(coins: Int, ready: Bool) -> some View {
+        if building.isWorking {
+            Button {
+                model.openBaseTest()
+            } label: {
+                Label("Test my base", systemImage: "bolt.shield.fill")
+            }
+            .buttonStyle(GameButtonStyle(bevel: ready ? GamePalette.go : GamePalette.steel, height: 50, font: .game(.headline)))
+            .guidePulse(ready)
+            .accessibilityLabel("Test my base")
+        } else {
+            Button {
+                model.repairBuilding(building.id)
+            } label: {
+                CoinLabel(title: "Repair", amount: BaseState.repairCost, size: 22)
+            }
+            .buttonStyle(GameButtonStyle(bevel: coins >= BaseState.repairCost ? GamePalette.go : GamePalette.steel, height: 50, font: .game(.headline)))
+            .guidePulse(coins >= BaseState.repairCost)
+            .accessibilityLabel("Repair for \(BaseState.repairCost) Moon coins")
+        }
+        Button {
+            model.startMoving(building.id)
+        } label: {
+            Label("Move", systemImage: "arrow.up.and.down.and.arrow.left.and.right")
+        }
+        .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 50, font: .game(.headline)))
+    }
+}
+
 // MARK: Learn
 
 struct LearnListView: View {
@@ -316,6 +409,18 @@ struct DrillsListView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
+                if model.baseState.stationRestored {
+                    Button {
+                        close()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openBaseTest() }
+                    } label: {
+                        Label("Test my base", systemImage: "bolt.shield.fill")
+                    }
+                    .buttonStyle(GameButtonStyle(bevel: GamePalette.gold, height: 54, font: .game(.headline)))
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                    .accessibilityHint("A shadow test that uses your real solar arrays and batteries")
+                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
                     ForEach(MissionID.allCases) { id in
                         VStack(spacing: 6) {

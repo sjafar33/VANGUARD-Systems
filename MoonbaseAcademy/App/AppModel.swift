@@ -113,6 +113,11 @@ final class AppModel {
             progress.base = base
             save()
         }
+        // A base saved before the landing station existed gets the ruin now. Nothing else on it changes.
+        if var base = progress.base, base.seedLandingStation() {
+            progress.base = base
+            save()
+        }
         board.scene.onTileTapped = { [weak self] x, y in self?.boardTileTapped(x, y) }
         board.scene.onBuildingTapped = { [weak self] id in self?.selectBuilding(id) }
         refreshBase()
@@ -144,6 +149,57 @@ final class AppModel {
         route = .mission
     }
 
+    // MARK: Test My Base
+
+    /// Opens the shadow test for the player's real base. The equipment is snapshotted here, so nothing
+    /// done to the base afterwards can change this test. Reference drills are not touched.
+    func openBaseTest() {
+        guard let science else { return }
+        let base = progress.baseState
+        if let needs = base.baseTestNeeds {
+            baseMessage = needs
+            Haptics.warning()
+            return
+        }
+        session?.leave()
+        let inputs = BaseExperiment.inputs(from: base)
+        let definition = BaseExperiment.shadowTest(inputs: inputs)
+        let context = BaseTestContext(inputs: inputs, previous: base.baseTests?.last)
+        session = MissionSession(definition: definition, science: science, world: missionWorld,
+                                 decor: BaseDecor(progress: progress), reduceMotion: reduceMotion,
+                                 firstVisit: false,
+                                 playbackMode: progress.playbackMode ?? .automatic,
+                                 onModeChange: { [weak self] mode in self?.setPlaybackMode(mode) },
+                                 baseTest: context) { [weak self] attempt, _, _ in
+            self?.recordBaseTest(attempt, inputs: inputs) ?? false
+        }
+        selectedMission = nil
+        selectedBuildingID = nil
+        baseMessage = nil
+        route = .mission
+    }
+
+    /// Saves a base test. It never counts as a drill: no completion, no stars, no drill attempts.
+    private func recordBaseTest(_ attempt: AttemptRecord, inputs: BaseTestInputs) -> Bool {
+        var base = progress.baseState
+        let plans = attempt.resourceConfiguration?.plans ?? []
+        let record = BaseTestRecord(inputs: inputs,
+                                    airSunlight: plans.first?.airFraction ?? 1,
+                                    airShadow: plans.last?.airFraction ?? 1,
+                                    observation: (plans.first?.researchLevel ?? 0) > 0,
+                                    success: attempt.success,
+                                    headline: attempt.headline,
+                                    finalBatteryKWh: attempt.finalBatteryKWh ?? 0,
+                                    finalAirHours: attempt.finalAirHours ?? 0,
+                                    date: attempt.date)
+        let first = base.recordBaseTest(record)
+        lastDrillCoins = first ? BaseExperiment.firstPassCoins : 0
+        progress.base = base
+        claimGoals()
+        save()
+        return first
+    }
+
     // MARK: Interruption recovery
 
     /// The plan the player was working on before the app was closed, if it can still be opened.
@@ -166,6 +222,8 @@ final class AppModel {
     /// so reopening starts safely at planning and cannot replay or double-award a result.
     func saveDraftForInterruption() {
         guard route == .mission, let session else { return }
+        // A base test is rebuilt from the base itself, so there is no plan to keep.
+        guard !session.isBaseTest else { return }
         progress.draft = MissionDraft(missionID: session.definition.missionID,
                                       variant: session.isVariant,
                                       configuration: session.isRover ? nil : session.configuration,
@@ -508,6 +566,26 @@ final class AppModel {
             SoundFX.shared.play(.star)
         }
         return result == .ok
+    }
+
+    /// Repairs the landing station. One charge, however many times it is tapped.
+    @discardableResult
+    func repairBuilding(_ id: String) -> Bool {
+        let wasDamaged = progress.baseState.buildings.first { $0.id == id }?.damaged == true
+        let result = updateBase { $0.repair(id) }
+        explain(result)
+        if result == .ok && wasDamaged {
+            Haptics.success()
+            SoundFX.shared.play(.success)
+        }
+        return result == .ok
+    }
+
+    /// "Show me" for the landing station: selects it and moves the camera to it.
+    func showLandingStation() {
+        guard placement == nil, let station = progress.baseState.landingStation else { return }
+        selectBuilding(station.id)
+        board.focus(x: station.centerX, y: station.centerY)
     }
 
     @discardableResult

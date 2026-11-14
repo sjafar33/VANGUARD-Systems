@@ -269,7 +269,7 @@ struct MissionTopHUD: View {
         let state = session.displayState
         let focus = session.currentCheckpoint?.focus
         Group {
-            if !d.catalog.isEmpty && session.stage != .playback {
+            if !d.catalog.isEmpty && session.stage != .playback && !session.isBaseTest {
                 ResourcePill(symbol: "shippingbox.fill", bevel: GamePalette.gold,
                              value: "\(session.cargoCost)/\(d.cargoBudget)", label: "Cargo crates",
                              fraction: d.cargoBudget > 0 ? Double(session.cargoCost) / Double(d.cargoBudget) : 0,
@@ -399,10 +399,14 @@ struct BuildTray: View {
                 if session.isRover {
                     RoverTray(session: session)
                 } else {
-                    ForEach(session.definition.catalog) { item in
-                        BuildCard(session: session, item: item,
-                                  highlighted: session.tutorial == .placeFirstArray && item.kind == .solarArray,
-                                  dimmed: session.tutorial == .placeFirstArray && item.kind != .solarArray)
+                    if session.isBaseTest {
+                        BaseGearCard(session: session)
+                    } else {
+                        ForEach(session.definition.catalog) { item in
+                            BuildCard(session: session, item: item,
+                                      highlighted: session.tutorial == .placeFirstArray && item.kind == .solarArray,
+                                      dimmed: session.tutorial == .placeFirstArray && item.kind != .solarArray)
+                        }
                     }
                     ForEach(planIndices, id: \.self) { index in
                         PlanCard(session: session, index: index) { openPlan(index) }
@@ -418,6 +422,69 @@ struct BuildTray: View {
     private var planIndices: [Int] {
         if session.definition.missionID == .livingBase && session.sameSettingsForAllBlocks { return [0] }
         return Array(session.definition.phases.indices)
+    }
+}
+
+/// "Test My Base" has no lander: the tray shows the equipment the player's real base already has.
+struct BaseGearCard: View {
+    let session: MissionSession
+    @ScaledMetric(relativeTo: .footnote) private var cardHeight: CGFloat = 146
+
+    var body: some View {
+        let gear = session.baseTest?.inputs ?? BaseTestInputs(arrays: 0, batteries: 0)
+        VStack(alignment: .leading, spacing: 6) {
+            Label("Your base", systemImage: "house.fill")
+                .font(.game(.subheadline))
+                .foregroundStyle(Theme.ink)
+            Label("\(gear.arrays) solar array\(gear.arrays == 1 ? "" : "s")", systemImage: "sun.max.fill")
+            Label("\(gear.batteries) batter\(gear.batteries == 1 ? "y" : "ies")", systemImage: "battery.75percent")
+            Text("To change these, build at your base.")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .font(.system(.footnote, design: .rounded).weight(.heavy))
+        .foregroundStyle(Theme.ink)
+        .padding(10)
+        .frame(width: 170, alignment: .leading)
+        .frame(minHeight: cardHeight)
+        .background(GameCardBackground(highlighted: true))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// On the result of a base test: what the base had, how it compares with the last saved test, and the
+/// rules that turned buildings into numbers.
+struct BaseTestCard: View {
+    let session: MissionSession
+
+    var body: some View {
+        if let context = session.baseTest {
+            let d = session.definition
+            let arrayKW = d.phases.map(\.solarKWPerArray).max() ?? 0
+            let batteryKWh = d.item(.battery)?.batteryCapacityKWh ?? 0
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Your base: \(context.inputs.summary)", systemImage: "house.fill")
+                    .font(.system(.subheadline, design: .rounded).weight(.black))
+                    .foregroundStyle(Theme.ink)
+                if let previous = context.previous, session.previousAttempt == nil {
+                    Text("Last saved test: \(previous.inputs.summary). \(previous.headline).")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(Theme.ink)
+                    Text(BaseExperiment.change(from: previous.inputs, to: context.inputs))
+                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                        .foregroundStyle(Theme.energyInk)
+                }
+                Text("Game rules for this test: each working solar array makes \(Format.kW(arrayKW)) in sunlight and each battery stores \(Words.kWh(batteryKWh)), the same training numbers as Lights Out. Building levels and colours don't change them.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkSecondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.panel))
+            .accessibilityElement(children: .combine)
+        }
     }
 }
 
@@ -941,7 +1008,7 @@ struct ResultOverlay: View {
             }
             ScrollView {
                 VStack(spacing: 14) {
-                    Ribbon(text: success ? "DRILL COMPLETE!" : "NOT YET!", bevel: success ? GamePalette.go : GamePalette.coral, font: .game(.title))
+                    Ribbon(text: success ? (session.isBaseTest ? "TEST PASSED!" : "DRILL COMPLETE!") : "NOT YET!", bevel: success ? GamePalette.go : GamePalette.coral, font: .game(.title))
                         .padding(.top, -38)
                         .accessibilityFocused($titleFocused)
                     HStack {
@@ -954,10 +1021,12 @@ struct ResultOverlay: View {
                         .font(.game(.title3))
                         .foregroundStyle(Theme.ink)
                         .multilineTextAlignment(.center)
-                    HStack(alignment: .top, spacing: 8) {
-                        StarSlot(filled: stars.finished, label: "Finish the drill", delay: 0.25)
-                        StarSlot(filled: stars.predicted, label: "Predict it right", delay: 0.55)
-                        StarSlot(filled: stars.bonus, label: session.gameCopy.bonusStar, delay: 0.85)
+                    if !session.isBaseTest {
+                        HStack(alignment: .top, spacing: 8) {
+                            StarSlot(filled: stars.finished, label: "Finish the drill", delay: 0.25)
+                            StarSlot(filled: stars.predicted, label: "Predict it right", delay: 0.55)
+                            StarSlot(filled: stars.bonus, label: session.gameCopy.bonusStar, delay: 0.85)
+                        }
                     }
                     if model.lastDrillCoins > 0 {
                         HStack(spacing: 8) {
@@ -991,6 +1060,7 @@ struct ResultOverlay: View {
                             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: 0xFFF4D6)))
                     }
                     whySection
+                    if session.isBaseTest { BaseTestCard(session: session) }
                     if let previous = session.previousAttempt, let current = session.currentAttempt {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Last try vs this try").font(.system(.subheadline, design: .rounded).weight(.black)).foregroundStyle(Theme.ink)
@@ -1013,7 +1083,7 @@ struct ResultOverlay: View {
                                 .buttonStyle(GameButtonStyle(bevel: GamePalette.go))
                                 .accessibilityLabel("Continue")
                         } else {
-                            Button("Base") { model.leaveMission() }
+                            Button(session.isBaseTest ? "Improve base" : "Base") { model.leaveMission() }
                                 .buttonStyle(GameButtonStyle(bevel: GamePalette.steel))
                             Button { session.retry() } label: { Label("Try again", systemImage: "arrow.counterclockwise") }
                                 .buttonStyle(GameButtonStyle(bevel: GamePalette.gold))
@@ -1049,7 +1119,7 @@ struct ResultOverlay: View {
         guard let prediction = session.prediction else { return nil }
         switch session.predictionWasRight {
         case .some(true):
-            return ("You predicted \"\(prediction.label)\" and you were right. Prediction star earned!", "brain.head.profile")
+            return ("You predicted \"\(prediction.label)\" and you were right.\(session.isBaseTest ? "" : " Prediction star earned!")", "brain.head.profile")
         case .some(false):
             return ("You predicted \"\(prediction.label)\". Now you know why it went the other way!", "sparkles")
         case .none:

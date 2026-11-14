@@ -6,6 +6,8 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
     case buildArray
     case buildBattery
     case playLightsOut
+    case restoreStation
+    case testBase
     case learnPlants
     case buildGreenhouse
     case playLivingBase
@@ -23,6 +25,8 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .buildArray: return "Build a solar array"
         case .buildBattery: return "Build a battery"
         case .playLightsOut: return "Play the Lights Out drill"
+        case .restoreStation: return "Fix the old landing station"
+        case .testBase: return "Test your real base"
         case .learnPlants: return "Learn \"Plants and Air\""
         case .buildGreenhouse: return "Build the greenhouse"
         case .playLivingBase: return "Play The Living Base drill"
@@ -41,6 +45,8 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .buildArray: return "Let's make power! Tap Show me and I'll help you place a solar array."
         case .buildBattery: return "Solar arrays only work in sunlight. A battery saves energy for the dark. Tap Show me."
         case .playLightsOut: return "Your base has power gear! Now test it in your first drill. Tap Show me."
+        case .restoreStation: return "There's an old landing station on the edge of your base. Tap Show me, then fix it up!"
+        case .testBase: return "The station works! Now test YOUR base: your own arrays and batteries, in a real shadow. Tap Show me."
         case .learnPlants: return "Next, a quick lesson about plants and air. You'll earn Moon coins and unlock the greenhouse."
         case .buildGreenhouse: return "You unlocked the greenhouse! Tap Show me to build it."
         case .playLivingBase: return "Can you grow lettuce and keep the air flowing? Tap Show me to try."
@@ -59,6 +65,8 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .buildBattery: return "battery.75percent"
         case .playLightsOut, .playLivingBase, .playStorm, .playSignal: return "play.fill"
         case .learnPlants: return "book.fill"
+        case .restoreStation: return "wrench.and.screwdriver.fill"
+        case .testBase: return "bolt.shield.fill"
         case .buildGreenhouse: return "leaf.fill"
         case .decorate: return "paintpalette.fill"
         case .buildShelter: return "shield.lefthalf.filled"
@@ -72,6 +80,9 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .buildArray: return base.count(.solarArray) > 0
         case .buildBattery: return base.count(.battery) > 0
         case .playLightsOut: return progress.isCompleted(.lightsOut)
+        // A base with no station (a board too full to place one) is never blocked by these two goals.
+        case .restoreStation: return base.landingStation.map(\.isWorking) ?? true
+        case .testBase: return base.landingStation == nil || base.baseTests?.isEmpty == false
         case .learnPlants: return base.lessons[LessonLibrary.plantsAndAirID]?.completed == true
         case .buildGreenhouse: return base.count(.greenhouse) > 0
         case .playLivingBase: return progress.isCompleted(.livingBase)

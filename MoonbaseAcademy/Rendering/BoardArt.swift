@@ -199,12 +199,17 @@ enum BoardArt {
                 }])))
             }
             body = group
+        case .landingStation:
+            body = b.isWorking ? stationRestored(animated: animated) : stationRuin(animated: animated)
         }
         body.zPosition = 1
         // Higher levels stand a little taller.
         body.setScale(1 + CGFloat(b.level - 1) * 0.06)
         node.addChild(body)
-        node.addChild(levelPips(b.level, height: pipHeight(b.kind)))
+        // The landing station has no levels: it is either a ruin or repaired.
+        if b.kind != .landingStation {
+            node.addChild(levelPips(b.level, height: pipHeight(b.kind)))
+        }
         if animated && b.level >= BuildingKind.maxLevel {
             // Top level: a few gold sparkles now and then.
             node.run(.repeatForever(.sequence([.wait(forDuration: 1.2, withRange: 1), .run { [weak node] in
@@ -286,7 +291,117 @@ enum BoardArt {
         case .dish: return 82
         case .solarArray: return 52
         case .battery: return 60
+        case .landingStation: return 64
         }
+    }
+
+    // MARK: Landing station
+
+    static let stationCanvas = Art.Canvas(size: CGSize(width: 176, height: 132), origin: CGPoint(x: 88, y: 82))
+
+    /// The repaired station: a clean pad with a landing circle, corner lights and a small control tower.
+    private static func stationRestored(animated: Bool) -> SKNode {
+        let group = SKNode()
+        let pad = Art.sprite("board.station.restored", stationCanvas) { pt in
+            pt.shadow(-0.9, -0.9, 0.9, 0.9, length: 0.22)
+            pt.box(-0.9, -0.9, 0.9, 0.9, z1: 6, colors: .init(0xC3CBD6, 0x97A2B1, 0x7B8798), edge: UIColor(hex: 0x5E6978))
+            // Landing circle and cross.
+            let yellow = UIColor(hex: 0xF2B84B)
+            pt.ctx.setStrokeColor(yellow.cgColor)
+            pt.ctx.setLineWidth(3)
+            pt.ctx.strokeEllipse(in: pt.ellipseRect(cx: 0.12, cy: 0.12, z: 6, r: 0.58))
+            pt.line(pt.p(-0.16, 0.12, 6), pt.p(0.4, 0.12, 6), yellow, width: 2.4)
+            pt.line(pt.p(0.12, -0.16, 6), pt.p(0.12, 0.4, 6), yellow, width: 2.4)
+            // Corner light housings.
+            for corner in [CGPoint(x: 0.78, y: -0.78), CGPoint(x: 0.78, y: 0.78), CGPoint(x: -0.78, y: 0.78)] {
+                pt.box(corner.x - 0.07, corner.y - 0.07, corner.x + 0.07, corner.y + 0.07, z0: 6, z1: 10,
+                       colors: .init(0xFFD66B, 0xD9A63A, 0xB8862A))
+            }
+            // Control tower at the back corner.
+            pt.box(-0.86, -0.86, -0.5, -0.5, z0: 6, z1: 30, colors: .init(0xEEF1F4, 0xC7CED8, 0xA3ADBB))
+            pt.box(-0.92, -0.92, -0.44, -0.44, z0: 30, z1: 39, colors: .init(0xBFEFF5, 0x6FC4D2, 0x4A9DAD),
+                   edge: UIColor(hex: 0x2F6E7A))
+            pt.line(pt.p(-0.68, -0.68, 39), pt.p(-0.68, -0.68, 50), UIColor(hex: 0x6E7A8B), width: 2)
+        }
+        group.addChild(pad)
+        let lights = [CGPoint(x: 0.78, y: -0.78), CGPoint(x: 0.78, y: 0.78), CGPoint(x: -0.78, y: 0.78)]
+        for (index, corner) in lights.enumerated() {
+            let light = SKSpriteNode(texture: Art.glowDot(color: 0xFFE27A, diameter: 14))
+            light.position = Iso.point(corner).offset(0, 11)
+            light.zPosition = 0.2
+            light.blendMode = .add
+            group.addChild(light)
+            if animated {
+                // The lights blink one after another, like a runway.
+                light.alpha = 0.25
+                light.run(.sequence([.wait(forDuration: Double(index) * 0.35),
+                                     .repeatForever(.sequence([.fadeAlpha(to: 1, duration: 0.15), .fadeAlpha(to: 0.25, duration: 0.45),
+                                                               .wait(forDuration: 0.45)]))]))
+            }
+        }
+        let beacon = SKSpriteNode(texture: Art.glowDot(color: 0x8BE3EE, diameter: 12))
+        beacon.position = Iso.point(-0.68, -0.68).offset(0, 51)
+        beacon.zPosition = 0.3
+        beacon.blendMode = .add
+        group.addChild(beacon)
+        if animated {
+            beacon.run(.repeatForever(.sequence([.fadeAlpha(to: 1, duration: 0.2), .fadeAlpha(to: 0.2, duration: 0.9)])))
+        }
+        return group
+    }
+
+    /// The ruin: a cracked, dusty pad with a broken tower, and a wrench badge so it reads as "fix me".
+    private static func stationRuin(animated: Bool) -> SKNode {
+        let group = SKNode()
+        let pad = Art.sprite("board.station.ruin", stationCanvas) { pt in
+            pt.shadow(-0.9, -0.9, 0.9, 0.9, length: 0.18, alpha: 0.18)
+            pt.box(-0.9, -0.9, 0.9, 0.9, z1: 5, colors: .init(0x858D99, 0x676F7B, 0x535B67))
+            // What is left of the landing circle.
+            pt.ctx.setStrokeColor(UIColor(hex: 0xC9A455, alpha: 0.4).cgColor)
+            pt.ctx.setLineWidth(2.5)
+            pt.ctx.setLineDash(phase: 0, lengths: [9, 7])
+            pt.ctx.strokeEllipse(in: pt.ellipseRect(cx: 0.12, cy: 0.12, z: 5, r: 0.58))
+            pt.ctx.setLineDash(phase: 0, lengths: [])
+            // Cracks across the pad.
+            let crack = UIColor(hex: 0x2B323D, alpha: 0.85)
+            pt.stroke([pt.p(-0.7, 0.5, 5), pt.p(-0.35, 0.3, 5), pt.p(-0.2, 0.45, 5), pt.p(0.15, 0.1, 5), pt.p(0.5, 0.2, 5)], crack, width: 1.6)
+            pt.stroke([pt.p(0.15, 0.1, 5), pt.p(0.3, -0.3, 5), pt.p(0.7, -0.45, 5)], crack, width: 1.4)
+            pt.stroke([pt.p(-0.2, 0.45, 5), pt.p(-0.05, 0.8, 5)], crack, width: 1.2)
+            // Dust drifts.
+            pt.ctx.setFillColor(UIColor(hex: 0xB9BEC6, alpha: 0.75).cgColor)
+            pt.ctx.fillEllipse(in: pt.ellipseRect(cx: 0.55, cy: 0.6, z: 5, r: 0.3))
+            pt.ctx.fillEllipse(in: pt.ellipseRect(cx: -0.45, cy: 0.7, z: 5, r: 0.22))
+            // Broken tower stump, and the piece that fell off.
+            pt.box(-0.86, -0.86, -0.5, -0.5, z0: 5, z1: 17, colors: .init(0x9AA1AB, 0x7E8691, 0x666E7A))
+            pt.fill([pt.p(-0.86, -0.5, 17), pt.p(-0.5, -0.5, 17), pt.p(-0.5, -0.5, 22), pt.p(-0.7, -0.5, 19)], UIColor(hex: 0x7E8691))
+            pt.box(-0.3, -0.72, 0.28, -0.46, z0: 5, z1: 11, colors: .init(0xA6ADB7, 0x858D98, 0x6B7380))
+            // Rubble.
+            pt.box(0.3, 0.05, 0.44, 0.19, z0: 5, z1: 9, colors: .init(0x9299A4, 0x747C88, 0x5F6773))
+            pt.box(-0.62, 0.1, -0.5, 0.22, z0: 5, z1: 8, colors: .init(0x9299A4, 0x747C88, 0x5F6773))
+            pt.box(0.62, -0.2, 0.72, -0.1, z0: 5, z1: 8, colors: .init(0x8A919C, 0x6E7682, 0x59616D))
+        }
+        group.addChild(pad)
+        // "Fix me" badge: a gold disc with a wrench, floating above the ruin.
+        let badge = SKNode()
+        badge.position = CGPoint(x: 0, y: 62)
+        badge.zPosition = 5
+        let disc = SKShapeNode(circleOfRadius: 17)
+        disc.fillColor = UIColor(hex: 0xFFD66B)
+        disc.strokeColor = UIColor(hex: 0x0B1426, alpha: 0.85)
+        disc.lineWidth = 2.5
+        badge.addChild(disc)
+        let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .black)
+        if let symbol = UIImage(systemName: "wrench.and.screwdriver.fill", withConfiguration: config) {
+            let image = symbol.withTintColor(UIColor(hex: 0x3A2A00), renderingMode: .alwaysOriginal)
+            let icon = SKSpriteNode(texture: SKTexture(image: image))
+            icon.zPosition = 0.1
+            badge.addChild(icon)
+        }
+        group.addChild(badge)
+        if animated {
+            badge.run(.repeatForever(.sequence([.moveBy(x: 0, y: 7, duration: 0.6), .moveBy(x: 0, y: -7, duration: 0.6)])))
+        }
+        return group
     }
 
     private static func levelPips(_ level: Int, height: CGFloat) -> SKNode {

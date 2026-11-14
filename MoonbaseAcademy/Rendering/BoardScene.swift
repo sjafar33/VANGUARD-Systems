@@ -212,6 +212,16 @@ final class BoardScene: SKScene {
         applyCamera(animated: true)
     }
 
+    /// Moves the camera so a board position (in grid units) sits in the middle of the free screen area.
+    func focus(gridX: CGFloat, gridY: CGFloat, zoom: CGFloat = 1.7) {
+        zoomLevel = min(Self.maxZoom, max(Self.minZoom, zoom))
+        let point = Iso.point(gridX, gridY)
+        let center = CGPoint(x: 0, y: (hudInsets.bottom - hudInsets.top) / 2)
+        pan = CGPoint(x: center.x - fitPosition.x - point.x * fitScale * zoomLevel,
+                      y: center.y - fitPosition.y - point.y * fitScale * zoomLevel)
+        applyCamera(animated: true)
+    }
+
     // MARK: Snapshot
 
     func apply(_ s: BoardSnapshot) {
@@ -228,7 +238,7 @@ final class BoardScene: SKScene {
         var seen = Set<String>()
         for b in s.buildings {
             seen.insert(b.id)
-            let look = "\(b.kind.rawValue)-\(b.level)-\(b.kind == .habitat ? s.habitatTint : 0)-\(reduceMotion)"
+            let look = "\(b.kind.rawValue)-\(b.level)-\(b.isWorking ? "working" : "damaged")-\(b.kind == .habitat ? s.habitatTint : 0)-\(reduceMotion)"
             let target = Iso.point(CGFloat(b.centerX), CGFloat(b.centerY))
             let depth = Iso.depth(CGPoint(x: b.centerX, y: b.centerY))
             if let node = buildingNodes[b.id], nodeKeys[b.id] == look {
@@ -246,6 +256,7 @@ final class BoardScene: SKScene {
                 let old = buildingNodes[b.id]
                 let isNew = old == nil
                 let levelledUp = old != nil && (nodeKeys[b.id]?.hasPrefix("\(b.kind.rawValue)-\(b.level - 1)-") ?? false)
+                let repaired = old != nil && b.isWorking && (nodeKeys[b.id]?.contains("-damaged-") ?? false)
                 old?.removeFromParent()
                 let node = BoardArt.building(b, habitatTint: s.habitatTint, animated: !reduceMotion)
                 node.position = target
@@ -260,6 +271,13 @@ final class BoardScene: SKScene {
                     node.setScale(0.9)
                     node.run(.sequence([.scale(to: 1.12, duration: 0.16), .scale(to: 1, duration: 0.12)]))
                     sparkle(at: target + CGPoint(x: 0, y: 40), count: 12)
+                } else if animate && repaired {
+                    // A ruin coming back to life: dust off, pop up, and a burst of sparkles.
+                    puff(at: target)
+                    node.setScale(0.8)
+                    node.run(.sequence([.scale(to: 1.15, duration: 0.2), .scale(to: 1, duration: 0.14)]))
+                    sparkle(at: target + CGPoint(x: 0, y: 30), count: 16)
+                    sparkle(at: target + CGPoint(x: 0, y: 55), count: 10)
                 }
             }
         }
@@ -646,4 +664,6 @@ final class BoardCoordinator {
     func zoom(by factor: CGFloat) { scene.zoom(by: factor) }
 
     func resetCamera() { scene.resetCamera() }
+
+    func focus(x: Double, y: Double) { scene.focus(gridX: CGFloat(x), gridY: CGFloat(y)) }
 }

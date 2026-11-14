@@ -48,6 +48,17 @@ struct MissionCopy {
             let sun = d.phases.first?.durationHours ?? 0
             let shadow = d.phases.last?.durationHours ?? 0
             let observation = (d.phases.first?.research?.powerKWPerLevel ?? 0) * sun
+            if BaseExperiment.isBaseTest(d) {
+                return MissionCopy(
+                    topic: topic(id), symbol: symbol(id),
+                    story: "This is your own base. Its solar arrays make electricity while the Sun shines, and its batteries save it for the \(Words.hourAdjective(shadow)) shadow.",
+                    objectives: ["Keep your base powered through \(Words.hours(sun)) of sunlight and \(Words.hours(shadow)) of shadow.",
+                                 "Finish with at least \(minAir) of air in the tank."],
+                    bonus: "Bonus: power a \(Words.kWh(observation)) science observation while the Sun is up.",
+                    question: "Will your base stay powered all through the shadow?",
+                    hint: "Batteries can only store what your arrays make in sunlight. Turning the air maker down saves power, but then the crew breathes from the oxygen tank. To change the equipment, build at your base.",
+                    badge: nil)
+            }
             return MissionCopy(
                 topic: topic(id), symbol: symbol(id),
                 story: "Solar arrays make electricity while the Sun shines. Batteries save it for later. Get the base ready for a \(Words.hourAdjective(shadow)) shadow drill with no sunlight at all.",
@@ -286,7 +297,19 @@ enum ExplanationWriter {
                 }
                 switch d.missionID {
                 case .lightsOut:
-                    paragraphs.append("Try storing more energy, skipping the observation, or turning the air maker down during the shadow.")
+                    if BaseExperiment.isBaseTest(d) {
+                        // Read from the trace: were the batteries full before the dark, or still filling?
+                        let sunlit = r.trace.first { $0.phaseID == "sunlit" }
+                        let wereFull = sunlit.map { $0.after.batteryKWh >= $0.after.batteryCapacityKWh - 1e-9 } ?? false
+                        if wereFull {
+                            paragraphs.append("Your batteries were already full when the shadow started, and it still wasn't enough. Back at your base, another battery would store more.")
+                        } else {
+                            paragraphs.append("Your batteries were not full when the shadow started. Back at your base, another solar array would fill them faster.")
+                        }
+                        paragraphs.append("Or turn the air maker down in the shadow. That saves power, but the crew then breathes from the tank.")
+                    } else {
+                        paragraphs.append("Try storing more energy, skipping the observation, or turning the air maker down during the shadow.")
+                    }
                 case .livingBase:
                     paragraphs.append("Every kWh of research is used again every day. Small daily extras add up over \(Words.number(d.totalHours / 24)) days.")
                 case .stormDrill:

@@ -50,3 +50,15 @@ The test suite proves the data is functional, not decorative. Using test-only co
 - Moving the archived storm end by 10 hours changes the phase duration and food use.
 
 Production data is never modified by tests.
+
+## Test My Base (added 2026-11-14)
+
+"Test My Base" is a separate scenario from the Lights Out reference drill. It runs the same deterministic `ResourceEngine` with the same NASA input (oxygen per crew member per day, source N1) and the same training assumptions as the six-hour Lights Out drill. The only difference is where the equipment comes from: instead of choosing cargo for a lander, the test counts the working solar arrays and batteries on the player's own base when the test opens.
+
+Game rules (not NASA data), shown to the player on the result card:
+- Each working solar array counts as one Lights Out array (1 kW in sunlight). Each working battery counts as one Lights Out battery (4 kWh, starts empty). At most four of each.
+- Building level, colour, position and the robot buddy do not change any number. A damaged building counts for nothing.
+- The landing station is fictional. Repairing it costs Moon coins and only opens the test. It adds no power, oxygen, supplies or communication.
+- Coins (repair price, the one-time reward for a first pass) never enter the simulation.
+
+Limits: this is still a phase-averaged training model, not an electrical simulator. Board distance and layout are not modelled, so no cables or adjacency are implied. The reference drills, their harder versions and their test fixtures are unchanged.

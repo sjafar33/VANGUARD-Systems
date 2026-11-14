@@ -8,7 +8,8 @@ final class BaseBuilderTests: MoonbaseTestCase {
 
     func testNewPlayerStartsWithAHabitatAndEnoughForTheFirstDrill() {
         let base = fresh
-        XCTAssertEqual(base.buildings.map(\.kind), [.habitat])
+        XCTAssertEqual(base.buildings.map(\.kind), [.habitat, .landingStation])
+        XCTAssertEqual(base.landingStation?.damaged, true, "The landing station starts as a ruin")
         XCTAssertEqual(base.coins, BaseState.startingCoins)
         XCTAssertGreaterThanOrEqual(base.coins, BaseState.buildCost(.solarArray) + BaseState.buildCost(.battery))
         XCTAssertFalse(base.drillReady(.lightsOut))
@@ -185,7 +186,13 @@ final class BaseBuilderTests: MoonbaseTestCase {
         _ = base.build(.battery, x: b.x, y: b.y, progress: progress)
         XCTAssertEqual(GuideGoal.current(base, progress), .playLightsOut)
         progress.completedMissions = [.lightsOut]
-        XCTAssertEqual(GuideGoal.current(base, progress), .learnPlants)
+        XCTAssertEqual(GuideGoal.current(base, progress), .restoreStation)
+        XCTAssertEqual(base.repair("landingStation"), .ok)
+        XCTAssertEqual(GuideGoal.current(base, progress), .testBase)
+        base.recordBaseTest(BaseTestRecord(inputs: BaseTestInputs(arrays: 1, batteries: 1), airSunlight: 1, airShadow: 1,
+                                           observation: false, success: false, headline: "The power ran out",
+                                           finalBatteryKWh: 0, finalAirHours: 40, date: Date()))
+        XCTAssertEqual(GuideGoal.current(base, progress), .learnPlants, "A failed test still counts as trying it")
         _ = base.recordLesson(LessonLibrary.plantsAndAirID, firstTryCorrect: 3)
         XCTAssertEqual(GuideGoal.current(base, progress), .buildGreenhouse)
     }
@@ -239,7 +246,7 @@ final class BaseBuilderTests: MoonbaseTestCase {
         try oldStore.save(old)
         let migrated = AppModel(store: oldStore)
         XCTAssertEqual(migrated.baseState.coins, BaseState.startingCoins + 20 * old.totalStars)
-        XCTAssertEqual(migrated.currentGoal, .learnPlants)
+        XCTAssertEqual(migrated.currentGoal, .restoreStation)
     }
 
     @MainActor

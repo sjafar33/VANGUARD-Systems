@@ -44,6 +44,7 @@ struct GameCopy {
 
     /// The full briefing for one drill, with numbers read from that drill (standard or harder variant).
     static func of(_ d: MissionDefinition, science s: ScienceInputs) -> GameCopy {
+        if BaseExperiment.isBaseTest(d) { return baseTest(d) }
         var copy = of(d.missionID)
         switch d.missionID {
         case .lightsOut:
@@ -65,6 +66,22 @@ struct GameCopy {
                            "Park the rover in the yellow bay. Tap a flag to choose when Earth sends STOP!"]
         }
         return copy
+    }
+
+    /// "Test My Base": the same shadow as Lights Out, but with the player's own equipment.
+    /// Three lines, to match the three Lights Out briefing scenes.
+    static func baseTest(_ d: MissionDefinition) -> GameCopy {
+        let gear = BaseTestInputs(arrays: d.item(.solarArray)?.maxCount ?? 0,
+                                  batteries: d.item(.battery)?.maxCount ?? 0)
+        let shadow = d.phases.last?.durationHours ?? 0
+        return GameCopy(
+            title: "Test My Base",
+            intro: ["This test is about YOUR base. No lander and no spare crates: only what you really built.",
+                    "You have \(gear.summary). A \(Words.hourAdjective(shadow)) shadow is coming, with no sun at all.",
+                    "Choose how hard the air maker works, then test it!"],
+            planTip: "Tap a plan card to set the air maker. Less air saves power, but the crew breathes from the tank.",
+            bonusStar: "Power the observation",
+            unlock: "Your base passed its first shadow test!")
     }
 
     static func rank(stars: Int) -> String {
