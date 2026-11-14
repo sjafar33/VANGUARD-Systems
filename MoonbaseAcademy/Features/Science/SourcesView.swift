@@ -92,7 +92,8 @@ struct SourcesView: View {
         "Garden drill: 17 kWh of energy available each day (16 kWh in the harder version).",
         "Storm drill: 0.8 kW available on average; shelter takes 3 kWh to build; the crew must be inside for the whole storm. The lander holds 4 crates (3 in the harder version).",
         "Rover: drives at a steady 1 m/s (0.75 m/s in the harder version) and stops instantly. The yellow bay is 5 to 6 m.",
-        "Power and air use stay the same within each drill step. This is a training model, not an electrical simulator."
+        "Power and air use stay the same within each drill step. This is a training model, not an electrical simulator.",
+        "Building the base, Moon coins, upgrades and styles are game rules. They unlock drills and looks but never change the numbers inside a drill."
     ]
 
     static let limits = [

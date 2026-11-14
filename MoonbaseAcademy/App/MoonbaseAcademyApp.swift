@@ -40,6 +40,7 @@ struct RootView: View {
         // One motion policy and the Focus view preference, read by every view below (sheets included).
         .environment(\.appReduceMotion, model.reduceMotion)
         .environment(\.focusView, model.focusView)
+        .environment(\.novaColors, model.novaColors)
         .onAppear {
             model.setSystemReduceMotion(systemReduceMotion)
             KeyboardDismissal.install()

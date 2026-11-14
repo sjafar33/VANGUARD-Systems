@@ -42,9 +42,23 @@ final class MissionOneFlowTests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["-uiTesting", "-resetProgress"]
         app.launch()
-        XCTAssertTrue(app.buttons["Play Lights Out"].waitForExistence(timeout: 10))
+        // Base builder: a new player builds a solar array and a battery to open the first drill.
+        XCTAssertTrue(app.buttons["Build"].waitForExistence(timeout: 10))
         pause(1.5)
         shot("01-base-first-launch")
+        tap("Build")
+        pause(0.6)
+        shot("01b-build-shop")
+        tap("Build solar array for 40 Moon coins")
+        pause(0.8)
+        shot("01c-placing")
+        tap("Place here")
+        tap("Build")
+        tap("Build battery for 40 Moon coins")
+        tap("Place here")
+        XCTAssertTrue(app.buttons["Play Lights Out"].waitForExistence(timeout: 5), "The first drill opens once the base has power gear")
+        pause(1.2)
+        shot("01d-base-ready")
 
         tap("Play Lights Out")
         pause(0.8)
@@ -110,14 +124,20 @@ final class MissionOneFlowTests: XCTestCase {
         shot("12-result-stars")
 
         tap("Continue")
-        XCTAssertTrue(app.buttons["Play The Living Base"].waitForExistence(timeout: 6), "Drill 2 should unlock")
+        // Drill 2 is unlocked in order, and needs a greenhouse, which a lesson unlocks.
+        XCTAssertTrue(app.buttons["Learn"].waitForExistence(timeout: 6))
         pause(1.2)
         shot("13-base-after-mission-one")
+        tap("Drills")
+        XCTAssertTrue(app.buttons["The Living Base, 0 of 3 stars"].waitForExistence(timeout: 5), "Drill 2 should unlock")
+        shot("13b-drills")
 
         app.terminate()
         app.launchArguments = ["-uiTesting"]
         app.launch()
-        XCTAssertTrue(app.buttons["Play The Living Base"].waitForExistence(timeout: 10), "Progress must survive a relaunch")
+        XCTAssertTrue(app.buttons["Drills"].waitForExistence(timeout: 10))
+        tap("Drills")
+        XCTAssertTrue(app.buttons["The Living Base, 0 of 3 stars"].waitForExistence(timeout: 5), "Progress must survive a relaunch")
         pause(1.2)
         shot("14-base-after-relaunch")
     }

@@ -959,6 +959,11 @@ struct ResultOverlay: View {
                         StarSlot(filled: stars.predicted, label: "Predict it right", delay: 0.55)
                         StarSlot(filled: stars.bonus, label: session.gameCopy.bonusStar, delay: 0.85)
                     }
+                    if model.lastDrillCoins > 0 {
+                        Label("+\(model.lastDrillCoins) Moon coins for your base", systemImage: "moonphase.full.moon")
+                            .font(.game(.headline))
+                            .foregroundStyle(Theme.amberInk)
+                    }
                     if let unlock = session.unlockText {
                         Label(unlock, systemImage: "gift.fill")
                             .font(.system(.headline, design: .rounded).weight(.black))

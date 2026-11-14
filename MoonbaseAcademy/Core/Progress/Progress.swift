@@ -60,6 +60,11 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     var hapticsEnabled: Bool?
     /// The plan in progress, so a closed app can reopen at planning. Never holds a running test or a result.
     var draft: MissionDraft?
+    /// The base board (coins, buildings, lessons, looks). Optional so older saves load; see `baseState`.
+    var base: BaseState?
+
+    /// The saved base, or a starting base built from what this save already completed.
+    var baseState: BaseState { base ?? BaseState.starting(from: self) }
 
     func achievementSet(_ id: MissionID) -> Set<Achievement> {
         if let stored = achievements?[id.rawValue] { return Set(stored) }

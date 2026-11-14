@@ -174,3 +174,37 @@ Decision: white button text keeps a navy outline (now on four sides). With the s
 
 ### Not verified (must be checked by hand)
 Not compiled or run by me. No VoiceOver pass of a full drill, no largest accessibility text size check on iPhone or iPad, no Switch Control, Voice Control, Full Keyboard Access, Increase Contrast, Bold Text, Smart Invert or speech-voice availability checks, and no check of Read aloud with the ringer switch silent (speech follows the app audio session). Focus return timing (0.45 s) and dialog focus behaviour need a real VoiceOver check.
+
+## Base-builder redesign (branch `base-builder`, started 2026-11-14)
+
+Owner request: a Clash-of-Clans-style base on a board where you place, build, upgrade and decorate; coins come from learning (lessons) and the real trade-off drills; customization (colours, ground themes, robots); kid-friendly and not too hard. Owner decisions: upgrades unlock things and look better but never change a drill's science numbers; coins from lessons and drills, with no timers, streaks or waiting; build the core loop first and stop for review.
+
+### Core loop built
+- **Board** (`Rendering/BoardScene.swift`, `BoardArt.swift`): 12 by 12 tile platform on the Moon. Buildings snap to tiles with footprints (habitat 3x3, greenhouse and shelter 2x2, array, battery and dish 1x1). Tap a building to select it; tap or drag to move the placement preview, which shows green/✓ or red/✕. Level shown by plate rim colour, pips and size, and in words in the panel.
+- **Rules** (`Core/Base/BaseBuilder.swift`, game rules only):
+  - Start: habitat plus 120 coins, enough for a solar array and a battery.
+  - Build costs: array or battery 40, greenhouse 120, shelter 150, dish 150.
+  - Upgrades go to level 3:
+    - Habitat (150 then 300) raises the array and battery limit to 3 and then 4.
+    - Any drill building at level 2 opens that drill's harder version; level 3 adds a gold look.
+  - Drills need their building: Lights Out needs an array and a battery, The Living Base needs the greenhouse, Storm Drill the shelter, and Signal Lag the dish. They still unlock in order.
+  - Blueprints: the greenhouse is unlocked by the lesson "Plants and Air", the shelter by finishing The Living Base, and the dish by finishing Storm Drill.
+- **Coins:**
+  - Lessons: the first finish pays 10 per question right on the first try, plus 30. Replays pay 3 per first-try answer.
+  - Drills: the first completion pays 60, each new star 20, and a later successful run 10. A failed run pays 0 and costs nothing.
+  - Coins are shown on the base, in lessons and on the drill result.
+- **Lesson** (`Core/Learn/Lessons.swift`, `Features/Learn/LessonView.swift`): "Plants and Air", 5 teach cards and 5 questions.
+  - Facts carry their source: oxygen 0.895 kg per person per day (N1); Veggie lettuce in about 33 days at 70 W (N2).
+  - The 16-hour light rule is tagged "Game rule". Numbers are read from the science package.
+  - A wrong answer means "try again" (no lives, no timer). VoiceOver announcements and Read aloud are supported.
+- **Style shop:** 5 habitat colours, 4 ground themes, 4 robot buddies (Nova's colours change everywhere). Looks only.
+- **Home screen:** coins and stars pills; Build, Learn, Drills and Style buttons; contextual Nova guidance; PLAY when the next drill is ready; a building panel (upgrade, move, play); a placement bar with nudge arrows, so no dragging is needed.
+- **Old saves:** an optional `CampaignProgress.base`. Saves without it get a starting base seeded from completed drills (arrays, batteries, greenhouse and so on), plus 20 coins per star already earned.
+- **Tests:** `BaseBuilderTests` (board rules, limits, upgrades, unlocks, lesson and drill coins, cosmetics, migration, save round trip, lesson facts following the science inputs). The UI test now builds an array and a battery before Lights Out.
+
+### Not done yet / next
+- Lessons for power and batteries, storms and shielding, and communication delay (and their blueprint gates).
+- Pinch to zoom and pan on the board.
+- More art per level.
+- A real-data "today's space weather" link (archived DONKI/CCMC data only; no live claims).
+- Not compiled or run by me; no device or accessibility checks yet.

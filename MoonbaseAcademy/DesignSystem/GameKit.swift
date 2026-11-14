@@ -280,14 +280,34 @@ struct GameCardBackground: View {
 
 // MARK: Nova, the guide
 
+/// The robot buddy's colours, chosen in the Style shop.
+struct NovaColors: Equatable {
+    var shell: UInt32 = 0xFFFFFF
+    var eyes: UInt32 = 0x6FE6F2
+}
+
+private struct NovaColorsKey: EnvironmentKey {
+    static let defaultValue = NovaColors()
+}
+
+extension EnvironmentValues {
+    var novaColors: NovaColors {
+        get { self[NovaColorsKey.self] }
+        set { self[NovaColorsKey.self] = newValue }
+    }
+}
+
 /// Nova is the team's own helper robot. Drawn in code so no external art is needed.
 struct NovaAvatar: View {
     var size: CGFloat = 64
     var talking = false
     @Environment(\.appReduceMotion) private var reduceMotion
+    @Environment(\.novaColors) private var colors
     @State private var bob = false
 
     var body: some View {
+        let shell = Color(hex: colors.shell)
+        let eyes = Color(hex: colors.eyes)
         Canvas { context, canvas in
             let s = canvas.width
             let head = CGRect(x: s * 0.1, y: s * 0.18, width: s * 0.8, height: s * 0.74)
@@ -300,7 +320,7 @@ struct NovaAvatar: View {
             // head shell
             context.fill(Path(roundedRect: head.offsetBy(dx: 0, dy: s * 0.04), cornerRadius: s * 0.3), with: .color(Color(hex: 0x8794A6)))
             context.fill(Path(roundedRect: head, cornerRadius: s * 0.3),
-                         with: .linearGradient(Gradient(colors: [Color(hex: 0xFFFFFF), Color(hex: 0xD3DBE4)]),
+                         with: .linearGradient(Gradient(colors: [shell, shell.opacity(0.75), Color(hex: 0xD3DBE4)]),
                                                startPoint: CGPoint(x: head.minX, y: head.minY), endPoint: CGPoint(x: head.maxX, y: head.maxY)))
             // visor
             let visor = head.insetBy(dx: s * 0.1, dy: s * 0.17).offsetBy(dx: 0, dy: s * 0.02)
@@ -310,13 +330,13 @@ struct NovaAvatar: View {
             let eyeH = s * 0.17
             for dx in [-0.13, 0.13] as [CGFloat] {
                 let eye = CGRect(x: s * (0.5 + dx) - eyeW / 2, y: visor.midY - eyeH / 2, width: eyeW, height: eyeH)
-                context.fill(Path(roundedRect: eye, cornerRadius: eyeW / 2), with: .color(Color(hex: 0x6FE6F2)))
+                context.fill(Path(roundedRect: eye, cornerRadius: eyeW / 2), with: .color(eyes))
             }
             // smile
             var smile = Path()
             smile.move(to: CGPoint(x: s * 0.42, y: visor.maxY - s * 0.08))
             smile.addQuadCurve(to: CGPoint(x: s * 0.58, y: visor.maxY - s * 0.08), control: CGPoint(x: s * 0.5, y: visor.maxY - s * 0.02))
-            context.stroke(smile, with: .color(Color(hex: 0x6FE6F2)), lineWidth: s * 0.03)
+            context.stroke(smile, with: .color(eyes), lineWidth: s * 0.03)
             // cheek light
             context.fill(Path(ellipseIn: CGRect(x: head.minX + s * 0.04, y: head.midY, width: s * 0.08, height: s * 0.08)), with: .color(Theme.amber.opacity(0.9)))
         }
