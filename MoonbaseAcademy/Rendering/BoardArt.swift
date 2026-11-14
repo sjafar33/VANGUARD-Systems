@@ -94,7 +94,7 @@ enum BoardArt {
 
     /// The building, standing on a plate whose rim colour shows its level (grey, blue, gold),
     /// with level pips above it. Level is also announced in words by the SwiftUI panels.
-    static func building(_ b: PlacedBuilding, habitatTint: UInt32) -> SKNode {
+    static func building(_ b: PlacedBuilding, habitatTint: UInt32, animated: Bool = false) -> SKNode {
         let node = SKNode()
         let size = b.kind.footprint
         node.addChild(plate(w: size.w, h: size.h, level: b.level))
@@ -111,15 +111,35 @@ enum BoardArt {
             let windows = Art.sprite(Art.habitatWindowsTexture(lit: true), Art.habitatCanvas)
             windows.zPosition = 0.1
             group.addChild(windows)
+            // Antenna beacon (same spot as on the drill screen).
+            let beacon = SKSpriteNode(texture: Art.glowDot(color: 0xFFB347, diameter: 12))
+            beacon.position = CGPoint(x: 4.5, y: 89.5)
+            beacon.zPosition = 0.3
+            beacon.blendMode = .add
+            group.addChild(beacon)
+            if animated {
+                beacon.run(.repeatForever(.sequence([.fadeAlpha(to: 1, duration: 0.12), .wait(forDuration: 0.25),
+                                                     .fadeAlpha(to: 0.15, duration: 0.5), .wait(forDuration: 0.9)])))
+                windows.run(.repeatForever(.sequence([.wait(forDuration: 2, withRange: 2), .fadeAlpha(to: 0.7, duration: 0.3),
+                                                      .fadeAlpha(to: 1, duration: 0.3)])))
+            }
             body = group
         case .solarArray:
-            body = Art.solarArray()
+            let group = SKNode()
+            group.addChild(Art.solarArray())
+            if animated { addGlint(to: group) }
+            body = group
         case .battery:
             let group = SKNode()
             group.addChild(Art.batteryBody())
             let charge = Art.sprite(Art.batteryChargeTexture(level: 3, low: false), Art.batteryCanvas)
             charge.zPosition = 0.1
             group.addChild(charge)
+            if animated {
+                // Charging: the bars fill up, then start again.
+                let levels = (1...5).map { Art.batteryChargeTexture(level: $0, low: $0 <= 1) }
+                charge.run(.repeatForever(.sequence([.animate(with: levels, timePerFrame: 0.45), .wait(forDuration: 0.8)])))
+            }
             body = group
         case .greenhouse:
             let group = SKNode()
@@ -138,22 +158,124 @@ enum BoardArt {
             let glow = Art.greenhouseGlow()
             glow.zPosition = 0.15
             group.addChild(glow)
+            if animated {
+                glow.run(.repeatForever(.sequence([.fadeAlpha(to: 0.55, duration: 1.4), .fadeAlpha(to: 1, duration: 1.4)])))
+                for case let plant as SKSpriteNode in group.children where plant.zPosition == 0.1 {
+                    let sway = SKAction.sequence([.scaleY(to: 1.08, duration: 0.9), .scaleY(to: 0.96, duration: 0.9)])
+                    plant.run(.sequence([.wait(forDuration: Double.random(in: 0...0.8)), .repeatForever(sway)]))
+                }
+            }
             body = group
         case .shelter:
             let group = SKNode()
             let shelter = Art.shelterBody()
             shelter.position = Iso.point(-0.24, -0.11)
             group.addChild(shelter)
+            let glow = Art.shelterGlow()
+            glow.position = shelter.position
+            glow.zPosition = 0.1
+            group.addChild(glow)
+            if animated {
+                glow.run(.repeatForever(.sequence([.fadeAlpha(to: 0.4, duration: 1.2), .fadeAlpha(to: 1, duration: 1.2)])))
+            }
             body = group
         case .dish:
-            body = groundDish()
+            let group = SKNode()
+            let dish = groundDish()
+            group.addChild(dish)
+            if animated {
+                dish.run(.repeatForever(.sequence([.rotate(toAngle: 0.04, duration: 2.2), .rotate(toAngle: -0.04, duration: 2.2)])))
+                // Signal rings going out to Earth.
+                group.run(.repeatForever(.sequence([.wait(forDuration: 1.6), .run { [weak group] in
+                    guard let group else { return }
+                    let ring = SKShapeNode(ellipseOf: CGSize(width: 18, height: 10))
+                    ring.strokeColor = UIColor(hex: 0x8BE3EE)
+                    ring.lineWidth = 2
+                    ring.position = CGPoint(x: 0, y: 52)
+                    ring.zPosition = 2
+                    group.addChild(ring)
+                    ring.run(.sequence([.group([.scale(to: 3, duration: 1.2), .fadeOut(withDuration: 1.2),
+                                                .moveBy(x: 14, y: 14, duration: 1.2)]), .removeFromParent()]))
+                }])))
+            }
+            body = group
         }
         body.zPosition = 1
         // Higher levels stand a little taller.
         body.setScale(1 + CGFloat(b.level - 1) * 0.06)
         node.addChild(body)
         node.addChild(levelPips(b.level, height: pipHeight(b.kind)))
+        if animated && b.level >= BuildingKind.maxLevel {
+            // Top level: a few gold sparkles now and then.
+            node.run(.repeatForever(.sequence([.wait(forDuration: 1.2, withRange: 1), .run { [weak node] in
+                guard let node else { return }
+                let star = SKSpriteNode(texture: Art.glowDot(color: 0xFFE27A, diameter: 10))
+                star.position = CGPoint(x: CGFloat.random(in: -30...30), y: CGFloat.random(in: 10...60))
+                star.blendMode = .add
+                star.zPosition = 6
+                star.alpha = 0
+                node.addChild(star)
+                star.run(.sequence([.fadeIn(withDuration: 0.25), .fadeOut(withDuration: 0.5), .removeFromParent()]))
+            }])))
+        }
         return node
+    }
+
+    /// A light sweeping across a solar panel now and then.
+    private static func addGlint(to node: SKNode) {
+        let glint = SKSpriteNode(texture: Art.glowDot(color: 0xFFFFFF, diameter: 28))
+        glint.position = CGPoint(x: -12, y: 22)
+        glint.yScale = 0.45
+        glint.alpha = 0
+        glint.blendMode = .add
+        glint.zPosition = 0.2
+        node.addChild(glint)
+        let sweep = SKAction.group([.sequence([.fadeAlpha(to: 0.85, duration: 0.18), .fadeAlpha(to: 0, duration: 0.45)]),
+                                    .moveBy(x: 26, y: 8, duration: 0.63)])
+        glint.run(.repeatForever(.sequence([.wait(forDuration: 3.5, withRange: 3), sweep, .moveBy(x: -26, y: -8, duration: 0)])))
+    }
+
+    /// The robot buddy that walks around the base, in the chosen colours.
+    static let robotCanvas = Art.Canvas(size: CGSize(width: 44, height: 56), origin: CGPoint(x: 22, y: 50))
+
+    static func robot(shell: UInt32, eyes: UInt32) -> SKSpriteNode {
+        let texture = ArtCache.shared.texture("board.robot.\(shell).\(eyes)", size: robotCanvas.size) { ctx in
+            // Shadow.
+            ctx.setFillColor(UIColor(white: 0, alpha: 0.22).cgColor)
+            ctx.fillEllipse(in: CGRect(x: 8, y: 46, width: 28, height: 8))
+            // Body.
+            let body = CGRect(x: 12, y: 32, width: 20, height: 14)
+            ctx.addPath(CGPath(roundedRect: body, cornerWidth: 6, cornerHeight: 6, transform: nil))
+            ctx.setFillColor(UIColor(hex: shell).adjusted(by: -0.12).cgColor)
+            ctx.fillPath()
+            // Antenna.
+            ctx.setStrokeColor(UIColor(hex: 0x6E7A8B).cgColor)
+            ctx.setLineWidth(2)
+            ctx.move(to: CGPoint(x: 22, y: 8))
+            ctx.addLine(to: CGPoint(x: 22, y: 3))
+            ctx.strokePath()
+            ctx.setFillColor(UIColor(hex: 0xF2B84B).cgColor)
+            ctx.fillEllipse(in: CGRect(x: 19, y: 0, width: 6, height: 6))
+            // Head.
+            let head = CGRect(x: 6, y: 7, width: 32, height: 27)
+            ctx.addPath(CGPath(roundedRect: head.offsetBy(dx: 0, dy: 2), cornerWidth: 11, cornerHeight: 11, transform: nil))
+            ctx.setFillColor(UIColor(hex: 0x8794A6).cgColor)
+            ctx.fillPath()
+            ctx.addPath(CGPath(roundedRect: head, cornerWidth: 11, cornerHeight: 11, transform: nil))
+            ctx.setFillColor(UIColor(hex: shell).cgColor)
+            ctx.fillPath()
+            // Visor and eyes.
+            let visor = head.insetBy(dx: 5, dy: 6)
+            ctx.addPath(CGPath(roundedRect: visor, cornerWidth: 6, cornerHeight: 6, transform: nil))
+            ctx.setFillColor(UIColor(hex: 0x16223A).cgColor)
+            ctx.fillPath()
+            ctx.setFillColor(UIColor(hex: eyes).cgColor)
+            for x in [visor.midX - 6, visor.midX + 3] {
+                ctx.addPath(CGPath(roundedRect: CGRect(x: x, y: visor.midY - 4, width: 3.5, height: 7), cornerWidth: 1.7, cornerHeight: 1.7, transform: nil))
+                ctx.fillPath()
+            }
+        }
+        return Art.sprite(texture, robotCanvas)
     }
 
     private static func pipHeight(_ kind: BuildingKind) -> CGFloat {

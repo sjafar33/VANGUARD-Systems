@@ -208,3 +208,29 @@ Owner request: a Clash-of-Clans-style base on a board where you place, build, up
 - More art per level.
 - A real-data "today's space weather" link (archived DONKI/CCMC data only; no live claims).
 - Not compiled or run by me; no device or accessibility checks yet.
+
+### Round 2 (owner feedback, 2026-11-14 afternoon)
+- **Coins look like coins:** `CoinIcon` (gold rim, embossed moon and star, shine), `CoinPill`, `CoinLabel` on every price, reward and counter.
+- **Easier economy (game rules):**
+  - Start: 150 coins.
+  - Lessons: 15 per first-try answer plus 40 on the first finish; replays pay 5 per first-try answer.
+  - Drills: 80 for the first completion, 25 per new star, 15 for a later win.
+  - Goal bonus: +25 each.
+- **Guidance (`Core/Base/Guide.swift`):** 12 ordered goals. The base always shows one goal card with a single "Show me" that does the step (starts placement, opens the drill briefing or the lesson, opens Style, selects the habitat). Each goal pays a one-time +25 with a "Goal complete!" toast. Saves from before the base count already-done goals as claimed (no back pay).
+- **Never stuck:** any "not enough coins" now opens "Earn coins" (`EarnAdvisor`) with ranked options (new lesson, first drill, missing stars, practice) and Go buttons that take the child there. A lesson is always available, so there is no dead end.
+- **Style preview:** "Try it" shows the colour, ground or robot on the base and on Nova (the board reframes into the top half while the shop is open). Buy or Use from there; if short, "Get N more" opens Earn coins. Previews never spend or save.
+- **Base camera:** pinch to zoom (1x to 2.8x) around the fingers, one-finger pan, zoom-in, zoom-out and "show whole base" buttons (also for VoiceOver and Switch Control). Dragging on the placement preview still moves it.
+- **Living base:**
+  - Sky: twinkling stars and shooting stars.
+  - A rover patrols the platform edge, and the robot buddy (in the chosen colours) hops between free tiles.
+  - Buildings: solar glints, battery charging bars, a habitat beacon and windows, greenhouse glow with swaying plants, shelter glow, dish wobble with signal rings, and gold sparkles at level 3.
+  - New buildings drop in with dust and sparkles; upgrades pop with sparkles.
+  - All of this is off with reduced motion.
+- **Briefing scenes (`SceneBeat`):** each Nova line has its own looping scene:
+  - Lights Out: dark base, then a sunset into shadow, then crates landing on pads with welding sparks.
+  - The Living Base: lettuce growing, then energy flowing to the greenhouse, then fresh air bubbles.
+  - Storm Drill: storm flashes, then the crew walking into the shelter, then cargo crates landing.
+  - Signal Lag: the rover driving, then a signal to Earth and back, then the glowing bay.
+  - Presentation only; static versions with reduced motion.
+- **Tests:** coin amounts updated; added tests for guide order, an always-affordable start, the earn advisor (never empty, sorted), goal bonus paid once with no back pay, the coin shortfall opening help, and previews never spending or saving. The UI test now follows the "Show me" goals.
+- Not compiled or run by me.

@@ -77,8 +77,7 @@ struct LessonView: View {
                     .tint(Color(hex: 0xFFD66B))
                     .accessibilityLabel("Card \(min(index + 1, lesson.cards.count)) of \(lesson.cards.count)")
             }
-            ResourcePill(symbol: "moonphase.full.moon", bevel: GamePalette.gold,
-                         value: "+\(firstTryCorrect * coinsPerAnswer)", label: "Moon coins so far")
+            CoinPill(coins: firstTryCorrect * coinsPerAnswer, label: "Moon coins earned so far")
         }
         .padding(.horizontal, 14)
         .padding(.top, 8)
@@ -237,9 +236,13 @@ struct LessonView: View {
             Ribbon(text: "LESSON COMPLETE!", bevel: GamePalette.go, font: .game(.title2))
                 .accessibilityFocused($cardFocused)
             NovaBubble(text: "You got \(firstTryCorrect) of \(lesson.questionCount) right on the first try. Great thinking!", compact: true)
-            Label("+\(earned) Moon coins", systemImage: "moonphase.full.moon")
-                .font(.game(.title2))
-                .foregroundStyle(Theme.amberInk)
+            HStack(spacing: 8) {
+                CoinIcon(size: 44)
+                Text("+\(earned) Moon coins")
+            }
+            .font(.game(.title2))
+            .foregroundStyle(Theme.amberInk)
+            .accessibilityElement(children: .combine)
             if !firstTime {
                 Text("Replays pay a little, so you can keep practising.")
                     .font(.system(.caption, design: .rounded).weight(.heavy))

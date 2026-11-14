@@ -55,6 +55,34 @@ enum HighlightTarget: Equatable, Sendable {
     case rover
 }
 
+/// A short looping scene that illustrates one briefing line (sunset, construction, storm, signal...).
+/// Decoration only: it never shows a result or a number.
+enum SceneBeat: String, Equatable, Sendable {
+    case none
+    case darkBase
+    case sunset
+    case construction
+    case greenhouseGrow
+    case energyToGarden
+    case airFlow
+    case storm
+    case shelterUp
+    case cargoDrop
+    case roverDrive
+    case signal
+    case bay
+
+    /// One beat per briefing line, in order.
+    static func briefing(for mission: MissionID) -> [SceneBeat] {
+        switch mission {
+        case .lightsOut: return [.darkBase, .sunset, .construction]
+        case .livingBase: return [.greenhouseGrow, .energyToGarden, .airFlow]
+        case .stormDrill: return [.storm, .shelterUp, .cargoDrop]
+        case .signalLag: return [.roverDrive, .signal, .bay]
+        }
+    }
+}
+
 enum MarkerState: Equatable, Sendable {
     case next
     case done
@@ -95,6 +123,7 @@ struct WorldSnapshot: Equatable, Sendable {
     var ambient = false
     var highlight: HighlightTarget?
     var highlightToken = 0
+    var beat: SceneBeat = .none
 
     static func highlightTarget(for focus: CheckpointFocus) -> HighlightTarget? {
         switch focus {

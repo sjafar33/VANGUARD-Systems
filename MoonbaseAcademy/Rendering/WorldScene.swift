@@ -64,6 +64,9 @@ final class WorldScene: SKScene {
     private var patrolling = false
     private var lastRoverX: CGFloat = 0
     private var skyRunning = false
+    private let beatLayer = SKNode()
+    private let beatSky = SKNode()
+    private var currentBeat: SceneBeat = .none
     private let highlightRing: SKShapeNode = {
         let ring = SKShapeNode(ellipseOf: CGSize(width: 104, height: 52))
         ring.strokeColor = UIColor(hex: 0xFFD66B)
@@ -134,6 +137,10 @@ final class WorldScene: SKScene {
 
         flowLayer.zPosition = ZLayer.flow
         world.addChild(flowLayer)
+        beatLayer.zPosition = 0
+        world.addChild(beatLayer)
+        beatSky.zPosition = ZLayer.background + 60
+        addChild(beatSky)
         world.addChild(highlightRing)
 
         bottomShade.anchorPoint = CGPoint(x: 0.5, y: 0)
@@ -211,6 +218,7 @@ final class WorldScene: SKScene {
         updateMarkers(s)
         updateAmbient(s)
         updateHighlight(s)
+        updateBeat(s)
         current = s
         hasApplied = true
     }
@@ -814,6 +822,281 @@ final class WorldScene: SKScene {
         highlightRing.alpha = 1
         guard !reduceMotion else { return }
         highlightRing.run(.repeatForever(.sequence([.fadeAlpha(to: 0.45, duration: 0.8), .fadeAlpha(to: 1, duration: 0.8)])))
+    }
+
+    // MARK: Briefing scenes
+
+    private func updateBeat(_ s: WorldSnapshot) {
+        guard s.beat != currentBeat else { return }
+        let previous = currentBeat
+        currentBeat = s.beat
+        beatLayer.removeAllChildren()
+        beatSky.removeAllChildren()
+        removeAction(forKey: "beat")
+        tint.removeAction(forKey: "beat")
+        rover.removeAction(forKey: "beatDrive")
+        if previous == .roverDrive, s.roverTrack != nil, s.roverRun == nil {
+            rover.position = trackPoint(s.roverPositionM)
+            rover.xScale = 1
+        }
+        if previous == .signal { signalLayer.removeAllChildren() }
+        if previous == .greenhouseGrow {
+            plants.forEach { $0.removeAction(forKey: "beatGrow") }
+            greenhouseGlow?.removeAction(forKey: "beatGlow")
+            updateGreenhouse(s, animate: false)
+        }
+        switch s.beat {
+        case .none, .darkBase: break
+        case .sunset: beatSunset()
+        case .construction: beatConstruction()
+        case .greenhouseGrow: beatGreenhouse()
+        case .energyToGarden: beatEnergyToGarden(s)
+        case .airFlow: beatAirFlow()
+        case .storm: beatStormFlashes()
+        case .shelterUp: beatCrewToShelter()
+        case .cargoDrop: beatCargo()
+        case .roverDrive: beatRoverDrive(s)
+        case .signal: beatSignal()
+        case .bay: beatBay(s)
+        }
+    }
+
+    private func loop(_ body: SKAction, every seconds: Double) {
+        guard !reduceMotion else { return }
+        run(.repeatForever(.sequence([body, .wait(forDuration: seconds)])), withKey: "beat")
+    }
+
+    private static let crateCanvas = Art.Canvas(size: CGSize(width: 44, height: 48), origin: CGPoint(x: 22, y: 34))
+
+    private func crate() -> SKSpriteNode {
+        Art.sprite("beat.crate", Self.crateCanvas) { pt in
+            pt.shadow(-0.24, -0.24, 0.24, 0.24, length: 0.4)
+            pt.box(-0.24, -0.24, 0.24, 0.24, z1: 18, colors: .init(0xF4C86F, 0xD9A441, 0xB5862F), edge: UIColor(hex: 0x9C7328, alpha: 0.7))
+            pt.line(pt.p(-0.24, 0.24, 9), pt.p(0.24, 0.24, 9), UIColor(hex: 0x9C7328), width: 1)
+            pt.line(pt.p(0.24, -0.24, 9), pt.p(0.24, 0.24, 9), UIColor(hex: 0x9C7328), width: 1)
+        }
+    }
+
+    /// "Solar arrays make power in sunlight. But a shadow is coming": the Sun sinks and the base goes dark.
+    private func beatSunset() {
+        let sun = SKSpriteNode(texture: Art.glowDot(color: 0xFFE7A0, diameter: 120))
+        sun.blendMode = .add
+        sun.position = CGPoint(x: -size.width * 0.3, y: size.height * 0.38)
+        beatSky.addChild(sun)
+        tint.color = UIColor(hex: 0x07122B)
+        guard !reduceMotion else {
+            sun.alpha = 0.35
+            tint.alpha = 0.35
+            return
+        }
+        let start = sun.position
+        let set = CGPoint(x: -size.width * 0.12, y: size.height * 0.05)
+        sun.run(.repeatForever(.sequence([
+            .group([.move(to: start, duration: 0), .fadeAlpha(to: 1, duration: 0)]),
+            .wait(forDuration: 1.4),
+            .group([.move(to: set, duration: 2.2), .sequence([.wait(forDuration: 1.2), .fadeOut(withDuration: 1)])]),
+            .wait(forDuration: 2.2)
+        ])))
+        tint.run(.repeatForever(.sequence([
+            .fadeAlpha(to: 0, duration: 0.4), .wait(forDuration: 2.2),
+            .fadeAlpha(to: 0.55, duration: 1.4), .wait(forDuration: 1.8)
+        ])), withKey: "beat")
+    }
+
+    /// "Build a power system": crates land on the pads, then sparks fly as the crew builds.
+    private func beatConstruction() {
+        let spots = Array(Self.arrayPads.prefix(2)) + Array(Self.batteryPads.prefix(2))
+        for (index, spot) in spots.enumerated() {
+            let box = crate()
+            let target = Iso.point(spot)
+            box.zPosition = Iso.depth(spot)
+            beatLayer.addChild(box)
+            if reduceMotion {
+                box.position = target
+                continue
+            }
+            box.position = target + CGPoint(x: 0, y: 180)
+            box.alpha = 0
+            let drop = SKAction.move(to: target, duration: 0.45)
+            drop.timingMode = .easeIn
+            box.run(.sequence([.wait(forDuration: 0.25 + Double(index) * 0.35),
+                               .group([drop, .fadeIn(withDuration: 0.2)]),
+                               .run { [weak self] in self?.puff(at: target) },
+                               .scaleX(to: 1.15, y: 0.85, duration: 0.08), .scale(to: 1, duration: 0.14)]))
+        }
+        loop(.run { [weak self] in
+            guard let self, let spot = spots.randomElement() else { return }
+            let point = Iso.point(spot) + CGPoint(x: CGFloat.random(in: -10...10), y: CGFloat.random(in: 14...26))
+            for i in 0..<5 {
+                let spark = SKSpriteNode(texture: Art.glowDot(color: i % 2 == 0 ? 0xFFF1C2 : 0x8BE3EE, diameter: 8))
+                spark.position = point
+                spark.blendMode = .add
+                spark.zPosition = 500
+                self.beatLayer.addChild(spark)
+                let angle = CGFloat.random(in: 0...(2 * .pi))
+                spark.run(.sequence([.group([.moveBy(x: cos(angle) * 22, y: sin(angle) * 14 + 8, duration: 0.35),
+                                             .fadeOut(withDuration: 0.35)]), .removeFromParent()]))
+            }
+        }, every: 0.35)
+    }
+
+    /// "Let's grow lettuce": the plants sprout and grow, again and again.
+    private func beatGreenhouse() {
+        guard !reduceMotion else { return }
+        for (index, plant) in plants.enumerated() {
+            let textures = [Art.plantTexture(level: 0), Art.plantTexture(level: 1), Art.plantTexture(level: 2)]
+            plant.run(.repeatForever(.sequence([
+                .group([.setTexture(textures[0]), .scale(to: 0.5, duration: 0)]),
+                .wait(forDuration: Double(index % 5) * 0.08),
+                .scale(to: 0.75, duration: 0.6), .setTexture(textures[1]),
+                .scale(to: 0.9, duration: 0.6), .setTexture(textures[2]),
+                .scale(to: 1, duration: 0.5), .wait(forDuration: 1.6)
+            ])), withKey: "beatGrow")
+        }
+        greenhouseGlow?.run(.repeatForever(.sequence([.fadeAlpha(to: 0.5, duration: 0.8), .fadeAlpha(to: 1, duration: 0.8)])), withKey: "beatGlow")
+    }
+
+    /// "17 kWh of energy each day": energy dots flow from the batteries to the greenhouse and the habitat.
+    private func beatEnergyToGarden(_ s: WorldSnapshot) {
+        let sources = Array(Self.batteryPads.prefix(max(1, s.batteries))) + Array(Self.arrayPads.prefix(max(1, s.arrays)))
+        let targets = [Iso.point(Self.greenhouseSpot) + CGPoint(x: 0, y: 20), Iso.point(0, 0) + CGPoint(x: 0, y: 30)]
+        loop(.run { [weak self] in
+            guard let self, let from = sources.randomElement(), let to = targets.randomElement() else { return }
+            let dot = SKSpriteNode(texture: Art.glowDot(color: 0xFFE27A, diameter: 14))
+            dot.blendMode = .add
+            dot.position = Iso.point(from) + CGPoint(x: 0, y: 18)
+            dot.zPosition = 500
+            self.beatLayer.addChild(dot)
+            let move = SKAction.move(to: to, duration: 1.1)
+            move.timingMode = .easeInEaseOut
+            dot.run(.sequence([move, .fadeOut(withDuration: 0.2), .removeFromParent()]))
+        }, every: 0.25)
+    }
+
+    /// "Keep the air maker running": bubbles of fresh air rise from the habitat.
+    private func beatAirFlow() {
+        loop(.run { [weak self] in
+            guard let self else { return }
+            let bubble = SKSpriteNode(texture: Art.glowDot(color: 0xBFF4FA, diameter: 16))
+            bubble.blendMode = .add
+            bubble.position = Iso.point(0, 0) + CGPoint(x: CGFloat.random(in: -40...40), y: 60)
+            bubble.zPosition = 500
+            bubble.setScale(0.5)
+            self.beatLayer.addChild(bubble)
+            bubble.run(.sequence([.group([.moveBy(x: CGFloat.random(in: -20...20), y: 90, duration: 1.6),
+                                          .scale(to: 1.1, duration: 1.6), .fadeOut(withDuration: 1.6)]), .removeFromParent()]))
+        }, every: 0.18)
+    }
+
+    /// "A solar storm": the sky flickers while particles stream past.
+    private func beatStormFlashes() {
+        loop(.run { [weak self] in
+            guard let self else { return }
+            let flash = SKSpriteNode(color: UIColor(hex: 0x8BE3EE), size: CGSize(width: self.size.width + 4, height: self.size.height + 4))
+            flash.alpha = 0
+            flash.zPosition = ZLayer.tint + 1
+            self.addChild(flash)
+            flash.run(.sequence([.fadeAlpha(to: 0.16, duration: 0.08), .fadeOut(withDuration: 0.4), .removeFromParent()]))
+        }, every: 2.2)
+    }
+
+    /// "Stay in a shelter": the crew walks from the habitat into the shelter.
+    private func beatCrewToShelter() {
+        let from = Iso.point(0.6, 1.0)
+        let to = Iso.point(Self.shelterSpot) + CGPoint(x: 0, y: -4)
+        loop(.run { [weak self] in
+            guard let self else { return }
+            for i in 0..<2 {
+                let person = SKSpriteNode(texture: Art.glowDot(color: 0xFFFFFF, diameter: 14))
+                person.position = from
+                person.zPosition = 500
+                person.yScale = 1.3
+                self.beatLayer.addChild(person)
+                var hops: [SKAction] = []
+                for _ in 0..<6 {
+                    hops.append(.moveBy(x: 0, y: 4, duration: 0.12))
+                    hops.append(.moveBy(x: 0, y: -4, duration: 0.12))
+                }
+                person.run(.sequence([.wait(forDuration: Double(i) * 0.5),
+                                      .group([.move(to: to, duration: 1.44), .sequence(hops)]),
+                                      .fadeOut(withDuration: 0.25), .removeFromParent()]))
+            }
+        }, every: 2.2)
+    }
+
+    /// "The lander carries crates": cargo crates float down and stack up.
+    private func beatCargo() {
+        let spots = [CGPoint(x: -1.6, y: 2.4), CGPoint(x: -1.0, y: 2.7), CGPoint(x: -1.3, y: 2.0), CGPoint(x: -0.7, y: 2.2)]
+        loop(.sequence([.run { [weak self] in
+            guard let self else { return }
+            self.beatLayer.removeAllChildren()
+            for (index, spot) in spots.enumerated() {
+                let box = self.crate()
+                let target = Iso.point(spot)
+                box.position = target + CGPoint(x: 0, y: 200)
+                box.zPosition = Iso.depth(spot)
+                box.alpha = 0
+                self.beatLayer.addChild(box)
+                let fall = SKAction.move(to: target, duration: 0.6)
+                fall.timingMode = .easeOut
+                box.run(.sequence([.wait(forDuration: Double(index) * 0.4), .group([fall, .fadeIn(withDuration: 0.2)]),
+                                   .run { [weak self] in self?.puff(at: target) }]))
+            }
+        }, .wait(forDuration: 3.6)], every: 0.4)
+        if reduceMotion {
+            for spot in spots {
+                let box = crate()
+                box.position = Iso.point(spot)
+                box.zPosition = Iso.depth(spot)
+                beatLayer.addChild(box)
+            }
+        }
+    }
+
+    /// "Mission Control drives our rover": the rover rolls along its track and back.
+    private func beatRoverDrive(_ s: WorldSnapshot) {
+        guard !reduceMotion, let track = s.roverTrack else { return }
+        let start = trackPoint(0)
+        let end = trackPoint(track.lengthM * 0.8)
+        let out = SKAction.move(to: end, duration: 2.6)
+        out.timingMode = .easeInEaseOut
+        let back = SKAction.move(to: start, duration: 2.6)
+        back.timingMode = .easeInEaseOut
+        rover.run(.repeatForever(.sequence([.run { [weak self] in self?.rover.xScale = 1 }, out, .wait(forDuration: 0.6),
+                                            .run { [weak self] in self?.rover.xScale = -1 }, back, .wait(forDuration: 0.6)])),
+                  withKey: "beatDrive")
+    }
+
+    /// "Radio signals take time": a picture flies to Earth, and a command flies back.
+    private func beatSignal() {
+        loop(.sequence([.run { [weak self] in self?.sendImagePulse(duration: 1.3) }, .wait(forDuration: 1.5),
+                        .run { [weak self] in
+                            guard let self else { return }
+                            self.pulse(from: self.earth.position, to: self.world.convert(self.rover.position + CGPoint(x: 0, y: 18), to: self),
+                                       color: 0x53C6D7, duration: 1.3)
+                        }, .wait(forDuration: 1.5)]), every: 0.6)
+    }
+
+    /// "Park the rover in the yellow bay": the bay glows.
+    private func beatBay(_ s: WorldSnapshot) {
+        guard let track = s.roverTrack else { return }
+        let path = CGMutablePath()
+        let half: CGFloat = 0.45
+        let x0 = Self.trackStartX + CGFloat(track.bayStartM)
+        let x1 = Self.trackStartX + CGFloat(track.bayEndM)
+        path.addLines(between: [Iso.point(x0, Self.trackY - half), Iso.point(x1, Self.trackY - half),
+                                Iso.point(x1, Self.trackY + half), Iso.point(x0, Self.trackY + half)])
+        path.closeSubpath()
+        let glow = SKShapeNode(path: path)
+        glow.fillColor = UIColor(hex: 0xFFD66B, alpha: 0.35)
+        glow.strokeColor = UIColor(hex: 0xFFD66B)
+        glow.lineWidth = 3
+        glow.glowWidth = 3
+        glow.zPosition = ZLayer.track + 1
+        beatLayer.addChild(glow)
+        if !reduceMotion {
+            glow.run(.repeatForever(.sequence([.fadeAlpha(to: 0.35, duration: 0.6), .fadeAlpha(to: 1, duration: 0.6)])))
+        }
     }
 
     // MARK: Ambient life

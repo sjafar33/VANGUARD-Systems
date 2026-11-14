@@ -14,10 +14,12 @@ struct BaseView: View {
     @State private var topHeight: CGFloat = 0
     @State private var bottomHeight: CGFloat = 0
     @State private var coinGain: Int?
+    @State private var earnNeeded = 0
+    @State private var screenHeight: CGFloat = 800
     @Environment(\.appReduceMotion) private var reduceMotion
 
     enum BaseSheet: String, Identifiable {
-        case build, learn, drills, style
+        case build, learn, drills, style, earn
         var id: String { rawValue }
     }
 
@@ -55,6 +57,20 @@ struct BaseView: View {
                 .padding(.top, 6)
                 .padding(.bottom, 6)
                 .accessibilityHidden(overlayShown)
+                if model.placement == nil && sheet == nil {
+                    zoomControls
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .padding(.trailing, 12)
+                        .accessibilityHidden(overlayShown)
+                }
+                if let goal = model.goalToast {
+                    GoalToast(goal: goal)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .padding(.top, topHeight - proxy.safeAreaInsets.top + 6)
+                        .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                        .zIndex(3)
+                        .allowsHitTesting(false)
+                }
                 if let mission = model.selectedMission {
                     MissionBriefCard(model: model, mission: mission)
                         .transition(reduceMotion ? .opacity : .scale(scale: 0.85).combined(with: .opacity))
@@ -64,8 +80,11 @@ struct BaseView: View {
             .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.75), value: model.selectedMission)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: model.placement)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: model.selectedBuildingID)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.7), value: model.goalToast)
+            .onAppear { screenHeight = proxy.size.height }
+            .onChange(of: proxy.size.height) { _, height in screenHeight = height }
         }
-        .sheet(item: $sheet) { which in
+        .sheet(item: $sheet, onDismiss: { model.previewCosmetic = nil; updateInsets() }) { which in
             switch which {
             case .build:
                 BuildShopView(model: model) { sheet = nil }
@@ -78,6 +97,11 @@ struct BaseView: View {
                 DrillsListView(model: model) { sheet = nil }
             case .style:
                 StyleShopView(model: model)
+            case .earn:
+                EarnCoinsView(model: model, needed: earnNeeded) { option in
+                    sheet = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { go(option) }
+                }
             }
         }
         .fullScreenCover(item: $lesson) { current in
@@ -93,6 +117,23 @@ struct BaseView: View {
         .onChange(of: novaText, initial: true) { _, text in
             if model.readAloud && model.selectedMission == nil && model.placement == nil { Narrator.shared.speak(text) }
         }
+        .onChange(of: model.coinHelpNeeded) { _, needed in
+            guard let needed else { return }
+            earnNeeded = needed
+            model.coinHelpNeeded = nil
+            if sheet != nil {
+                sheet = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { sheet = .earn }
+            } else {
+                sheet = .earn
+            }
+        }
+        .onChange(of: model.goalToast) { _, goal in
+            guard goal != nil else { return }
+            Haptics.success()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { model.goalToast = nil }
+        }
+        .onChange(of: sheet) { _, _ in updateInsets() }
         .onChange(of: base.coins) { old, new in
             guard new > old else { return }
             coinGain = new - old
@@ -102,7 +143,53 @@ struct BaseView: View {
     }
 
     private func updateInsets() {
-        model.board.setHUDInsets(top: topHeight + 4, bottom: bottomHeight + 4)
+        // While the Style shop is open, frame the base in the top half so the preview is visible.
+        let bottom = sheet == .style ? max(bottomHeight, screenHeight * 0.5) : bottomHeight
+        model.board.setHUDInsets(top: topHeight + 4, bottom: bottom + 4)
+    }
+
+    private var zoomControls: some View {
+        VStack(spacing: 10) {
+            RoundIconButton(symbol: "plus.magnifyingglass", label: "Zoom in", size: 44) { model.board.zoom(by: 1.35) }
+            RoundIconButton(symbol: "minus.magnifyingglass", label: "Zoom out", size: 44) { model.board.zoom(by: 1 / 1.35) }
+            RoundIconButton(symbol: "scope", label: "Show the whole base", size: 44) { model.board.resetCamera() }
+        }
+    }
+
+    /// "Show me": does the next step for the child, or opens exactly where it happens.
+    private func perform(_ goal: GuideGoal) {
+        switch goal {
+        case .buildArray: model.startBuilding(.solarArray)
+        case .buildBattery: model.startBuilding(.battery)
+        case .buildGreenhouse: model.startBuilding(.greenhouse)
+        case .buildShelter: model.startBuilding(.shelter)
+        case .buildDish: model.startBuilding(.dish)
+        case .playLightsOut: play(.lightsOut)
+        case .playLivingBase: play(.livingBase)
+        case .playStorm: play(.stormDrill)
+        case .playSignal: play(.signalLag)
+        case .learnPlants:
+            if let science = model.science { lesson = LessonLibrary.lesson(LessonLibrary.plantsAndAirID, science: science) }
+        case .decorate: sheet = .style
+        case .upgradeHabitat: model.selectBuilding("habitat")
+        }
+    }
+
+    private func play(_ id: MissionID) {
+        if model.progress.isUnlocked(id) && base.drillReady(id) {
+            model.selectedMission = id
+        } else {
+            sheet = .drills
+        }
+    }
+
+    private func go(_ option: EarnOption) {
+        switch option.action {
+        case .lesson(let id):
+            if let science = model.science { lesson = LessonLibrary.lesson(id, science: science) }
+        case .drill(let id):
+            model.selectedMission = id
+        }
     }
 
     private var total: Int { model.progress.totalStars }
@@ -135,7 +222,7 @@ struct BaseView: View {
                 RoundIconButton(symbol: "gearshape.fill", label: "Settings") { showSettings = true }
             }
             HStack(spacing: 12) {
-                ResourcePill(symbol: "moonphase.full.moon", bevel: GamePalette.gold, value: "\(base.coins)", label: "Moon coins")
+                CoinPill(coins: base.coins)
                     .overlay(alignment: .topTrailing) {
                         if let coinGain {
                             Text("+\(coinGain)")
@@ -154,6 +241,7 @@ struct BaseView: View {
     }
 
     var novaText: String {
+        if let goal = model.currentGoal { return goal.detail }
         guard let next = model.nextMission else {
             return "Every drill done, Commander! Upgrade buildings to open harder drills, or decorate your base in Style."
         }
@@ -192,10 +280,14 @@ struct BaseView: View {
             if let draft = model.resumableDraft {
                 ResumeCard(draft: draft, onContinue: { model.resumeDraft() }, onDismiss: { model.discardDraft() })
             }
-            HStack(alignment: .bottom, spacing: 8) {
-                NovaBubble(text: novaText, compact: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                ReadAloudButton(enabled: model.readAloud, text: novaText)
+            if let goal = model.currentGoal {
+                GoalCard(goal: goal, readAloud: model.readAloud) { perform(goal) }
+            } else {
+                HStack(alignment: .bottom, spacing: 8) {
+                    NovaBubble(text: novaText, compact: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ReadAloudButton(enabled: model.readAloud, text: novaText)
+                }
             }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) { actionButtons }
@@ -210,7 +302,7 @@ struct BaseView: View {
                     }
                 }
             }
-            if let next = model.nextMission, base.drillReady(next) {
+            if let next = model.nextMission, base.drillReady(next), model.currentGoal?.title.hasPrefix("Play") != true {
                 Button {
                     model.selectedMission = next
                 } label: {

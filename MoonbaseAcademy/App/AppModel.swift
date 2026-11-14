@@ -62,6 +62,14 @@ final class AppModel {
     var baseMessage: String?
     /// Coins from the most recent finished drill, shown on the result screen.
     private(set) var lastDrillCoins = 0
+    /// Set when the player tried something they can't afford: how many more coins they need (0 = just show ways).
+    var coinHelpNeeded: Int?
+    /// The goal just completed, for a short celebration.
+    var goalToast: GuideGoal?
+    /// A style being tried on in the shop. Shown on the board and on Nova; never saved.
+    var previewCosmetic: String? {
+        didSet { if previewCosmetic != oldValue { refreshBoard() } }
+    }
     @ObservationIgnored let missionWorld = WorldCoordinator()
     @ObservationIgnored private let store: SaveStore
     @ObservationIgnored private var canSave = true
@@ -96,6 +104,14 @@ final class AppModel {
         baseWorld.onMarkerTapped = { [weak self] id in
             Haptics.tap()
             self?.selectedMission = id
+        }
+        // A save from before the base existed: give it a base now, and count goals it already did as
+        // done (no bonus), so only new progress pays.
+        if progress.base == nil {
+            var base = progress.baseState
+            base.claimedGoals = GuideGoal.allCases.filter { $0.isDone(base, progress) }.map(\.rawValue)
+            progress.base = base
+            save()
         }
         board.scene.onTileTapped = { [weak self] x, y in self?.boardTileTapped(x, y) }
         board.scene.onBuildingTapped = { [weak self] id in self?.selectBuilding(id) }
@@ -184,6 +200,7 @@ final class AppModel {
         lastDrillCoins = BaseState.drillCoins(firstCompletion: first, newStars: newStars, success: attempt.success)
         base.coins += lastDrillCoins
         progress.base = base
+        claimGoals()
         if first, attempt.success, attempt.missionID == .lightsOut, let config = attempt.resourceConfiguration {
             progress.builtArrays = config.count(.solarArray)
             progress.builtBatteries = config.count(.battery)
@@ -325,9 +342,18 @@ final class AppModel {
     var baseState: BaseState { progress.baseState }
 
     func boardSnapshot() -> BoardSnapshot {
-        let base = progress.baseState
+        var base = progress.baseState
+        if let preview = previewCosmetic, let item = CosmeticCatalog.item(preview) {
+            switch item.kind {
+            case .habitatColor: base.habitatColor = preview
+            case .boardTheme: base.boardTheme = preview
+            case .robot: base.robot = preview
+            }
+        }
         var s = BoardSnapshot()
         s.buildings = base.buildings.filter { $0.id != placement?.movingID }
+        s.robotShell = CosmeticCatalog.item(base.robot)?.color ?? 0xFFFFFF
+        s.robotEyes = CosmeticCatalog.item(base.robot)?.accent ?? 0x6FE6F2
         s.habitatTint = CosmeticCatalog.item(base.habitatColor)?.color ?? 0xFFFFFF
         let theme = CosmeticCatalog.item(base.boardTheme)
         s.boardColor = theme?.color ?? 0x9AA2AE
@@ -353,15 +379,46 @@ final class AppModel {
         var base = progress.baseState
         let result = change(&base)
         progress.base = base
+        claimGoals()
         save()
         refreshBoard()
         return result
     }
 
+    // MARK: Guide and coins help
+
+    var currentGoal: GuideGoal? { GuideGoal.current(progress.baseState, progress) }
+
+    /// Pays the one-time bonus for every goal that is now done.
+    private func claimGoals() {
+        var base = progress.baseState
+        var claimed = Set(base.claimedGoals ?? [])
+        var newest: GuideGoal?
+        for goal in GuideGoal.allCases where goal.isDone(base, progress) && !claimed.contains(goal.rawValue) {
+            claimed.insert(goal.rawValue)
+            base.coins += GuideGoal.reward
+            newest = goal
+        }
+        guard let newest else { return }
+        base.claimedGoals = GuideGoal.allCases.map(\.rawValue).filter { claimed.contains($0) }
+        progress.base = base
+        goalToast = newest
+        save()
+    }
+
+    var earnOptions: [EarnOption] {
+        guard let science else { return [] }
+        return EarnAdvisor.options(base: progress.baseState, progress: progress, lessons: LessonLibrary.all(science: science))
+    }
+
+    func showCoinHelp() { coinHelpNeeded = 0 }
+
     private func explain(_ result: BaseActionResult) {
         switch result {
         case .ok: baseMessage = nil
-        case .notEnoughCoins(let needed): baseMessage = "You need \(needed) more Moon coins. Learn a lesson or play a drill to earn some!"
+        case .notEnoughCoins(let needed):
+            baseMessage = nil
+            coinHelpNeeded = needed
         case .blocked: baseMessage = "That spot is taken or off the board. Try another spot."
         case .limitReached: baseMessage = "You have as many as your habitat allows. Upgrade the habitat to build more."
         case .locked(let reason): baseMessage = reason
@@ -487,9 +544,14 @@ final class AppModel {
         return parts.joined(separator: ", ")
     }
 
+    private var previewRobot: String? {
+        guard let id = previewCosmetic, CosmeticCatalog.item(id)?.kind == .robot else { return nil }
+        return id
+    }
+
     /// Robot buddy colours for Nova.
     var novaColors: NovaColors {
-        let robot = CosmeticCatalog.item(progress.baseState.robot)
+        let robot = CosmeticCatalog.item(previewRobot ?? progress.baseState.robot)
         return NovaColors(shell: robot?.color ?? 0xFFFFFF, eyes: robot?.accent ?? 0x6FE6F2)
     }
 

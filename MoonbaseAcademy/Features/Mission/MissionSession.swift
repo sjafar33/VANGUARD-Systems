@@ -762,6 +762,53 @@ final class MissionSession {
         return result
     }
 
+    /// While Nova briefs the drill, the scene changes with each line. Presentation only.
+    private func applyBriefingBeat(_ w: inout WorldSnapshot) {
+        guard stage == .briefing else { return }
+        let beats = SceneBeat.briefing(for: definition.missionID)
+        let beat = beats[min(introIndex, beats.count - 1)]
+        w.beat = beat
+        switch beat {
+        case .darkBase:
+            w.arrays = 0
+            w.batteries = 0
+            w.habitatLit = false
+            w.mood = .steady
+        case .sunset:
+            w.arrays = 2
+            w.batteries = 0
+            w.habitatLit = true
+            w.mood = .sunlit
+        case .construction:
+            w.arrays = 0
+            w.batteries = 0
+            w.habitatLit = false
+            w.padsVisible = true
+            w.highlightedPads = [.array(0), .array(1), .battery(0), .battery(1)]
+        case .greenhouseGrow:
+            w.greenhouse = true
+            w.gardenLights = true
+            w.cropFraction = 0
+        case .energyToGarden, .airFlow:
+            w.greenhouse = true
+            w.gardenLights = true
+            w.cropFraction = 0.6
+            w.habitatLit = true
+        case .storm:
+            w.mood = .storm
+            w.stormParticles = true
+        case .shelterUp:
+            w.mood = .storm
+            w.stormParticles = true
+            w.shelter = true
+            w.shelterOccupied = true
+        case .cargoDrop:
+            w.mood = .steady
+        case .roverDrive, .signal, .bay, .none:
+            break
+        }
+    }
+
     func worldSnapshot() -> WorldSnapshot {
         var w = WorldSnapshot()
         w.dish = decor.dish
@@ -807,6 +854,7 @@ final class MissionSession {
                 }
                 w.habitatWarning = stage == .results && !r.success
             }
+            applyBriefingBeat(&w)
             return w
         }
 
@@ -857,6 +905,7 @@ final class MissionSession {
                 }
             }
         }
+        applyBriefingBeat(&w)
         return w
     }
 }

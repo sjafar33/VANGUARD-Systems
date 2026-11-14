@@ -67,7 +67,11 @@ private struct BuildCardRow: View {
                         .foregroundStyle(Theme.amberInk)
                 case .available:
                     Button(action: build) {
-                        Label(full ? "Upgrade the habitat to build more" : "Build for \(cost)", systemImage: full ? "house.fill" : "moonphase.full.moon")
+                        if full {
+                            Label("Upgrade the habitat to build more", systemImage: "house.fill")
+                        } else {
+                            CoinLabel(title: "Build for", amount: cost)
+                        }
                     }
                     .buttonStyle(GameButtonStyle(bevel: base.coins >= cost && !full ? GamePalette.go : GamePalette.steel, height: 48, font: .game(.headline)))
                     .accessibilityLabel(full ? "\(kind.name): upgrade the habitat to build more" : "Build \(kind.name.lowercased()) for \(cost) Moon coins")
@@ -96,6 +100,9 @@ struct PlacementBar: View {
             Text(moving ? "Move your \(placement.kind.name.lowercased())" : "Place your \(placement.kind.name.lowercased())")
                 .font(.game(.headline))
                 .foregroundStyle(Theme.ink)
+            Text("Tap a tile or drag to pick a spot. Pinch to zoom.")
+                .font(.system(.caption, design: .rounded).weight(.heavy))
+                .foregroundStyle(Theme.inkSecondary)
             Label(fits ? "Fits here" : "Doesn't fit here. Tap or drag to another spot.",
                   systemImage: fits ? "checkmark.circle.fill" : "xmark.octagon.fill")
                 .font(.system(.subheadline, design: .rounded).weight(.heavy))
@@ -113,10 +120,15 @@ struct PlacementBar: View {
                 Button {
                     model.confirmPlacement()
                 } label: {
-                    Label(moving ? "Put it here" : "Build for \(cost)", systemImage: "checkmark")
+                    if moving {
+                        Label("Put it here", systemImage: "checkmark")
+                    } else {
+                        CoinLabel(title: "Build for", amount: cost, size: 22)
+                    }
                 }
                 .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 52, font: .game(.headline)))
                 .disabled(!fits)
+                .guidePulse(fits)
                 .accessibilityLabel(moving ? "Put it here" : "Place here")
             }
         }
@@ -188,7 +200,7 @@ struct BuildingPanel: View {
             Button {
                 model.upgradeBuilding(building.id)
             } label: {
-                Label("Upgrade for \(cost)", systemImage: "arrow.up")
+                CoinLabel(title: "Upgrade", amount: cost, size: 22)
             }
             .buttonStyle(GameButtonStyle(bevel: coins >= cost ? GamePalette.gold : GamePalette.steel, height: 50, font: .game(.headline)))
             .accessibilityLabel("Upgrade for \(cost) Moon coins")
@@ -352,7 +364,7 @@ struct StyleShopView: View {
                         ForEach(CosmeticKind.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    Text("Looks only. Style never changes how a drill works.")
+                    Text("Tap Try it to see it on your base above. Looks only: style never changes how a drill works.")
                         .font(.system(.caption, design: .rounded).weight(.heavy))
                         .foregroundStyle(.secondary)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
@@ -367,14 +379,15 @@ struct StyleShopView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Label("\(model.baseState.coins)", systemImage: "moonphase.full.moon")
+                    CoinLabel(amount: model.baseState.coins, size: 22)
                         .font(.game(.headline))
                         .accessibilityLabel("\(model.baseState.coins) Moon coins")
                 }
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.fraction(0.5), .large])
+        .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.5)))
     }
 }
 
@@ -386,6 +399,8 @@ private struct StyleCard: View {
         let base = model.baseState
         let owned = base.ownedCosmetics.contains(item.id)
         let wearing = [base.habitatColor, base.boardTheme, base.robot].contains(item.id)
+        let previewing = model.previewCosmetic == item.id
+        let short = max(0, item.price - base.coins)
         VStack(spacing: 8) {
             preview.frame(height: 70)
             Text(item.name).font(.game(.headline)).foregroundStyle(Theme.ink).multilineTextAlignment(.center)
@@ -394,23 +409,59 @@ private struct StyleCard: View {
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.plantInk)
                     .frame(minHeight: 44)
+            } else if !previewing {
+                Button {
+                    model.previewCosmetic = item.id
+                } label: {
+                    Label("Try it", systemImage: "eye.fill")
+                }
+                .buttonStyle(GameButtonStyle(bevel: GamePalette.energy, height: 44, font: .game(.headline)))
+                .accessibilityLabel("Try \(item.name) on your base")
             } else if owned {
-                Button("Use") { model.equipCosmetic(item.id) }
-                    .buttonStyle(GameButtonStyle(bevel: GamePalette.energy, height: 44, font: .game(.headline)))
-                    .accessibilityLabel("Use \(item.name)")
+                Button("Use it") {
+                    model.equipCosmetic(item.id)
+                    model.previewCosmetic = nil
+                }
+                .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 44, font: .game(.headline)))
+                .accessibilityLabel("Use \(item.name)")
+            } else if short == 0 {
+                Button {
+                    if model.buyCosmetic(item.id) { model.previewCosmetic = nil }
+                } label: {
+                    CoinLabel(title: "Buy", amount: item.price, size: 22)
+                }
+                .buttonStyle(GameButtonStyle(bevel: GamePalette.gold, height: 44, font: .game(.headline)))
+                .accessibilityLabel("Buy \(item.name) for \(item.price) Moon coins")
             } else {
                 Button {
-                    model.buyCosmetic(item.id)
+                    model.coinHelpNeeded = short
                 } label: {
-                    Label("\(item.price)", systemImage: "moonphase.full.moon")
+                    Label("Get \(short) more", systemImage: "plus.circle.fill")
                 }
-                .buttonStyle(GameButtonStyle(bevel: base.coins >= item.price ? GamePalette.gold : GamePalette.steel, height: 44, font: .game(.headline)))
-                .accessibilityLabel("Buy \(item.name) for \(item.price) Moon coins")
+                .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 44, font: .game(.headline)))
+                .accessibilityLabel("You need \(short) more Moon coins. Show how to earn them")
+            }
+            if !wearing && !owned {
+                HStack(spacing: 4) {
+                    CoinIcon(size: 16)
+                    Text("\(item.price)")
+                }
+                .font(.system(.caption, design: .rounded).weight(.black))
+                .foregroundStyle(Theme.amberInk)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Costs \(item.price) Moon coins")
+            }
+            if previewing {
+                Text("Look at your base!")
+                    .font(.system(.caption, design: .rounded).weight(.heavy))
+                    .foregroundStyle(Theme.energyInk)
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(GameCardBackground(corner: 18, highlighted: wearing))
+        .background(GameCardBackground(corner: 18, highlighted: wearing || previewing))
+        .contentShape(Rectangle())
+        .onTapGesture { if !wearing { model.previewCosmetic = item.id } }
         .accessibilityElement(children: .contain)
     }
 
@@ -434,5 +485,193 @@ private struct StyleCard: View {
                 .scaleEffect(x: 1, y: 0.55)
                 .accessibilityHidden(true)
         }
+    }
+}
+
+// MARK: Guide
+
+/// A gentle "look here" pulse on the next thing to tap. A steady gold outline when motion is reduced.
+struct GuidePulse: ViewModifier {
+    var active = true
+    @Environment(\.appReduceMotion) private var reduceMotion
+    @State private var on = false
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if active {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(Color(hex: 0xFFE27A), lineWidth: 4)
+                        .padding(-5)
+                        .opacity(reduceMotion ? 1 : (on ? 1 : 0.25))
+                        .scaleEffect(reduceMotion ? 1 : (on ? 1.03 : 1))
+                        .allowsHitTesting(false)
+                }
+            }
+            .onAppear {
+                guard active, !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { on = true }
+            }
+    }
+}
+
+extension View {
+    func guidePulse(_ active: Bool = true) -> some View { modifier(GuidePulse(active: active)) }
+}
+
+/// Nova's next goal with one big "Show me" button and the bonus it pays.
+struct GoalCard: View {
+    let goal: GuideGoal
+    let readAloud: Bool
+    let showMe: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                NovaAvatar(size: 54, talking: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("GOAL \(goal.index + 1) OF \(GuideGoal.allCases.count)")
+                            .font(.system(.caption, design: .rounded).weight(.black))
+                            .foregroundStyle(Theme.energyInk)
+                        Spacer(minLength: 4)
+                        HStack(spacing: 4) {
+                            Text("+\(GuideGoal.reward)")
+                            CoinIcon(size: 18)
+                        }
+                        .font(.system(.subheadline, design: .rounded).weight(.black))
+                        .foregroundStyle(Theme.amberInk)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Bonus: \(GuideGoal.reward) Moon coins")
+                    }
+                    Label(goal.title, systemImage: goal.symbol)
+                        .font(.game(.headline))
+                        .foregroundStyle(Theme.ink)
+                    Text(goal.detail)
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .foregroundStyle(Theme.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                ReadAloudButton(enabled: readAloud, text: "\(goal.title). \(goal.detail)", size: 40)
+            }
+            Button(action: showMe) {
+                Label("Show me", systemImage: "hand.point.right.fill")
+            }
+            .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 58, font: .game(.title3)))
+            .guidePulse()
+            .accessibilityLabel("Show me")
+            .accessibilityHint(goal.title)
+        }
+        .padding(14)
+        .background(GameCardBackground(corner: 22))
+        .accessibilityElement(children: .contain)
+    }
+}
+
+/// "Goal complete!" with the coin bonus.
+struct GoalToast: View {
+    let goal: GuideGoal
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 26, weight: .black))
+                .foregroundStyle(Color(hex: 0x7EDB6E))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Goal complete!").font(.game(.headline)).foregroundStyle(Theme.ink)
+                Text(goal.title).font(.system(.subheadline, design: .rounded).weight(.heavy)).foregroundStyle(Theme.inkSecondary)
+            }
+            HStack(spacing: 4) {
+                Text("+\(GuideGoal.reward)")
+                CoinIcon(size: 28)
+            }
+            .font(.game(.title3))
+            .foregroundStyle(Theme.amberInk)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(GameCardBackground(corner: 20, highlighted: true))
+        .padding(.horizontal, 20)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Goal complete: \(goal.title). Plus \(GuideGoal.reward) Moon coins.")
+    }
+}
+
+// MARK: Earn coins
+
+/// Shown whenever the player can't afford something: exactly how to get more, with Go buttons.
+struct EarnCoinsView: View {
+    let model: AppModel
+    let needed: Int
+    let go: (EarnOption) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 10) {
+                        NovaAvatar(size: 56, talking: true)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(needed > 0 ? "You need \(needed) more Moon coins." : "Here's how to earn Moon coins.")
+                                .font(.game(.title3))
+                                .foregroundStyle(.primary)
+                            Text("Pick one and I'll take you there!")
+                                .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    ForEach(Array(model.earnOptions.enumerated()), id: \.element.id) { index, option in
+                        optionCard(option, best: index == 0)
+                    }
+                }
+                .padding(16)
+            }
+            .navigationTitle("Earn coins")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    CoinLabel(amount: model.baseState.coins, size: 22)
+                        .font(.game(.headline))
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("You have \(model.baseState.coins) Moon coins")
+                }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func optionCard(_ option: EarnOption, best: Bool) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: option.symbol)
+                .font(.system(size: 22, weight: .black))
+                .gameText()
+                .frame(width: 50, height: 50)
+                .background(Circle().fill(best ? GamePalette.go.bottom : GamePalette.energy.bottom))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(option.title).font(.game(.headline)).foregroundStyle(Theme.ink)
+                Text(option.detail)
+                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                    .foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    Text(option.upTo ? "Up to +\(option.coins)" : "+\(option.coins)")
+                    CoinIcon(size: 18)
+                }
+                .font(.system(.subheadline, design: .rounded).weight(.black))
+                .foregroundStyle(Theme.amberInk)
+            }
+            Spacer(minLength: 4)
+            Button("Go") { go(option) }
+                .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 48, font: .game(.headline)))
+                .frame(width: 84)
+                .guidePulse(best)
+                .accessibilityLabel("Go: \(option.title)")
+        }
+        .padding(12)
+        .background(GameCardBackground(corner: 18, highlighted: best))
+        .accessibilityElement(children: .contain)
     }
 }

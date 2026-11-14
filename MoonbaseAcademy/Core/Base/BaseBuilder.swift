@@ -172,7 +172,7 @@ struct BaseState: Codable, Equatable, Sendable {
     /// Board tiles run from -6 to 5 on both axes (12 by 12).
     static let minCoord = -6
     static let maxCoord = 5
-    static let startingCoins = 120
+    static let startingCoins = 150
 
     var coins: Int
     var buildings: [PlacedBuilding]
@@ -181,6 +181,8 @@ struct BaseState: Codable, Equatable, Sendable {
     var boardTheme: String
     var robot: String
     var lessons: [String: LessonRecord]
+    /// Guide goals whose bonus has been paid. Optional so earlier base saves still load.
+    var claimedGoals: [String]?
 
     // MARK: Rules (game rules, not science)
 
@@ -353,16 +355,22 @@ struct BaseState: Codable, Equatable, Sendable {
 
     // MARK: Coins (game rules)
 
-    /// Lessons: 10 coins per question right on the first try and 30 for finishing, the first time.
-    /// Replaying pays 3 per first-try answer, so practice still counts but cannot replace new learning.
+    /// Lessons: 15 coins per question right on the first try and 40 for finishing, the first time.
+    /// Replaying pays 5 per first-try answer, so practice still counts.
+    static let lessonCoinsPerAnswer = 15
+    static let lessonFinishBonus = 40
+    static let lessonReplayPerAnswer = 5
     static func lessonCoins(firstTryCorrect: Int, firstCompletion: Bool) -> Int {
-        firstCompletion ? firstTryCorrect * 10 + 30 : firstTryCorrect * 3
+        firstCompletion ? firstTryCorrect * lessonCoinsPerAnswer + lessonFinishBonus : firstTryCorrect * lessonReplayPerAnswer
     }
 
-    /// Drills: 60 for the first completion, 20 for each new star, 10 for a later successful run.
+    /// Drills: 80 for the first completion, 25 for each new star, 15 for a later successful run.
     /// A failed run pays nothing but loses nothing.
+    static let drillFirstCoins = 80
+    static let drillStarCoins = 25
+    static let drillReplayCoins = 15
     static func drillCoins(firstCompletion: Bool, newStars: Int, success: Bool) -> Int {
-        (firstCompletion ? 60 : (success ? 10 : 0)) + newStars * 20
+        (firstCompletion ? drillFirstCoins : (success ? drillReplayCoins : 0)) + newStars * drillStarCoins
     }
 
     mutating func recordLesson(_ id: String, firstTryCorrect: Int) -> Int {
