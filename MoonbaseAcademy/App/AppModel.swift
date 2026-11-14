@@ -27,8 +27,19 @@ final class AppModel {
     func setSystemReduceMotion(_ on: Bool) {
         guard on != systemReduceMotion else { return }
         systemReduceMotion = on
+        applyMotionPolicy()
+    }
+
+    /// Pushes the one reduced-motion answer to the base world and to a drill that is already open.
+    private func applyMotionPolicy() {
+        session?.setReduceMotion(reduceMotion)
         refreshBase()
     }
+
+    var focusView: Bool { progress.focusView ?? false }
+    var readAloud: Bool { progress.readAloud ?? false }
+    var hapticsEnabled: Bool { progress.hapticsEnabled ?? true }
+    var playbackMode: PlaybackMode { progress.playbackMode ?? .automatic }
 
     var reduceMotion: Bool { systemReduceMotion || progress.forceReducedMotion }
 
@@ -63,6 +74,7 @@ final class AppModel {
         SoundFX.shared.enabled = progress.soundEnabled
         SoundFX.shared.musicStyle = progress.musicStyle ?? .spaceAmbient
         SoundFX.shared.musicEnabled = progress.musicEnabled ?? true
+        Haptics.enabled = progress.hapticsEnabled ?? true
         baseWorld.onMarkerTapped = { [weak self] id in
             Haptics.tap()
             self?.selectedMission = id
@@ -77,7 +89,7 @@ final class AppModel {
 
     // MARK: Navigation
 
-    func openMission(_ id: MissionID, variant: Bool = false) {
+    func openMission(_ id: MissionID, variant: Bool = false, restoring draft: MissionDraft? = nil) {
         guard let science, progress.isUnlocked(id) else { return }
         session?.leave()
         let definition = variant ? MissionCatalog.variant(id, science: science) : MissionCatalog.definition(id, science: science)
@@ -89,8 +101,40 @@ final class AppModel {
                                  onModeChange: { [weak self] mode in self?.setPlaybackMode(mode) }) { [weak self] attempt, badge, earned in
             self?.record(attempt, badge: badge, earned: earned) ?? false
         }
+        if let draft, draft.missionID == id, draft.variant == variant {
+            session?.restorePlan(configuration: draft.configuration, rover: draft.roverConfiguration)
+        }
         selectedMission = nil
         route = .mission
+    }
+
+    // MARK: Interruption recovery
+
+    /// The plan the player was working on before the app was closed, if it can still be opened.
+    var resumableDraft: MissionDraft? {
+        guard route == .base, let draft = progress.draft, progress.isUnlocked(draft.missionID) else { return nil }
+        return draft
+    }
+
+    func resumeDraft() {
+        guard let draft = resumableDraft else { return }
+        openMission(draft.missionID, variant: draft.variant, restoring: draft)
+    }
+
+    func discardDraft() {
+        progress.draft = nil
+        save()
+    }
+
+    /// Called when the app stops being active. Keeps only the planning choices (never a running test),
+    /// so reopening starts safely at planning and cannot replay or double-award a result.
+    func saveDraftForInterruption() {
+        guard route == .mission, let session else { return }
+        progress.draft = MissionDraft(missionID: session.definition.missionID,
+                                      variant: session.isVariant,
+                                      configuration: session.isRover ? nil : session.configuration,
+                                      roverConfiguration: session.isRover ? session.roverConfiguration : nil)
+        save()
     }
 
     func setPlaybackMode(_ mode: PlaybackMode) {
@@ -99,6 +143,9 @@ final class AppModel {
     }
 
     func leaveMission() {
+        progress.draft = nil
+        save()
+        Narrator.shared.stop()
         session?.leave()
         session = nil
         route = .base
@@ -146,7 +193,42 @@ final class AppModel {
     func setForceReducedMotion(_ on: Bool) {
         progress.forceReducedMotion = on
         save()
-        refreshBase()
+        applyMotionPolicy()
+    }
+
+    func setFocusView(_ on: Bool) {
+        progress.focusView = on
+        save()
+    }
+
+    func setReadAloud(_ on: Bool) {
+        progress.readAloud = on
+        if !on { Narrator.shared.stop() }
+        save()
+    }
+
+    func setHapticsEnabled(_ on: Bool) {
+        progress.hapticsEnabled = on
+        Haptics.enabled = on
+        save()
+    }
+
+    /// From settings: also updates a drill that is open, which reports back through `setPlaybackMode`.
+    func choosePlaybackMode(_ mode: PlaybackMode) {
+        if let session {
+            session.setPlaybackMode(mode)
+        }
+        setPlaybackMode(mode)
+    }
+
+    /// A starting point only. Each setting stays individually adjustable afterwards.
+    func applyFocusSuggestions() {
+        progress.focusView = true
+        progress.playbackMode = .stepByStep
+        progress.forceReducedMotion = true
+        session?.setPlaybackMode(.stepByStep)
+        save()
+        applyMotionPolicy()
     }
 
     func startFresh() {

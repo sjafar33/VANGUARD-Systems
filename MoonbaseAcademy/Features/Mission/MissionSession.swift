@@ -96,6 +96,8 @@ final class MissionSession {
     private(set) var pausedByInterruption = false
     /// Bumped to replay the current explanation (restarts reading time and the highlight).
     private(set) var replayToken = 0
+    /// True when this drill was reopened from a saved plan; shows a short reminder.
+    var resumedFromDraft = false
     private(set) var stars: StarResult?
     private(set) var shakeToken = 0
     var hintVisible = false
@@ -103,7 +105,7 @@ final class MissionSession {
 
     @ObservationIgnored private let world: WorldCoordinator
     @ObservationIgnored private let decor: BaseDecor
-    @ObservationIgnored private let reduceMotion: Bool
+    @ObservationIgnored private var reduceMotion: Bool
     @ObservationIgnored private var attemptToken = 0
     @ObservationIgnored private var playbackTask: Task<Void, Never>?
     @ObservationIgnored private let onRecord: (AttemptRecord, String?, Set<Achievement>) -> Bool
@@ -528,6 +530,31 @@ final class MissionSession {
     }
 
     // MARK: Playback controls
+
+    /// The motion setting can change while a drill is open (system or in-app switch). Animation only.
+    func setReduceMotion(_ on: Bool) {
+        guard on != reduceMotion else { return }
+        reduceMotion = on
+        refreshWorld()
+    }
+
+    /// Reopens a saved plan after the app was closed. Starts at planning; nothing is simulated or recorded.
+    func restorePlan(configuration saved: ResourceConfiguration?, rover: RoverConfiguration?) {
+        if isRover, let rover, RoverEngine.validateConfiguration(mission: definition, configuration: rover).isEmpty {
+            roverConfiguration = rover
+        } else if !isRover, let saved, validateConfiguration(mission: definition, configuration: saved).isEmpty {
+            configuration = saved
+            if let first = saved.plans.first {
+                sameSettingsForAllBlocks = saved.plans.allSatisfy { $0 == first }
+            }
+        } else {
+            return
+        }
+        tutorial = .done
+        stage = .planning
+        resumedFromDraft = true
+        refreshWorld()
+    }
 
     func setPlaybackMode(_ mode: PlaybackMode) {
         guard mode != playbackMode else { return }

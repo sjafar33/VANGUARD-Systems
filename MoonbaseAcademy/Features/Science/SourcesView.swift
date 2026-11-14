@@ -241,12 +241,28 @@ struct SettingsView: View {
                                                           set: { model.setSoundEnabled($0) }))
                 }
                 Section {
+                    Toggle("Focus view", isOn: Binding(get: { model.focusView }, set: { model.setFocusView($0) }))
+                    Picker("Test pace", selection: Binding(get: { model.playbackMode }, set: { model.choosePlaybackMode($0) })) {
+                        ForEach(PlaybackMode.allCases, id: \.self) { mode in
+                            Text(mode == .automatic ? "Plays by itself" : "Step by step").tag(mode)
+                        }
+                    }
+                    Toggle("Read aloud", isOn: Binding(get: { model.readAloud }, set: { model.setReadAloud($0) }))
                     Toggle("Reduce motion", isOn: Binding(get: { model.progress.forceReducedMotion },
                                                           set: { model.setForceReducedMotion($0) }))
+                    Toggle("Haptics", isOn: Binding(get: { model.hapticsEnabled }, set: { model.setHapticsEnabled($0) }))
+                    Button("Use Focus suggestions") { model.applyFocusSuggestions() }
                 } header: {
-                    Text("Motion")
+                    Text("Focus & Accessibility")
                 } footer: {
-                    Text("Replaces moving animations with short step-by-step changes. Results are exactly the same.")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Focus view: calmer screens that keep the goal and the next step in front, with no confetti.")
+                        Text("Test pace: \"Step by step\" waits for you to tap Next at each moment of a test.")
+                        Text("Read aloud: Nova's words are spoken with this device's voice. It stays quiet while VoiceOver is on, because VoiceOver already reads the screen.")
+                        Text("Reduce motion: swaps moving animations for simple changes. It also turns on when Reduce Motion is on in the device's settings. Reading time never gets shorter.")
+                        Text("Use Focus suggestions turns on Focus view, Step by step and Reduce motion. You can change each one afterwards.")
+                        Text("None of these settings change the science results.")
+                    }
                 }
                 Section {
                     Button("Reset All Progress", role: .destructive) {

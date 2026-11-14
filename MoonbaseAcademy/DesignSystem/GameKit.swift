@@ -3,12 +3,16 @@ import UIKit
 
 // MARK: Feel
 
+/// Haptics are an extra cue only: every haptic event also has a visual change and an accessible description.
 enum Haptics {
-    static func tap() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
-    static func thump() { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
-    static func heavy() { UIImpactFeedbackGenerator(style: .heavy).impactOccurred() }
-    static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
-    static func warning() { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
+    /// Set from the Haptics preference.
+    nonisolated(unsafe) static var enabled = true
+
+    static func tap() { guard enabled else { return }; UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+    static func thump() { guard enabled else { return }; UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
+    static func heavy() { guard enabled else { return }; UIImpactFeedbackGenerator(style: .heavy).impactOccurred() }
+    static func success() { guard enabled else { return }; UINotificationFeedbackGenerator().notificationOccurred(.success) }
+    static func warning() { guard enabled else { return }; UINotificationFeedbackGenerator().notificationOccurred(.warning) }
 }
 
 enum GamePalette {
@@ -19,25 +23,37 @@ enum GamePalette {
         let top: Color
         let bottom: Color
         let edge: Color
+        /// Light faces where plain white text measures under 4.5:1 (it relies on its dark outline).
+        /// With Increase Contrast on, these use dark text instead (measured 4.8:1 to 11:1).
+        var lightFace = false
     }
 
-    static let go = Bevel(top: Color(hex: 0x7EDB6E), bottom: Color(hex: 0x43A63E), edge: Color(hex: 0x2B6E28))
-    static let gold = Bevel(top: Color(hex: 0xFFD66B), bottom: Color(hex: 0xF2A93B), edge: Color(hex: 0xB0680F))
+    static let go = Bevel(top: Color(hex: 0x7EDB6E), bottom: Color(hex: 0x43A63E), edge: Color(hex: 0x2B6E28), lightFace: true)
+    static let gold = Bevel(top: Color(hex: 0xFFD66B), bottom: Color(hex: 0xF2A93B), edge: Color(hex: 0xB0680F), lightFace: true)
     static let steel = Bevel(top: Color(hex: 0x7C93B3), bottom: Color(hex: 0x52698B), edge: Color(hex: 0x324560))
-    static let coral = Bevel(top: Color(hex: 0xF7A68C), bottom: Color(hex: 0xE06A50), edge: Color(hex: 0x9C3F2C))
-    static let energy = Bevel(top: Color(hex: 0x74DFEC), bottom: Color(hex: 0x2CAEC3), edge: Color(hex: 0x1A6F7D))
+    static let coral = Bevel(top: Color(hex: 0xF7A68C), bottom: Color(hex: 0xE06A50), edge: Color(hex: 0x9C3F2C), lightFace: true)
+    static let energy = Bevel(top: Color(hex: 0x74DFEC), bottom: Color(hex: 0x2CAEC3), edge: Color(hex: 0x1A6F7D), lightFace: true)
     static let card = Bevel(top: Color(hex: 0xFFFFFF), bottom: Color(hex: 0xE3E9F0), edge: Color(hex: 0x9AA8BA))
 }
 
-/// White heavy text with a dark outline-like shadow, readable on any part of the world.
+/// White heavy text with a dark outline, readable on any part of the world.
+/// The outline (navy, 13:1 against the lightest button face) is what makes white text readable on light
+/// game colours; `outlined: false` is used for dark text, which needs no outline.
 struct GameTextModifier: ViewModifier {
     var color: Color = .white
+    var outlined = true
 
-    func body(content: Content) -> some View {
-        content
-            .foregroundStyle(color)
-            .shadow(color: GamePalette.night.opacity(0.95), radius: 0, x: 0, y: 2)
-            .shadow(color: GamePalette.night.opacity(0.7), radius: 1.2, x: 0, y: 0)
+    @ViewBuilder func body(content: Content) -> some View {
+        if outlined {
+            content
+                .foregroundStyle(color)
+                .shadow(color: GamePalette.night.opacity(0.95), radius: 0, x: 1, y: 0)
+                .shadow(color: GamePalette.night.opacity(0.95), radius: 0, x: -1, y: 0)
+                .shadow(color: GamePalette.night.opacity(0.95), radius: 0, x: 0, y: 2)
+                .shadow(color: GamePalette.night.opacity(0.7), radius: 1.2, x: 0, y: 0)
+        } else {
+            content.foregroundStyle(color)
+        }
     }
 }
 
@@ -60,15 +76,20 @@ struct GameButtonStyle: ButtonStyle {
     var font: Font = .game(.title3)
     var dark: Bool = false
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.appReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
 
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
+        let darkText = dark || (contrast == .increased && bevel.lightFace)
         return configuration.label
             .font(font)
-            .modifier(GameTextModifier(color: dark ? Theme.ink : .white))
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
+            .modifier(GameTextModifier(color: darkText ? Theme.ink : .white, outlined: !darkText))
+            // Large text wraps onto a second line instead of shrinking.
+            .lineLimit(3)
+            .multilineTextAlignment(.center)
             .padding(.horizontal, 18)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity, minHeight: height)
             .background {
                 ZStack {
@@ -91,7 +112,7 @@ struct GameButtonStyle: ButtonStyle {
             .padding(.bottom, 6)
             .saturation(isEnabled ? 1 : 0.1)
             .opacity(isEnabled ? 1 : 0.7)
-            .animation(.spring(response: 0.16, dampingFraction: 0.55), value: pressed)
+            .animation(reduceMotion ? nil : .spring(response: 0.16, dampingFraction: 0.55), value: pressed)
             .onChange(of: pressed) { _, now in if now { Haptics.tap() } }
     }
 }
@@ -117,11 +138,14 @@ struct RoundIconButton: View {
 struct RoundBevelStyle: ButtonStyle {
     let bevel: GamePalette.Bevel
     let size: CGFloat
+    @Environment(\.appReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
 
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
+        let darkIcon = contrast == .increased && bevel.lightFace
         return configuration.label
-            .gameText()
+            .modifier(GameTextModifier(color: darkIcon ? Theme.ink : .white, outlined: !darkIcon))
             .frame(width: size, height: size)
             .background {
                 ZStack {
@@ -133,7 +157,7 @@ struct RoundBevelStyle: ButtonStyle {
             .offset(y: pressed ? 3 : 0)
             .padding(.bottom, 4)
             .frame(minWidth: 44, minHeight: 44)
-            .animation(.spring(response: 0.16, dampingFraction: 0.55), value: pressed)
+            .animation(reduceMotion ? nil : .spring(response: 0.16, dampingFraction: 0.55), value: pressed)
             .onChange(of: pressed) { _, now in if now { Haptics.tap() } }
     }
 }
@@ -169,7 +193,6 @@ struct ResourcePill: View {
                     .gameText()
                     .contentTransition(.numericText())
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                 if let fraction {
                     GeometryReader { proxy in
                         ZStack(alignment: .leading) {
@@ -208,8 +231,8 @@ struct Ribbon: View {
         Text(text)
             .font(font)
             .gameText()
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
             .padding(.horizontal, 26)
             .padding(.vertical, 10)
             .background {
@@ -261,7 +284,7 @@ struct GameCardBackground: View {
 struct NovaAvatar: View {
     var size: CGFloat = 64
     var talking = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var bob = false
 
     var body: some View {
@@ -371,7 +394,7 @@ struct StarSlot: View {
     let label: String
     let delay: Double
     var size: CGFloat = 54
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
     @State private var shown = false
 
     var body: some View {
@@ -502,7 +525,17 @@ extension View {
     func readHeight(_ onChange: @escaping (CGFloat) -> Void) -> some View { modifier(HeightReader(onChange: onChange)) }
 
     /// A quick horizontal shake used when an action is not possible.
-    func shake(_ trigger: Int) -> some View { modifier(ShakeEffect(animatableData: CGFloat(trigger))) }
+    /// Shakes on a refusal unless motion is reduced; the refusal is always also shown as text and sound.
+    func shake(_ trigger: Int) -> some View { modifier(ReducibleShake(trigger: trigger)) }
+}
+
+struct ReducibleShake: ViewModifier {
+    let trigger: Int
+    @Environment(\.appReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.modifier(ShakeEffect(animatableData: reduceMotion ? 0 : CGFloat(trigger)))
+    }
 }
 
 struct ShakeEffect: GeometryEffect {

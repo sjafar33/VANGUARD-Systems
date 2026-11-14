@@ -11,21 +11,53 @@ struct MissionView: View {
     @State private var topHeight: CGFloat = 0
     @State private var bottomHeight: CGFloat = 0
     @State private var banner: String?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showSettings = false
+    @Environment(\.appReduceMotion) private var reduceMotion
+    @Environment(\.focusView) private var focusView
+    @AccessibilityFocusState private var launchFocused: Bool
+
+    /// True while a dialog covers the drill; the controls underneath are hidden from VoiceOver.
+    private var overlayShown: Bool {
+        session.stage == .predicting || session.stage == .results || (planPhase != nil && session.stage == .planning)
+    }
+
+    /// What Read aloud says for the current moment. The same words are always on screen.
+    private var narrationText: String {
+        switch session.stage {
+        case .briefing, .planning:
+            return session.novaLine
+        case .predicting:
+            return session.copy.question
+        case .playback:
+            guard let checkpoint = session.currentCheckpoint else { return "" }
+            return "\(checkpoint.title). \(checkpoint.text)"
+        case .results:
+            let lead = (session.explanation?.paragraphs ?? []).prefix(2).joined(separator: " ")
+            return [session.explanation?.headline ?? "", lead].filter { !$0.isEmpty }.joined(separator: ". ")
+        }
+    }
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 WorldView(coordinator: model.missionWorld, isActive: isActive, summary: session.worldSummary)
                     .ignoresSafeArea()
+                    .accessibilityHidden(overlayShown)
                 VStack(spacing: 0) {
-                    MissionTopHUD(session: session, onBack: { model.leaveMission() }, onSources: { showSources = true })
+                    MissionTopHUD(session: session, readAloud: model.readAloud, narration: narrationText,
+                                  onBack: { model.leaveMission() }, onSources: { showSources = true },
+                                  onSettings: { showSettings = true })
                         .readHeight { height in
                             topHeight = height + proxy.safeAreaInsets.top
                             updateInsets()
                         }
                     Spacer(minLength: 0)
-                    bottomArea
+                    // At large text sizes the bottom controls scroll instead of being pushed off screen.
+                    ViewThatFits(in: .vertical) {
+                        bottomArea
+                        ScrollView { bottomArea.padding(.bottom, 4) }
+                            .frame(maxHeight: proxy.size.height * 0.55)
+                    }
                         .frame(maxWidth: 760)
                         .readHeight { height in
                             bottomHeight = height + proxy.safeAreaInsets.bottom
@@ -35,6 +67,7 @@ struct MissionView: View {
                 .padding(.horizontal, 12)
                 .padding(.top, 4)
                 .padding(.bottom, 6)
+                .accessibilityHidden(overlayShown)
 
                 if let banner {
                     Ribbon(text: banner, bevel: GamePalette.energy, font: .game(.title2))
@@ -47,13 +80,13 @@ struct MissionView: View {
                         .font(.system(size: 120, weight: .black, design: .rounded))
                         .gameText(number == 0 ? Color(hex: 0x9FF28F) : .white)
                         .id(number)
-                        .transition(.scale(scale: 2.2).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .scale(scale: 2.2).combined(with: .opacity))
                         .allowsHitTesting(false)
                         .zIndex(4)
                         .accessibilityLabel(number == 0 ? "Go" : "\(number)")
                 }
                 if session.stage == .predicting {
-                    BetOverlay(session: session).transition(.opacity).zIndex(5)
+                    BetOverlay(session: session, readAloud: model.readAloud).transition(.opacity).zIndex(5)
                 }
                 if let index = planPhase, session.stage == .planning {
                     PlanPopup(session: session, index: index) { planPhase = nil }
@@ -69,14 +102,33 @@ struct MissionView: View {
             .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.72), value: session.stage)
             .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.6), value: session.countdown)
             .animation(.easeOut(duration: 0.25), value: banner)
-            .animation(.spring(response: 0.3, dampingFraction: 0.75), value: planPhase)
+            .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.75), value: planPhase)
         }
         .onChange(of: session.currentStep?.phaseID) { _, newPhase in
             guard session.stage == .playback, session.countdown == nil, let newPhase,
                   session.definition.missionID != .livingBase else { return }
             showBanner(for: newPhase)
         }
-        .onChange(of: isActive) { _, active in session.setAppActive(active) }
+        .onChange(of: isActive) { _, active in
+            session.setAppActive(active)
+            if !active { Narrator.shared.stop() }
+        }
+        .onChange(of: narrationText, initial: true) { _, text in
+            guard model.readAloud else { return }
+            text.isEmpty ? Narrator.shared.stop() : Narrator.shared.speak(text)
+        }
+        .onChange(of: session.replayToken) { _, _ in
+            if model.readAloud { Narrator.shared.speak(narrationText) }
+        }
+        .onDisappear { Narrator.shared.stop() }
+        // Return VoiceOver focus to the main action when a dialog closes.
+        .onChange(of: planPhase) { old, new in
+            if old != nil, new == nil { launchFocused = true }
+        }
+        .onChange(of: session.stage) { old, new in
+            if new == .planning, old == .predicting || old == .results { launchFocused = true }
+        }
+        .sheet(isPresented: $showSettings) { SettingsView(model: model) }
         .onChange(of: session.countdown) { old, value in
             if let value {
                 Haptics.thump()
@@ -123,6 +175,21 @@ struct MissionView: View {
             }
         case .planning:
             VStack(spacing: 16) {
+                if session.resumedFromDraft {
+                    HStack(spacing: 8) {
+                        Label("You were working on this plan. Pick up where you left off.", systemImage: "arrow.uturn.backward.circle.fill")
+                            .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                            .gameText()
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        Button("OK") { session.resumedFromDraft = false }
+                            .font(.system(.subheadline, design: .rounded).weight(.black))
+                            .foregroundStyle(Color(hex: 0xFFE27A))
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .padding(.horizontal, 12)
+                    .background(Capsule().fill(GamePalette.hud))
+                }
                 NovaBubble(text: session.novaLine, compact: true) {
                     if session.tutorial == .powered {
                         session.dismissTutorial()
@@ -139,6 +206,8 @@ struct MissionView: View {
                 }
                 .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 62, font: .game(.title2)))
                 .disabled(!session.canLaunch)
+                .accessibilityFocused($launchFocused)
+                .accessibilityHint(session.canLaunch ? "Then you predict what will happen" : "Finish the plan first")
             }
         case .playback:
             PlaybackPanel(session: session)
@@ -152,8 +221,12 @@ struct MissionView: View {
 
 struct MissionTopHUD: View {
     let session: MissionSession
+    let readAloud: Bool
+    let narration: String
     let onBack: () -> Void
     let onSources: () -> Void
+    let onSettings: () -> Void
+    @Environment(\.focusView) private var focusView
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -167,12 +240,15 @@ struct MissionTopHUD: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 4)
+                ReadAloudButton(enabled: readAloud, text: narration)
                 if session.stage == .playback {
-                    RoundIconButton(symbol: "forward.end.fill", label: "Skip animation", bevel: GamePalette.gold) { session.skipPlayback() }
+                    RoundIconButton(symbol: "forward.end.fill", label: "Skip to the result", bevel: GamePalette.gold) { session.skipPlayback() }
                 } else {
                     RoundIconButton(symbol: "books.vertical.fill", label: "Where the numbers come from", action: onSources)
+                    RoundIconButton(symbol: "gearshape.fill", label: "Settings", action: onSettings)
                 }
             }
+            MissionStepsBar(session: session, emphasized: focusView)
             pills
             if session.stage == .playback && !session.isRover && session.countdown == nil {
                 TimelineStrip(session: session)
@@ -180,11 +256,19 @@ struct MissionTopHUD: View {
         }
     }
 
-    @ViewBuilder private var pills: some View {
+    private var pills: some View {
+        // Wraps onto two rows at large text sizes instead of shrinking the numbers.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) { pillItems }
+            VStack(alignment: .leading, spacing: 6) { pillItems }
+        }
+    }
+
+    @ViewBuilder private var pillItems: some View {
         let d = session.definition
         let state = session.displayState
         let focus = session.currentCheckpoint?.focus
-        HStack(spacing: 10) {
+        Group {
             if !d.catalog.isEmpty && session.stage != .playback {
                 ResourcePill(symbol: "shippingbox.fill", bevel: GamePalette.gold,
                              value: "\(session.cargoCost)/\(d.cargoBudget)", label: "Cargo crates",
@@ -343,7 +427,9 @@ struct BuildCard: View {
     var highlighted = false
     var dimmed = false
     @State private var pop = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 118
+    @ScaledMetric(relativeTo: .footnote) private var cardHeight: CGFloat = 146
 
     var body: some View {
         let count = session.count(item.kind)
@@ -366,9 +452,9 @@ struct BuildCard: View {
                 Text(name)
                     .font(.system(.footnote, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.ink)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 3) {
                     Image(systemName: "shippingbox.fill")
                     Text("\(item.cost)")
@@ -377,7 +463,8 @@ struct BuildCard: View {
                 .foregroundStyle(Theme.amberInk)
             }
             .padding(10)
-            .frame(width: 118, height: 146)
+            .frame(width: cardWidth)
+            .frame(minHeight: cardHeight)
             .background(GameCardBackground(highlighted: highlighted || count > 0))
             .scaleEffect(pop ? 1.08 : 1)
             .animation(.spring(response: 0.2, dampingFraction: 0.5), value: pop)
@@ -454,6 +541,8 @@ struct PlanCard: View {
     let session: MissionSession
     let index: Int
     let action: () -> Void
+    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 124
+    @ScaledMetric(relativeTo: .footnote) private var cardHeight: CGFloat = 146
 
     var body: some View {
         let phase = session.definition.phases[index]
@@ -469,12 +558,13 @@ struct PlanCard: View {
                 Text(PlanCard.title(session, index))
                     .font(.system(.footnote, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                 VStack(spacing: 1) {
                     status("wind", MissionSession.airLabel(plan.airFraction))
                     if !phase.allowedGardenFractions.isEmpty {
-                        status("lightbulb.fill", plan.gardenFraction > 0 ? "\(Int(plan.gardenFraction * 16)) h" : "Off")
+                        status("lightbulb.fill", PlanCard.lightLabel(session, plan.gardenFraction))
                     }
                     if phase.research != nil {
                         status("flask.fill", plan.researchLevel > 0 ? (session.definition.missionID == .livingBase ? "\(Int(plan.researchLevel)) kWh" : "On") : "Off")
@@ -482,7 +572,8 @@ struct PlanCard: View {
                 }
             }
             .padding(10)
-            .frame(width: 124, height: 146)
+            .frame(width: cardWidth)
+            .frame(minHeight: cardHeight)
             .background(GameCardBackground())
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "slider.horizontal.3")
@@ -504,10 +595,20 @@ struct PlanCard: View {
         .foregroundStyle(Theme.inkSecondary)
     }
 
+    /// Greenhouse light hours from the drill's own assumption (not a fixed 16).
+    static func lightLabel(_ session: MissionSession, _ fraction: Double) -> String {
+        fraction > 0 ? "\(Format.number(fraction * session.definition.assumptions.gardenFullLightHours)) h" : "Off"
+    }
+
     static func title(_ session: MissionSession, _ index: Int) -> String {
         if session.definition.missionID == .livingBase {
             if session.sameSettingsForAllBlocks { return "Every day" }
-            return "Days \(index * 11 + 1)–\(index * 11 + 11)"
+            // Day ranges come from the block lengths, so a different crop reference changes them too.
+            let phases = session.definition.phases
+            let startHour = phases.prefix(index).reduce(0) { $0 + $1.durationHours }
+            let first = Int((startHour / 24).rounded()) + 1
+            let last = Int(((startHour + phases[index].durationHours) / 24).rounded())
+            return "Days \(first)–\(last)"
         }
         return session.definition.phases[index].label
     }
@@ -533,6 +634,9 @@ struct PlanCard: View {
 
 struct RoverTray: View {
     let session: MissionSession
+    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 118
+    @ScaledMetric(relativeTo: .footnote) private var cardHeight: CGFloat = 150
+    @ScaledMetric(relativeTo: .caption) private var markerWidth: CGFloat = 150
 
     var body: some View {
         HStack(spacing: 12) {
@@ -545,12 +649,13 @@ struct RoverTray: View {
                         .font(.system(.caption, design: .rounded).weight(.heavy))
                         .foregroundStyle(Theme.ink)
                         .multilineTextAlignment(.center)
-                        .frame(width: 150)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(width: markerWidth)
                     ForEach(rover.markerChoicesM, id: \.self) { marker in
                         let selected = abs((session.roverConfiguration.observedMarkerM ?? -1) - marker) < 1e-9
                         Button(Format.meters(marker)) { session.setMarker(marker) }
                             .buttonStyle(GameButtonStyle(bevel: selected ? GamePalette.gold : GamePalette.steel, height: 34, font: .game(.subheadline)))
-                            .frame(width: 120)
+                            .frame(width: markerWidth * 0.8)
                             .accessibilityLabel("Stop at the \(Format.meters(marker)) flag")
                             .accessibilityAddTraits(selected ? .isSelected : [])
                     }
@@ -579,7 +684,8 @@ struct RoverTray: View {
                     .font(.system(.footnote, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.ink)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 3) {
                     Image(systemName: "shippingbox.fill")
                     Text(cost == 0 ? "Free" : "\(cost)")
@@ -588,7 +694,8 @@ struct RoverTray: View {
                 .foregroundStyle(Theme.amberInk)
             }
             .padding(10)
-            .frame(width: 118, height: 150)
+            .frame(width: cardWidth)
+            .frame(minHeight: cardHeight)
             .background(GameCardBackground(highlighted: selected))
         }
         .buttonStyle(PressableStyle())
@@ -603,21 +710,33 @@ struct PlanPopup: View {
     let session: MissionSession
     let index: Int
     let close: () -> Void
+    @AccessibilityFocusState private var titleFocused: Bool
 
     var body: some View {
-        let phase = session.definition.phases[index]
-        let plan = session.plan(index)
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea().onTapGesture(perform: close).accessibilityHidden(true)
-            VStack(spacing: 14) {
+            ViewThatFits(in: .vertical) {
+                card
+                ScrollView { card.padding(.vertical, 30) }
+            }
+        }
+        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { titleFocused = true } }
+        .accessibilityAction(.escape, close)
+    }
+
+    private var card: some View {
+        let phase = session.definition.phases[index]
+        let plan = session.plan(index)
+        return VStack(spacing: 14) {
                 Ribbon(text: PlanCard.title(session, index), bevel: PlanCard.bevel(phase.mood))
                     .padding(.top, -34)
+                    .accessibilityFocused($titleFocused)
                 GameChoice(title: "Air maker", symbol: "wind",
                            options: phase.allowedAirFractions.map { ($0, MissionSession.airLabel($0)) },
                            selection: plan.airFraction) { session.setAir(index, $0) }
                 if !phase.allowedGardenFractions.isEmpty {
                     GameChoice(title: "Greenhouse lights", symbol: "lightbulb.fill",
-                               options: phase.allowedGardenFractions.map { ($0, $0 > 0 ? "\(Int($0 * 16)) h" : "Off") },
+                               options: phase.allowedGardenFractions.map { ($0, PlanCard.lightLabel(session, $0)) },
                                selection: plan.gardenFraction) { session.setGarden(index, $0) }
                 }
                 if let research = phase.research {
@@ -646,12 +765,15 @@ struct PlanPopup: View {
             .frame(maxWidth: 460)
             .background(GameCardBackground(corner: 26))
             .padding(24)
-        }
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(.isModal)
     }
 
     private var researchTitle: String {
         switch session.definition.missionID {
-        case .lightsOut: return "Science observation (1.5 kWh)"
+        case .lightsOut:
+            let phase = session.definition.phases[index]
+            return "Science observation (\(Words.kWh((phase.research?.powerKWPerLevel ?? 0) * phase.durationHours)))"
         case .livingBase: return "Research each day"
         default: return "Storm science (needs the kit)"
         }
@@ -670,16 +792,26 @@ struct GameChoice: View {
             Label(title, systemImage: symbol)
                 .font(.system(.subheadline, design: .rounded).weight(.heavy))
                 .foregroundStyle(Theme.inkSecondary)
-            HStack(spacing: 8) {
-                ForEach(options.indices, id: \.self) { i in
-                    let option = options[i]
-                    let selected = abs(option.value - selection) < 1e-9
-                    Button(option.label) { choose(option.value) }
-                        .buttonStyle(GameButtonStyle(bevel: selected ? GamePalette.gold : GamePalette.steel, height: 46, font: .game(.headline)))
-                        .accessibilityLabel("\(title): \(option.label)")
-                        .accessibilityAddTraits(selected ? .isSelected : [])
-                }
+            // Side by side when they fit; stacked at large text sizes.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { buttons }
+                VStack(spacing: 6) { buttons }
             }
+        }
+    }
+
+    @ViewBuilder private var buttons: some View {
+        ForEach(options.indices, id: \.self) { i in
+            let option = options[i]
+            let selected = abs(option.value - selection) < 1e-9
+            Button {
+                choose(option.value)
+            } label: {
+                Label(option.label, systemImage: selected ? "checkmark.circle.fill" : "circle")
+            }
+            .buttonStyle(GameButtonStyle(bevel: selected ? GamePalette.gold : GamePalette.steel, height: 46, font: .game(.headline)))
+            .accessibilityLabel("\(title): \(option.label)")
+            .accessibilityAddTraits(selected ? .isSelected : [])
         }
     }
 }
@@ -729,19 +861,34 @@ struct PowerBalance: View {
 
 struct BetOverlay: View {
     let session: MissionSession
+    var readAloud = false
+    @AccessibilityFocusState private var titleFocused: Bool
 
     var body: some View {
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea().accessibilityHidden(true)
+            ViewThatFits(in: .vertical) {
+                card
+                ScrollView { card.padding(.vertical, 30) }
+            }
+        }
+        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { titleFocused = true } }
+        .accessibilityAction(.escape) { session.backToPlanning() }
+    }
+
+    private var card: some View {
             VStack(spacing: 14) {
                 Ribbon(text: "Make a prediction!", bevel: GamePalette.energy)
                     .padding(.top, -34)
+                    .accessibilityFocused($titleFocused)
                 HStack(alignment: .top, spacing: 10) {
                     NovaAvatar(size: 62, talking: true)
                     Text(session.copy.question)
                         .font(.system(.title3, design: .rounded).weight(.heavy))
                         .foregroundStyle(Theme.ink)
                         .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    ReadAloudButton(enabled: readAloud, text: session.copy.question, size: 40)
                 }
                 Label("Guess right to earn a star, even if the drill fails", systemImage: "star.fill")
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
@@ -768,7 +915,8 @@ struct BetOverlay: View {
             .frame(maxWidth: 460)
             .background(GameCardBackground(corner: 26))
             .padding(24)
-        }
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(.isModal)
     }
 }
 
@@ -778,20 +926,30 @@ struct ResultOverlay: View {
     let model: AppModel
     let session: MissionSession
     @State private var showWhy = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
+    @Environment(\.focusView) private var focusView
+    @AccessibilityFocusState private var titleFocused: Bool
 
     var body: some View {
         let success = session.explanation?.success ?? false
         let stars = session.stars ?? StarResult(finished: false, predicted: false, bonus: false)
         ZStack {
             Color.black.opacity(0.55).ignoresSafeArea().accessibilityHidden(true)
-            if success && !reduceMotion {
+            // Confetti is decoration: off with reduced motion and in Focus view.
+            if success && !reduceMotion && !focusView {
                 ConfettiView().ignoresSafeArea()
             }
             ScrollView {
                 VStack(spacing: 14) {
                     Ribbon(text: success ? "DRILL COMPLETE!" : "NOT YET!", bevel: success ? GamePalette.go : GamePalette.coral, font: .game(.title))
                         .padding(.top, -38)
+                        .accessibilityFocused($titleFocused)
+                    HStack {
+                        Spacer()
+                        ReadAloudButton(enabled: model.readAloud,
+                                        text: [session.explanation?.headline ?? "", explanationLead].joined(separator: ". "),
+                                        size: 40)
+                    }
                     Text(session.explanation?.headline ?? "")
                         .font(.game(.title3))
                         .foregroundStyle(Theme.ink)
@@ -861,9 +1019,12 @@ struct ResultOverlay: View {
                 .padding(.horizontal, 18)
                 .padding(.vertical, 50)
                 .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .contain)
+                .accessibilityAddTraits(.isModal)
             }
         }
         .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { titleFocused = true }
             if success {
                 Haptics.success()
                 SoundFX.shared.play(.success)
@@ -1073,5 +1234,106 @@ struct PlaybackPanel: View {
                 }
             }
         }
+    }
+}
+
+
+// MARK: Orientation (Phase 3)
+
+/// Build → Predict → Test → Understand, with the current step marked by shape and colour, plus one concrete
+/// next action. At large text sizes it becomes a single "Step n of 4" line instead of four squeezed labels.
+struct MissionStepsBar: View {
+    let session: MissionSession
+    var emphasized = false
+
+    private static let steps = ["Build", "Predict", "Test", "Understand"]
+
+    private var current: Int {
+        switch session.stage {
+        case .briefing, .planning: return 0
+        case .predicting: return 1
+        case .playback: return 2
+        case .results: return 3
+        }
+    }
+
+    private var nextAction: String {
+        switch session.stage {
+        case .briefing:
+            return session.isLastIntroLine ? "Tap Let's build! to start planning." : "Tap Next to hear the mission."
+        case .planning:
+            if session.tutorial == .placeFirstArray { return "Tap the glowing solar array card." }
+            if session.isRover { return session.canLaunch ? "Pick a plan, then tap Launch test." : "Pick a plan that fits the cargo." }
+            return session.canLaunch ? "Change the plan if you like, then tap Launch test." : "Fix the plan so it fits, then launch."
+        case .predicting:
+            return "Choose Yes, No or Not sure."
+        case .playback:
+            if session.countdown != nil { return "Get ready to watch." }
+            if session.isPaused { return "Tap Resume or Next when you're ready." }
+            return session.playbackMode == .stepByStep ? "Read, then tap Next." : "Watch and read. Pause any time."
+        case .results:
+            return (session.explanation?.success ?? false) ? "Read why it worked, then continue." : "Read why, then try a new plan."
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 4) {
+                    ForEach(Self.steps.indices, id: \.self) { index in
+                        if index > 0 {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .black))
+                                .foregroundStyle(Color.white.opacity(0.6))
+                        }
+                        chip(index)
+                    }
+                }
+                Label("Step \(current + 1) of 4: \(Self.steps[current])", systemImage: "\(current + 1).circle.fill")
+                    .font(.system(.subheadline, design: .rounded).weight(.black))
+                    .gameText(Color(hex: 0xFFE27A))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if emphasized {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let goal = session.copy.objectives.first {
+                        Label("Goal: \(goal)", systemImage: "scope")
+                            .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                            .foregroundStyle(Theme.ink)
+                    }
+                    Label("Next: \(nextAction)", systemImage: "hand.point.right.fill")
+                        .font(.system(.body, design: .rounded).weight(.black))
+                        .foregroundStyle(Theme.energyInk)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(10)
+                .frame(maxWidth: 560, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
+            } else {
+                Text("Next: \(nextAction)")
+                    .font(.system(.caption, design: .rounded).weight(.heavy))
+                    .gameText()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Step \(current + 1) of 4, \(Self.steps[current]). Next: \(nextAction)")
+    }
+
+    private func chip(_ index: Int) -> some View {
+        let active = index == current
+        let done = index < current
+        return HStack(spacing: 3) {
+            Image(systemName: done ? "checkmark.circle.fill" : (active ? "\(index + 1).circle.fill" : "\(index + 1).circle"))
+                .font(.system(size: 12, weight: .black))
+            Text(Self.steps[index])
+                .font(.system(.caption, design: .rounded).weight(.black))
+                .lineLimit(1)
+        }
+        .foregroundStyle(active ? Theme.ink : Color.white.opacity(done ? 0.9 : 0.7))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(active ? Color(hex: 0xFFD66B) : GamePalette.hud))
+        .overlay(Capsule().strokeBorder(active ? Color.white : Color.white.opacity(0.2), lineWidth: active ? 2 : 1))
     }
 }

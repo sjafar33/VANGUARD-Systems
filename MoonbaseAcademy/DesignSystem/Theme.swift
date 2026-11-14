@@ -34,7 +34,8 @@ enum Theme {
     static let panelRaised = Color.white
     static let panelLine = Color(hex: 0xD6DDE5)
     /// Darker versions for text and icons on light panels, where the bright world colors lack contrast.
-    static let energyInk = Color(hex: 0x1F7E8C)
+    /// Measured: 6.3:1 on white, 5.1:1 on the card gradient's darkest stop, 6.3:1 for white text on it.
+    static let energyInk = Color(hex: 0x186A76)
     static let plantInk = Color(hex: 0x3E7A4B)
     static let warningInk = Color(hex: 0xB04A33)
     static let amberInk = Color(hex: 0x8A5A00)

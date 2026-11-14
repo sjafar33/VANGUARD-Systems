@@ -37,6 +37,9 @@ struct RootView: View {
             }
         }
         .preferredColorScheme(.dark)
+        // One motion policy and the Focus view preference, read by every view below (sheets included).
+        .environment(\.appReduceMotion, model.reduceMotion)
+        .environment(\.focusView, model.focusView)
         .onAppear {
             model.setSystemReduceMotion(systemReduceMotion)
             KeyboardDismissal.install()
@@ -44,9 +47,14 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active: SoundFX.shared.recover()
-            case .background: SoundFX.shared.pauseForBackground()
-            default: break
+            case .active:
+                SoundFX.shared.recover()
+            case .background:
+                SoundFX.shared.pauseForBackground()
+                Narrator.shared.stop()
+                model.saveDraftForInterruption()
+            default:
+                model.saveDraftForInterruption()
             }
         }
         .onChange(of: systemReduceMotion) { _, newValue in model.setSystemReduceMotion(newValue) }

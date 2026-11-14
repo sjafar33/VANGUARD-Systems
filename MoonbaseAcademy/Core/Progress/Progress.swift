@@ -23,6 +23,15 @@ enum Achievement: String, Codable, CaseIterable, Sendable, Hashable {
     case bonus
 }
 
+/// A saved in-progress plan. Only planning choices are kept; tests are re-run from scratch, so nothing
+/// is replayed or awarded twice after the app is closed.
+struct MissionDraft: Codable, Equatable, Sendable {
+    var missionID: MissionID
+    var variant: Bool
+    var configuration: ResourceConfiguration?
+    var roverConfiguration: RoverConfiguration?
+}
+
 struct CampaignProgress: Codable, Equatable, Sendable {
     var baseName: String = "Moonbase One"
     var completedMissions: [MissionID] = []
@@ -45,6 +54,12 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     /// Which stars each drill has earned, kept as separate achievements. Optional so older saves still load;
     /// a drill missing here is rebuilt from the older fields by `legacyAchievements`.
     var achievements: [String: [Achievement]]?
+    /// Focus & Accessibility preferences. Optional so older saves still load; missing means off (haptics: on).
+    var focusView: Bool?
+    var readAloud: Bool?
+    var hapticsEnabled: Bool?
+    /// The plan in progress, so a closed app can reopen at planning. Never holds a running test or a result.
+    var draft: MissionDraft?
 
     func achievementSet(_ id: MissionID) -> Set<Achievement> {
         if let stored = achievements?[id.rawValue] { return Set(stored) }

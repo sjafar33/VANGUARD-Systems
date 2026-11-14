@@ -49,7 +49,7 @@ These builds were started by the owner. No compiler errors in either log.
 | F6 | (Addressed in Phase 2, untested) Mission copy hard-codes standard values ("6-hour shadow", "17 kWh", "33 days", "4 crates") that variants change | Confirmed | `GameCopy.swift` intros, `MissionContent.swift` stories |
 | F7 | (Addressed in Phase 2, untested) "Same starting supplies both times" is always shown, even when cargo (for example a charged battery) differs | Confirmed | `MissionView.swift:825` |
 | F8 | Session playback keeps advancing while the app is in the background (only audio and scene rendering pause); a result can appear while away. Attempt tokens and the stage guard should prevent double recording | Addressed in Phase 1: presentation pauses when the scene is not active and waits for Resume (untested) | `MissionSession.startPlayback`, `MoonbaseAcademyApp` scenePhase handler |
-| F9 | Large text: six `minimumScaleFactor` uses and fixed-width tray/tile cards (118–124 pt) | Confirmed in source; not tested at accessibility sizes | `GameKit.swift`, `BaseView.swift`, `MissionView.swift` |
+| F9 | (Addressed in Phase 3, untested) Large text: six `minimumScaleFactor` uses and fixed-width tray/tile cards (118–124 pt) | Confirmed in source; not tested at accessibility sizes | `GameKit.swift`, `BaseView.swift`, `MissionView.swift` |
 | F10 | Home and planning views leave large empty terrain on portrait iPad | Observed in owner screenshots; framing changed since (Moon region) — recheck in Phase 5 | screenshots |
 | F11 | HANDOFF and SUBMISSION were stale (no audio, unverified visuals, placeholder links) | Fixed for HANDOFF in this phase; SUBMISSION deferred to Phase 7 | this file |
 
@@ -126,3 +126,51 @@ Known limits: F3, F4, F6, F7 are left for Phase 2 as planned. Rover mission is a
 `MoonbaseAcademyTests/RewardAndNarrationTests.swift`: prediction star on a failure without unlocking, completed never kept without success, achievements across attempts and failed replay, StarResult mapping, legacy rebuild, pre-star saves, an older save file loading and re-saving, session tests for a correct "No" on a failed drill and for "Not sure", and narration tests (garden air story both ways, Lights Out oxygen and no-array copy, storm shortage and success, variant copy, copy following science inputs).
 
 Not verified: not compiled or run by me (Xcode cannot be driven while the desktop is a full-screen Space). No device, VoiceOver or Dynamic Type checks.
+
+## Phase 3 checkpoint (Focus & Accessibility)
+
+### Settings (Settings → "Focus & Accessibility"; reachable from the base and, new, from inside a drill)
+Each is its own switch, saved as an optional field (older saves load; missing = off, haptics = on):
+- **Focus view**: shows the current goal and a bold "Next:" action under the step bar; no confetti; never hides resources, warnings or answers.
+- **Test pace**: Plays by itself / Step by step (the Phase 1 mode; also switchable during a test and in the prediction dialog). Works without Focus view.
+- **Read aloud**: on-device `AVSpeechSynthesizer`. Speaks Nova's line, the prediction question, each playback checkpoint and the result lead; every spoken word is on screen. A speaker button repeats, and turns into Stop while speaking. Speech is replaced when the step changes and stopped on leaving the drill or the app. Silent while VoiceOver runs (no double speech; VoiceOver already gets checkpoint announcements). Uses an installed voice for the device language or the system default; never downloads or blocks. Units are read as words ("kilowatt hours").
+- **Reduce motion**: unchanged switch; now one policy (`appReduceMotion` = system OR app) used by every SwiftUI view, SpriteKit, countdown, button press springs, shake, confetti, transitions. Changing it (or the system setting) updates an open drill. Reading time never shortens.
+- **Haptics**: new independent switch (`Haptics.enabled`). Every haptic event also has a visible change and an accessible description.
+- **Use Focus suggestions**: turns on Focus view, Step by step and Reduce motion as a starting point; each stays adjustable.
+- Music and Sound effects stay independent (unchanged).
+
+### Orientation
+`MissionStepsBar`: Build → Predict → Test → Understand with the current step marked by fill, a numbered/check icon and colour, plus one concrete next action. At large text sizes it becomes "Step n of 4: Predict". VoiceOver reads it as one element.
+
+### Accessible controls and dialogs
+- Prediction, plan, result and mission-briefing dialogs are marked modal; the drill or base underneath is hidden from VoiceOver while one is open; VoiceOver focus moves to the dialog title; the two-finger escape gesture closes the plan and briefing dialogs and goes back from the prediction dialog. Focus returns to Launch test after the plan or prediction dialog closes or after Try again.
+- Option buttons (air maker, lights, research) show a check/empty circle as well as colour and expose the selected trait. Launch test has a hint. Locked drills have a hint saying how to unlock.
+
+### Readable layouts
+- Removed `minimumScaleFactor` from game buttons, ribbons, resource pills, build/plan/rover/mission cards; text wraps (up to 3 lines) instead of shrinking. One remains, on the watch-mode toggle labels (0.85), which also wrap.
+- Card widths/heights use `@ScaledMetric`; tray and tile rows already fall back to horizontal scrolling. Resource pills wrap to two rows. Option buttons stack vertically when they don't fit. The bottom control area, prediction, plan and briefing dialogs scroll when they don't fit.
+- Removed the remaining hard-coded drill numbers found in the plan cards and plan dialog (16 h light, 11-day blocks, 1.5 kWh), now read from the drill.
+
+### Contrast (measured with the WCAG formula; script logic in this phase's notes)
+| Pair | Ratio |
+|---|---|
+| Ink text on white / darkest card stop | 15.8 / 13.0 |
+| Secondary ink on white / card / panel | 7.5 / 6.1 / 7.0 |
+| Teal ink (darkened from 1F7E8C to 186A76) on white / card; white on teal | 6.3 / 5.1; 6.3 (was 3.9 on card) |
+| Amber ink on white / card | 5.9 / 4.9 |
+| Warning ink, plant ink on white | 5.4, 5.1 |
+| White / yellow text on HUD over the Moon | 14.6 / 11.4 |
+| Ink on the active step chip | 11.4 |
+| **White on game buttons, no outline** (gold, energy, go, coral bottoms) | **2.0, 2.6, 3.1, 3.3 — fail on their own** |
+| Navy outline vs lightest button face | 13.2 |
+Decision: white button text keeps a navy outline (now on four sides). With the system Increase Contrast setting on, light-faced buttons and round icons switch to dark ink text (4.8–11.4:1). This is a measured mitigation, not a full pass of white-on-gold by itself.
+
+### Interruption recovery
+- In-memory: backgrounding pauses playback (Phase 1), stops narration, keeps plan, variant and stage.
+- Process termination: on going inactive/background the in-progress plan (`MissionDraft`: mission, harder-version flag, cargo/plans or rover choice) is saved. Never a running test or a result. On relaunch the base shows "You were working on Lights Out (harder version)." with Continue / Not now. Continue opens the drill at planning with that plan and a short reminder; invalid saved plans are ignored. Leaving a drill on purpose clears the draft. Results are recorded only by finished tests, so nothing replays or double-awards.
+
+### Tests added
+`MoonbaseAcademyTests/FocusAccessibilityTests.swift`: settings independent and persisted, Focus suggestions as a starting point, identical science across motion/pace combinations, motion change reaching an open drill, interrupted plan reopens at planning with no recorded attempt, harder version restored as harder, invalid saved plan ignored, narration unit words.
+
+### Not verified (must be checked by hand)
+Not compiled or run by me. No VoiceOver pass of a full drill, no largest accessibility text size check on iPhone or iPad, no Switch Control, Voice Control, Full Keyboard Access, Increase Contrast, Bold Text, Smart Invert or speech-voice availability checks, and no check of Read aloud with the ringer switch silent (speech follows the app audio session). Focus return timing (0.45 s) and dialog focus behaviour need a real VoiceOver check.

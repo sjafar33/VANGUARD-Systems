@@ -10,13 +10,14 @@ struct BaseView: View {
     @State private var topHeight: CGFloat = 0
     @State private var bottomHeight: CGFloat = 0
     @State private var lockedShake = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 WorldView(coordinator: model.baseWorld, isActive: isActive, summary: model.baseSummary)
                     .ignoresSafeArea()
+                    .accessibilityHidden(model.selectedMission != nil)
                 VStack(spacing: 0) {
                     topHUD
                         .readHeight { height in
@@ -34,6 +35,7 @@ struct BaseView: View {
                 .padding(.horizontal, 14)
                 .padding(.top, 6)
                 .padding(.bottom, 6)
+                .accessibilityHidden(model.selectedMission != nil)
                 if let mission = model.selectedMission {
                     MissionBriefCard(model: model, mission: mission)
                         .transition(reduceMotion ? .opacity : .scale(scale: 0.85).combined(with: .opacity))
@@ -44,6 +46,9 @@ struct BaseView: View {
         }
         .sheet(isPresented: $showSources) { SourcesView(package: package, focus: nil) }
         .sheet(isPresented: $showSettings) { SettingsView(model: model) }
+        .onChange(of: novaText, initial: true) { _, text in
+            if model.readAloud && model.selectedMission == nil { Narrator.shared.speak(text) }
+        }
     }
 
     private func updateInsets() {
@@ -93,8 +98,14 @@ struct BaseView: View {
 
     private var bottomHUD: some View {
         VStack(spacing: 18) {
-            NovaBubble(text: novaText, compact: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let draft = model.resumableDraft {
+                ResumeCard(draft: draft, onContinue: { model.resumeDraft() }, onDismiss: { model.discardDraft() })
+            }
+            HStack(alignment: .bottom, spacing: 8) {
+                NovaBubble(text: novaText, compact: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                ReadAloudButton(enabled: model.readAloud, text: novaText)
+            }
             ViewThatFits(in: .horizontal) {
                 tiles
                 ScrollView(.horizontal, showsIndicators: false) { tiles }
@@ -120,7 +131,7 @@ struct BaseView: View {
                                 model.selectedMission = id
                             } else {
                                 Haptics.warning()
-                                withAnimation(.default) { lockedShake += 1 }
+                                withAnimation(reduceMotion ? nil : .default) { lockedShake += 1 }
                             }
                         }
                     }
@@ -135,6 +146,9 @@ struct MissionTile: View {
     let progress: CampaignProgress
     let isNext: Bool
     let action: () -> Void
+    // Cards grow with Dynamic Type; the row scrolls instead of shrinking text.
+    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 118
+    @ScaledMetric(relativeTo: .footnote) private var cardHeight: CGFloat = 140
 
     var body: some View {
         let unlocked = progress.isUnlocked(id)
@@ -155,25 +169,29 @@ struct MissionTile: View {
                     .font(.system(.footnote, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.ink)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                 MiniStars(count: progress.stars(id))
             }
             .padding(10)
-            .frame(width: 118, height: 140)
+            .frame(width: cardWidth)
+            .frame(minHeight: cardHeight)
             .background(GameCardBackground(highlighted: isNext))
             .opacity(unlocked ? 1 : 0.75)
         }
         .buttonStyle(PressableStyle())
         .accessibilityLabel("\(GameCopy.of(id).title), \(unlocked ? "\(progress.stars(id)) of 3 stars" : "locked")")
+        .accessibilityHint(unlocked ? "Opens the drill briefing" : "Finish the drill before it to unlock this one")
     }
 }
 
 struct PressableStyle: ButtonStyle {
+    @Environment(\.appReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(.spring(response: 0.18, dampingFraction: 0.6), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .spring(response: 0.18, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
@@ -181,17 +199,29 @@ struct PressableStyle: ButtonStyle {
 struct MissionBriefCard: View {
     let model: AppModel
     let mission: MissionID
+    @AccessibilityFocusState private var titleFocused: Bool
 
     var body: some View {
-        let game = GameCopy.of(mission)
-        let done = model.progress.isCompleted(mission)
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea()
                 .onTapGesture { model.selectedMission = nil }
                 .accessibilityHidden(true)
-            VStack(spacing: 14) {
+            ViewThatFits(in: .vertical) {
+                card
+                ScrollView { card.padding(.vertical, 30) }
+            }
+        }
+        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { titleFocused = true } }
+        .accessibilityAction(.escape) { model.selectedMission = nil }
+    }
+
+    private var card: some View {
+        let game = GameCopy.of(mission)
+        let done = model.progress.isCompleted(mission)
+        return VStack(spacing: 14) {
                 Ribbon(text: game.title)
                     .padding(.top, -34)
+                    .accessibilityFocused($titleFocused)
                 Label(MissionCopy.topic(mission), systemImage: MissionCopy.symbol(mission))
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.inkSecondary)
@@ -233,7 +263,8 @@ struct MissionBriefCard: View {
                     .offset(x: 10, y: -14)
             }
             .padding(24)
-        }
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(.isModal)
     }
 
     private func goal(_ text: String) -> some View {
@@ -247,5 +278,42 @@ struct MissionBriefCard: View {
                 .foregroundStyle(Theme.ink)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+
+/// Interruption recovery: offers to reopen the plan the player was working on before the app closed.
+struct ResumeCard: View {
+    let draft: MissionDraft
+    let onContinue: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("You were working on \(GameCopy.of(draft.missionID).title)\(draft.variant ? " (harder version)" : "").",
+                  systemImage: "arrow.uturn.backward.circle.fill")
+                .font(.system(.headline, design: .rounded).weight(.heavy))
+                .foregroundStyle(Theme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Your plan was saved. The test starts fresh, so nothing is counted twice.")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { buttons }
+                VStack(spacing: 8) { buttons }
+            }
+        }
+        .padding(14)
+        .background(GameCardBackground(corner: 18))
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder private var buttons: some View {
+        Button("Not now", action: onDismiss)
+            .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 48, font: .game(.headline)))
+        Button(action: onContinue) { Label("Continue", systemImage: "play.fill") }
+            .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 48, font: .game(.headline)))
+            .accessibilityLabel("Continue \(GameCopy.of(draft.missionID).title)")
     }
 }
