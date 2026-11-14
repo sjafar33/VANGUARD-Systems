@@ -1042,7 +1042,7 @@ final class WorldScene: SKScene {
                 box.run(.sequence([.wait(forDuration: Double(index) * 0.4), .group([fall, .fadeIn(withDuration: 0.2)]),
                                    .run { [weak self] in self?.puff(at: target) }]))
             }
-        }, .wait(forDuration: 3.6)], every: 0.4)
+        }, .wait(forDuration: 3.6)]), every: 0.4)
         if reduceMotion {
             for spot in spots {
                 let box = crate()
