@@ -64,6 +64,17 @@ final class WorldScene: SKScene {
     private var patrolling = false
     private var lastRoverX: CGFloat = 0
     private var skyRunning = false
+    private let highlightRing: SKShapeNode = {
+        let ring = SKShapeNode(ellipseOf: CGSize(width: 104, height: 52))
+        ring.strokeColor = UIColor(hex: 0xFFD66B)
+        ring.fillColor = UIColor(hex: 0xFFD66B, alpha: 0.12)
+        ring.lineWidth = 3
+        ring.glowWidth = 2
+        ring.zPosition = ZLayer.padHighlight + 1
+        ring.isHidden = true
+        return ring
+    }()
+    private var highlightKey: (HighlightTarget?, Int) = (nil, -1)
 
     override init(size: CGSize) {
         super.init(size: size)
@@ -123,6 +134,7 @@ final class WorldScene: SKScene {
 
         flowLayer.zPosition = ZLayer.flow
         world.addChild(flowLayer)
+        world.addChild(highlightRing)
 
         bottomShade.anchorPoint = CGPoint(x: 0.5, y: 0)
         bottomShade.zPosition = ZLayer.tint - 5
@@ -198,6 +210,7 @@ final class WorldScene: SKScene {
         updateFloaters(s)
         updateMarkers(s)
         updateAmbient(s)
+        updateHighlight(s)
         current = s
         hasApplied = true
     }
@@ -759,6 +772,48 @@ final class WorldScene: SKScene {
                 label.run(.sequence([pop, .scale(to: 1, duration: 0.08), .group([rise, .sequence([.wait(forDuration: 0.65), .fadeOut(withDuration: 0.35)])]), .removeFromParent()]))
             }
         }
+    }
+
+    // MARK: Explanation highlight
+
+    private func updateHighlight(_ s: WorldSnapshot) {
+        guard s.highlight != highlightKey.0 || s.highlightToken != highlightKey.1 else { return }
+        highlightKey = (s.highlight, s.highlightToken)
+        highlightRing.removeAllActions()
+        guard let target = s.highlight else {
+            highlightRing.isHidden = true
+            return
+        }
+        let spot: CGPoint
+        var scale: CGFloat = 1
+        switch target {
+        case .arrays:
+            let pads = Array(Self.arrayPads.prefix(max(1, s.arrays)))
+            spot = Iso.point(pads.map(\.x).reduce(0, +) / CGFloat(pads.count), pads.map(\.y).reduce(0, +) / CGFloat(pads.count))
+            scale = 1 + CGFloat(max(0, pads.count - 1)) * 0.45
+        case .batteries:
+            let pads = Array(Self.batteryPads.prefix(max(1, s.batteries)))
+            spot = Iso.point(pads.map(\.x).reduce(0, +) / CGFloat(pads.count), pads.map(\.y).reduce(0, +) / CGFloat(pads.count))
+            scale = 1 + CGFloat(max(0, pads.count - 1)) * 0.45
+        case .habitat:
+            spot = Iso.point(0, 0.2)
+            scale = 1.7
+        case .greenhouse:
+            spot = Iso.point(Self.greenhouseSpot)
+            scale = 1.8
+        case .shelter:
+            spot = Iso.point(Self.shelterSpot)
+            scale = 1.6
+        case .rover:
+            spot = rover.position
+        }
+        highlightRing.position = spot
+        highlightRing.xScale = scale
+        highlightRing.yScale = min(scale, 1.4)
+        highlightRing.isHidden = false
+        highlightRing.alpha = 1
+        guard !reduceMotion else { return }
+        highlightRing.run(.repeatForever(.sequence([.fadeAlpha(to: 0.45, duration: 0.8), .fadeAlpha(to: 1, duration: 0.8)])))
     }
 
     // MARK: Ambient life

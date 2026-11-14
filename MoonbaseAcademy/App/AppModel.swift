@@ -84,11 +84,18 @@ final class AppModel {
         let firstVisit = !progress.isCompleted(id) && progress.recentAttempts(id).isEmpty
         session = MissionSession(definition: definition, science: science, world: missionWorld,
                                  decor: BaseDecor(progress: progress), reduceMotion: reduceMotion,
-                                 firstVisit: firstVisit) { [weak self] attempt, badge, stars in
+                                 firstVisit: firstVisit,
+                                 playbackMode: progress.playbackMode ?? .automatic,
+                                 onModeChange: { [weak self] mode in self?.setPlaybackMode(mode) }) { [weak self] attempt, badge, stars in
             self?.record(attempt, badge: badge, stars: stars) ?? false
         }
         selectedMission = nil
         route = .mission
+    }
+
+    func setPlaybackMode(_ mode: PlaybackMode) {
+        progress.playbackMode = mode
+        save()
     }
 
     func leaveMission() {

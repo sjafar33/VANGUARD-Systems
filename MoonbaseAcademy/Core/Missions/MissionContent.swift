@@ -133,6 +133,25 @@ enum ExplanationWriter {
         return failure.atHour
     }
 
+    /// Garden failures happen slowly, so the lead names the recurring daily gap rather than the final step.
+    /// Every value comes from the trace; the step-level detail moves into the numbers list.
+    static func gardenDeficitLead(_ r: ResourceMissionResult, _ failure: FailureEvent) -> (text: String, numbers: [NumberRow])? {
+        guard let failStep = r.trace.last(where: { $0.failure != nil }) ?? r.trace.last else { return nil }
+        let made = failStep.generationKW * 24
+        let used = failStep.demand.totalKW * 24
+        let gap = used - made
+        guard gap > 1e-6 else { return nil }
+        let day = Int((failure.atHour / 24).rounded(.down)) + 1
+        let text = "The base used \(Format.kWh(gap)) more than it made each day. The battery covered the gap until day \(day)."
+        let numbers = [
+            NumberRow("Made each day", Format.kWh(made)),
+            NumberRow("Used each day", Format.kWh(used)),
+            NumberRow("Power ran out", "Day \(day)"),
+            NumberRow("Short at the end", Format.kWh(failure.shortfall))
+        ]
+        return (text, numbers)
+    }
+
     static func resource(_ r: ResourceMissionResult, definition d: MissionDefinition, science s: ScienceInputs) -> Explanation {
         var numbers: [NumberRow] = [
             NumberRow("Battery at the end", Format.kWh(r.finalState.batteryKWh)),
@@ -154,6 +173,10 @@ enum ExplanationWriter {
                 if d.missionID == .lightsOut && r.configuration.count(.battery) == 0 {
                     headline = "No battery, no power in the dark"
                     paragraphs.append("Your solar arrays made plenty of power in sunlight, but there was nowhere to keep it. When the shadow started, the lights went out right away.")
+                } else if d.missionID == .livingBase, let lead = gardenDeficitLead(r, failure) {
+                    headline = "The power ran out"
+                    paragraphs.append(lead.text)
+                    numbers.append(contentsOf: lead.numbers)
                 } else {
                     headline = "The power ran out"
                     paragraphs.append("The batteries ran empty \(into) into the \(phase). The base needed \(Format.kW(failure.deficitKW)) more than it was getting, so it was short \(Format.kWh(failure.shortfall)) by the end of that step.")

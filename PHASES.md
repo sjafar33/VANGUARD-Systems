@@ -5,7 +5,7 @@ Source brief: `Moonbase_Academy_V2_Phased_Coding_Prompt.md` (owner, 2026-11-14).
 | Phase | Status | Notes |
 |---|---|---|
 | 0 Baseline | complete (see HANDOFF "V2 baseline") | No product changes |
-| 1 Pacing and cause/effect | pending | Plan in HANDOFF |
+| 1 Pacing and cause/effect | code complete; awaiting owner test run | See HANDOFF "Phase 1 checkpoint". Not yet compiled or tested on a device or simulator |
 | 2 Rewards and scientific narration | pending | |
 | 3 Focus & Accessibility | pending | |
 | 4 Learning evidence and provenance | pending | |

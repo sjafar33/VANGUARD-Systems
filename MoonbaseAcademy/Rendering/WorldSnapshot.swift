@@ -45,6 +45,16 @@ struct Floater: Equatable, Sendable {
     var anchor: FloaterAnchor
 }
 
+/// A structure the current explanation is about. Drawn as a restrained ring, never the only cue.
+enum HighlightTarget: Equatable, Sendable {
+    case arrays
+    case batteries
+    case habitat
+    case greenhouse
+    case shelter
+    case rover
+}
+
 enum MarkerState: Equatable, Sendable {
     case next
     case done
@@ -83,6 +93,20 @@ struct WorldSnapshot: Equatable, Sendable {
     var floaters: [Floater] = []
     /// Idle life on the home base: the rover patrols. Sky effects run everywhere.
     var ambient = false
+    var highlight: HighlightTarget?
+    var highlightToken = 0
+
+    static func highlightTarget(for focus: CheckpointFocus) -> HighlightTarget? {
+        switch focus {
+        case .battery: return .batteries
+        case .arrays: return .arrays
+        case .air: return .habitat
+        case .crop: return .greenhouse
+        case .shelter: return .shelter
+        case .rover: return .rover
+        case .none: return nil
+        }
+    }
     var markers: [MapMarker] = []
 
     static func chargeLevel(_ fraction: Double) -> Int {

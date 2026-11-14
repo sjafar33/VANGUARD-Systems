@@ -41,14 +41,14 @@ These builds were started by the owner. No compiler errors in either log.
 
 | # | Finding | Status | Evidence |
 |---|---|---|---|
-| F1 | Garden playback is 0.26 s per simulated day (0.1 s with reduced motion) | Confirmed | `MissionSession.playbackDurations()` |
-| F2 | Reduced motion shortens reading time (1.7 s → 0.7 s per step; 0.26 → 0.1 s per day) | Confirmed | same function |
+| F1 | Garden playback is 0.26 s per simulated day (0.1 s with reduced motion) | Addressed in Phase 1 (untested) | `MissionSession.playbackDurations()` |
+| F2 | Reduced motion shortens reading time (1.7 s → 0.7 s per step; 0.26 → 0.1 s per day) | Addressed in Phase 1 (untested) | same function |
 | F3 | Correctly predicting a failure shows "Good thinking!" but earns no prediction star | Confirmed in source | `finishAttempt`: `predicted: success && predictionWasRight == true`; `ResultOverlay` shows "Good thinking!" from `predictionWasRight` alone |
 | F4 | Garden success says "The air maker kept the tank full the whole time" although the drill starts at 3.58 of 7.16 kg | Confirmed | `MissionContent.swift:204` |
-| F5 | Garden failure lead is numerically dense ("ran empty 160 h into the sprouting… needed 0.03 kW more… short 0.2 kWh") and uses block labels, not days | Confirmed | `ExplanationWriter.resource` energyShortage branch |
+| F5 | (Addressed in Phase 1, untested) Garden failure lead is numerically dense ("ran empty 160 h into the sprouting… needed 0.03 kW more… short 0.2 kWh") and uses block labels, not days | Confirmed | `ExplanationWriter.resource` energyShortage branch |
 | F6 | Mission copy hard-codes standard values ("6-hour shadow", "17 kWh", "33 days", "4 crates") that variants change | Confirmed | `GameCopy.swift` intros, `MissionContent.swift` stories |
 | F7 | "Same starting supplies both times" is always shown, even when cargo (for example a charged battery) differs | Confirmed | `MissionView.swift:825` |
-| F8 | Session playback keeps advancing while the app is in the background (only audio and scene rendering pause); a result can appear while away. Attempt tokens and the stage guard should prevent double recording | Risk, unverified at runtime | `MissionSession.startPlayback`, `MoonbaseAcademyApp` scenePhase handler |
+| F8 | Session playback keeps advancing while the app is in the background (only audio and scene rendering pause); a result can appear while away. Attempt tokens and the stage guard should prevent double recording | Addressed in Phase 1: presentation pauses when the scene is not active and waits for Resume (untested) | `MissionSession.startPlayback`, `MoonbaseAcademyApp` scenePhase handler |
 | F9 | Large text: six `minimumScaleFactor` uses and fixed-width tray/tile cards (118–124 pt) | Confirmed in source; not tested at accessibility sizes | `GameKit.swift`, `BaseView.swift`, `MissionView.swift` |
 | F10 | Home and planning views leave large empty terrain on portrait iPad | Observed in owner screenshots; framing changed since (Moon region) — recheck in Phase 5 | screenshots |
 | F11 | HANDOFF and SUBMISSION were stale (no audio, unverified visuals, placeholder links) | Fixed for HANDOFF in this phase; SUBMISSION deferred to Phase 7 | this file |
@@ -75,3 +75,21 @@ Goal: a child can follow why the outcome happens, at their own pace. No simulati
 8. **Tests**: checkpoint mapping (failure day matches the trace; no checkpoint invents values), simulation identical across presentation modes, skip/retry/leave never record twice. Manual readability checks on iPhone and iPad.
 
 Risks: SwiftUI animation state tied to `stage`; playback task cancellation; UI test selectors may need updating for new controls.
+
+## Phase 1 checkpoint (pacing and cause/effect)
+
+Branch `v2`. Simulation engines, physics and source values are unchanged; this phase changes presentation only.
+
+What changed:
+- `Features/Mission/PlaybackScript.swift` (new, Foundation-level): `PlaybackMode` (Watch automatically / One step at a time), `PlaybackCheckpoint` (trace index, title, text, focus, warning) and `PlaybackScript`. Power and storm drills get one checkpoint per engine step. The garden drill gets grouped checkpoints from the trace: day 1 budget and trend, plan changes, battery first full, air tank first full, first low-battery or low-air warning, lettuce halfway and ready, and the final day or failure day. Rover gets one checkpoint.
+- `MissionSession`: one playback task per attempt, guarded by `attemptToken`. Countdown, then for each checkpoint a quick run-up of the in-between days (motion only, skipped with reduced motion or Next), then the checkpoint. Automatic mode waits a reading time from the text length (at least 3.5 s), independent of reduced motion; step-by-step waits for Next. New intents: `nextCheckpoint`, `pausePlayback`, `resumePlayback`, `replayCheckpoint`, `setPlaybackMode`, `setAppActive`. Skip still finishes through the same `finishAttempt` guard.
+- Lifecycle: when the scene is not active, presentation pauses and shows "Paused while you were away"; it resumes only when the player taps Resume.
+- `MissionView`: `PlaybackPanel` (title, "Step n of m", Nova text, Pause/Resume, Replay, Next / See result, pace switch) and a watch-mode choice in the prediction overlay. The mode is saved as optional `CampaignProgress.playbackMode` (older saves still load; schema version unchanged).
+- Highlight: `WorldSnapshot.highlight` draws a restrained pulsing ring (static with reduced motion) on the arrays, batteries, habitat, greenhouse, shelter or rover; the matching HUD pill gets a gold outline and the accessibility "selected" trait. Text always says the same thing, so colour is never the only cue.
+- VoiceOver: one announcement per checkpoint (and on Replay), never per animation tick.
+- Garden power failure lead: "The base used X kWh more than it made each day. The battery covered the gap until day N." Made/used per day, failure day and final shortfall move into the numbers list. Other missions' explanations are unchanged.
+- Tests: `MoonbaseAcademyTests/PlaybackTests.swift` (checkpoint mapping, failure day, daily-gap lead, one checkpoint per step for step drills, identical simulation across modes, skip/retry/leave never record twice, background pause waits for the player, mode change reported for saving). UI test now watches attempt 1 automatically (wait raised to 60 s) and plays attempt 2 one step at a time.
+
+Not verified yet: the project has not been compiled since these changes (Xcode was on another Space and could not be driven), and no unit, UI, device, VoiceOver or Dynamic Type run has happened. Reading times are estimates, not tested with children.
+
+Known limits: F3, F4, F6, F7 are left for Phase 2 as planned. Rover mission is a single checkpoint.

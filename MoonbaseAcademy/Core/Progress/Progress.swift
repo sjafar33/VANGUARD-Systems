@@ -30,6 +30,8 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     var musicStyle: MusicStyle?
     /// Best star count per mission (0 to 3). Optional so saves written before stars existed still load.
     var bestStars: [String: Int]?
+    /// How the player likes to watch tests. Optional so older saves still load; missing means automatic.
+    var playbackMode: PlaybackMode?
 
     func stars(_ id: MissionID) -> Int { bestStars?[id.rawValue] ?? 0 }
     var totalStars: Int { MissionID.allCases.reduce(0) { $0 + stars($1) } }

@@ -148,6 +148,7 @@ struct ResourcePill: View {
     let label: String
     var fraction: Double? = nil
     var warning: Bool = false
+    var highlighted: Bool = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -185,12 +186,15 @@ struct ResourcePill: View {
             .padding(.vertical, 6)
             .frame(minWidth: 86, alignment: .leading)
             .fixedSize(horizontal: true, vertical: false)
-            .background(Capsule().fill(GamePalette.hud).overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 1.5)))
+            .background(Capsule().fill(GamePalette.hud)
+                .overlay(Capsule().strokeBorder(highlighted ? Color(hex: 0xFFD66B) : Color.white.opacity(0.16),
+                                                lineWidth: highlighted ? 3 : 1.5)))
             .padding(.leading, -18)
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: value)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(label): \(value)\(warning ? ", warning" : "")")
+        .accessibilityAddTraits(highlighted ? .isSelected : [])
     }
 }
 

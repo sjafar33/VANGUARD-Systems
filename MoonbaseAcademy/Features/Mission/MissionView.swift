@@ -76,6 +76,7 @@ struct MissionView: View {
                   session.definition.missionID != .livingBase else { return }
             showBanner(for: newPhase)
         }
+        .onChange(of: isActive) { _, active in session.setAppActive(active) }
         .onChange(of: session.countdown) { old, value in
             if let value {
                 Haptics.thump()
@@ -140,8 +141,7 @@ struct MissionView: View {
                 .disabled(!session.canLaunch)
             }
         case .playback:
-            NovaBubble(text: session.novaLine, compact: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            PlaybackPanel(session: session)
         case .predicting, .results:
             EmptyView()
         }
@@ -183,6 +183,7 @@ struct MissionTopHUD: View {
     @ViewBuilder private var pills: some View {
         let d = session.definition
         let state = session.displayState
+        let focus = session.currentCheckpoint?.focus
         HStack(spacing: 10) {
             if !d.catalog.isEmpty && session.stage != .playback {
                 ResourcePill(symbol: "shippingbox.fill", bevel: GamePalette.gold,
@@ -205,17 +206,20 @@ struct MissionTopHUD: View {
                                 : "No battery",
                              label: "Battery",
                              fraction: state.batteryCapacityKWh > 0 ? state.batteryKWh / state.batteryCapacityKWh : 0,
-                             warning: failure == .energyShortage)
+                             warning: failure == .energyShortage,
+                             highlighted: focus == .battery || focus == .arrays)
                 let hours = ResourceEngine.airHours(oxygenKg: state.oxygenKg, crewCount: d.initial.crewCount, science: session.science)
                 let full = ResourceEngine.airHours(oxygenKg: state.oxygenCapacityKg, crewCount: d.initial.crewCount, science: session.science)
                 ResourcePill(symbol: "wind", bevel: GamePalette.steel, value: "\(Int(hours.rounded(.down))) h air", label: "Air in the tank",
                              fraction: full > 0 ? hours / full : 0,
-                             warning: failure == .oxygenExhausted || (session.stage != .planning && hours < d.success.minimumAirHours))
+                             warning: failure == .oxygenExhausted || (session.stage != .planning && hours < d.success.minimumAirHours),
+                             highlighted: focus == .air)
                 if d.hasGarden {
                     ResourcePill(symbol: "leaf.fill", bevel: GamePalette.go,
                                  value: "\(Format.number(state.cropGrowthDays, digits: 0))/\(Format.number(session.science.cropReferenceDays, digits: 0)) d",
                                  label: "Lettuce growth days",
-                                 fraction: state.cropGrowthDays / session.science.cropReferenceDays)
+                                 fraction: state.cropGrowthDays / session.science.cropReferenceDays,
+                                 highlighted: focus == .crop)
                 }
             }
         }
@@ -740,6 +744,7 @@ struct BetOverlay: View {
                 Label("Guess right to earn a star", systemImage: "star.fill")
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.amberInk)
+                PlaybackModePicker(session: session)
                 HStack(spacing: 10) {
                     Button { session.run(predicting: .yes) } label: { Label("Yes", systemImage: "hand.thumbsup.fill") }
                         .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 60))
@@ -912,5 +917,111 @@ struct AttemptLine: View {
             Text(summary.setup).font(.caption).foregroundStyle(Theme.inkSecondary)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+
+// MARK: Playback (Phase 1: the player's pace)
+
+/// How the test is watched. Both choices show exactly the same result.
+struct PlaybackModePicker: View {
+    let session: MissionSession
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("How do you want to watch?")
+                .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                .foregroundStyle(Theme.inkSecondary)
+            HStack(spacing: 8) {
+                ForEach(PlaybackMode.allCases, id: \.self) { mode in
+                    let selected = session.playbackMode == mode
+                    Button {
+                        session.setPlaybackMode(mode)
+                    } label: {
+                        Label(mode == .automatic ? "Watch" : "Step by step",
+                              systemImage: mode == .automatic ? "play.circle.fill" : "hand.point.right.fill")
+                    }
+                    .buttonStyle(GameButtonStyle(bevel: selected ? GamePalette.energy : GamePalette.steel, height: 44, font: .game(.subheadline)))
+                    .accessibilityLabel(mode.label)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+        }
+    }
+}
+
+/// Nova explains each checkpoint; the player can pause, replay, or move on whenever they are ready.
+struct PlaybackPanel: View {
+    let session: MissionSession
+
+    var body: some View {
+        VStack(spacing: 12) {
+            if let checkpoint = session.currentCheckpoint {
+                HStack(spacing: 8) {
+                    Label(checkpoint.title, systemImage: checkpoint.isWarning ? "exclamationmark.triangle.fill" : "clock.fill")
+                        .font(.game(.subheadline))
+                        .gameText(checkpoint.isWarning ? Color(hex: 0xFFB3A0) : .white)
+                    Spacer()
+                    Text("Step \(session.checkpointIndex + 1) of \(session.checkpoints.count)")
+                        .font(.system(.caption, design: .rounded).weight(.heavy))
+                        .gameText()
+                }
+                .accessibilityElement(children: .combine)
+                NovaBubble(text: checkpoint.text, compact: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                NovaBubble(text: session.novaLine, compact: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if session.pausedByInterruption {
+                Label("Paused while you were away. Tap Resume to keep watching.", systemImage: "pause.circle.fill")
+                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                    .gameText()
+            }
+            if session.countdown == nil {
+                HStack(spacing: 10) {
+                    if session.playbackMode == .automatic || session.isPaused {
+                        Button {
+                            session.isPaused ? session.resumePlayback() : session.pausePlayback()
+                        } label: {
+                            Label(session.isPaused ? "Resume" : "Pause", systemImage: session.isPaused ? "play.fill" : "pause.fill")
+                        }
+                        .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 52, font: .game(.headline)))
+                        .accessibilityLabel(session.isPaused ? "Resume" : "Pause")
+                    }
+                    Button {
+                        session.replayCheckpoint()
+                    } label: {
+                        Label("Replay", systemImage: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 52, font: .game(.headline)))
+                    .accessibilityLabel("Replay explanation")
+                    .disabled(session.currentCheckpoint == nil)
+                    Button {
+                        session.nextCheckpoint()
+                    } label: {
+                        Label(session.isLastCheckpoint ? "See result" : "Next", systemImage: "arrow.right")
+                    }
+                    .buttonStyle(GameButtonStyle(bevel: session.isLastCheckpoint ? GamePalette.go : GamePalette.gold, height: 52, font: .game(.headline)))
+                    .accessibilityLabel(session.isLastCheckpoint ? "See result" : "Next step")
+                }
+                HStack(spacing: 6) {
+                    Text("Pace:")
+                        .font(.system(.caption, design: .rounded).weight(.heavy))
+                        .gameText()
+                    ForEach(PlaybackMode.allCases, id: \.self) { mode in
+                        let selected = session.playbackMode == mode
+                        Button(mode.label) { session.setPlaybackMode(mode) }
+                            .font(.system(.caption, design: .rounded).weight(.heavy))
+                            .foregroundStyle(selected ? Theme.ink : .white)
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 36)
+                            .background(Capsule().fill(selected ? Color(hex: 0xFFD66B) : GamePalette.hud))
+                            .accessibilityAddTraits(selected ? .isSelected : [])
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
     }
 }

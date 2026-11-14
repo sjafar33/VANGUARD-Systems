@@ -71,7 +71,11 @@ final class MissionOneFlowTests: XCTestCase {
         shot("07-countdown")
         pause(2.2)
         shot("08-playback-sunlight")
-        XCTAssertTrue(app.buttons["Try again"].waitForExistence(timeout: 15), "The no-battery plan should fail")
+        // Automatic playback waits for reading time at every checkpoint, so allow for it.
+        XCTAssertTrue(app.buttons["Next step"].waitForExistence(timeout: 8) || app.buttons["See result"].exists,
+                      "Playback controls should be visible")
+        shot("08b-playback-controls")
+        XCTAssertTrue(app.buttons["Try again"].waitForExistence(timeout: 60), "The no-battery plan should fail")
         pause(1.2)
         shot("09-result-not-yet")
 
@@ -85,10 +89,23 @@ final class MissionOneFlowTests: XCTestCase {
         pause(0.8)
         shot("10-planning-improved")
         tap("Launch test")
+        // Second attempt: the player controls the pace, one checkpoint at a time.
+        tap("One step at a time")
         tap("Yes")
-        pause(4.3)
-        shot("11-playback-shadow")
-        XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 15), "The improved plan should succeed")
+        XCTAssertTrue(app.buttons["Next step"].waitForExistence(timeout: 8) || app.buttons["See result"].waitForExistence(timeout: 1))
+        pause(0.8)
+        shot("11-playback-step-by-step")
+        var guardCount = 0
+        while !app.buttons["Continue"].exists && guardCount < 12 {
+            if app.buttons["See result"].exists {
+                app.buttons["See result"].tap()
+            } else if app.buttons["Next step"].exists {
+                app.buttons["Next step"].tap()
+            }
+            guardCount += 1
+            pause(1.0)
+        }
+        XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 10), "The improved plan should succeed")
         pause(1.6)
         shot("12-result-stars")
 

@@ -79,6 +79,15 @@ final class MissionSession {
     private(set) var notice: String?
     private(set) var introIndex = 0
     private(set) var countdown: Int?
+    /// Presentation-only playback state. The trace index lives in `playbackIndex`; the checkpoint
+    /// cursor is separate, so grouping days never changes event timing or resource values.
+    private(set) var playbackMode: PlaybackMode
+    private(set) var checkpoints: [PlaybackCheckpoint] = []
+    private(set) var checkpointIndex = 0
+    private(set) var isPaused = false
+    private(set) var pausedByInterruption = false
+    /// Bumped to replay the current explanation (restarts reading time and the highlight).
+    private(set) var replayToken = 0
     private(set) var stars: StarResult?
     private(set) var shakeToken = 0
     var hintVisible = false
@@ -90,9 +99,14 @@ final class MissionSession {
     @ObservationIgnored private var attemptToken = 0
     @ObservationIgnored private var playbackTask: Task<Void, Never>?
     @ObservationIgnored private let onRecord: (AttemptRecord, String?, Int) -> Bool
+    @ObservationIgnored private let onModeChange: (PlaybackMode) -> Void
+    @ObservationIgnored private var advanceRequested = false
+    @ObservationIgnored private var restartDwell = false
 
     init(definition: MissionDefinition, science: ScienceInputs, world: WorldCoordinator, decor: BaseDecor,
-         reduceMotion: Bool, firstVisit: Bool, onRecord: @escaping (AttemptRecord, String?, Int) -> Bool) {
+         reduceMotion: Bool, firstVisit: Bool, playbackMode: PlaybackMode = .automatic,
+         onModeChange: @escaping (PlaybackMode) -> Void = { _ in },
+         onRecord: @escaping (AttemptRecord, String?, Int) -> Bool) {
         self.definition = definition
         self.science = science
         self.copy = MissionCopy.of(definition.missionID)
@@ -101,6 +115,8 @@ final class MissionSession {
         self.decor = decor
         self.reduceMotion = reduceMotion
         self.onRecord = onRecord
+        self.onModeChange = onModeChange
+        self.playbackMode = playbackMode
         self.configuration = MissionCatalog.defaultConfiguration(for: definition)
         self.roverConfiguration = RoverConfiguration(mode: .earthControl,
                                                      observedMarkerM: definition.rover?.markerChoicesM.first)
@@ -272,6 +288,7 @@ final class MissionSession {
             return copy.question
         case .playback:
             if countdown != nil { return "Test starting. Watch closely!" }
+            if let checkpoint = currentCheckpoint { return checkpoint.text }
             if isRover { return "The picture flies to Earth, then STOP flies back. The rover keeps rolling..." }
             guard let step = currentStep else { return "" }
             return GameCopy.commentary(step, mission: definition.missionID)
@@ -392,6 +409,15 @@ final class MissionSession {
             explanation = ExplanationWriter.resource(result, definition: definition, science: science)
         }
         playbackIndex = 0
+        checkpointIndex = 0
+        isPaused = false
+        pausedByInterruption = false
+        advanceRequested = false
+        if let r = resourceResult {
+            checkpoints = PlaybackScript.checkpoints(for: r, definition: definition, science: science)
+        } else if let r = roverResult {
+            checkpoints = PlaybackScript.roverCheckpoints(r)
+        }
         stars = nil
         stage = .playback
         countdown = reduceMotion ? nil : 3
@@ -399,37 +425,145 @@ final class MissionSession {
         startPlayback(token: token)
     }
 
-    private func playbackDurations() -> [Double] {
-        if let r = roverResult {
-            return [reduceMotion ? 0.8 : r.stopAtSecond + 0.9]
+    var currentCheckpoint: PlaybackCheckpoint? {
+        guard stage == .playback, countdown == nil, checkpoints.indices.contains(checkpointIndex) else { return nil }
+        return checkpoints[checkpointIndex]
+    }
+
+    var isLastCheckpoint: Bool { checkpointIndex >= checkpoints.count - 1 }
+
+    /// The player's reading time at a checkpoint. Motion settings never shorten it.
+    private func dwellSeconds(_ checkpoint: PlaybackCheckpoint) -> Double {
+        var seconds = checkpoint.readingSeconds
+        if let r = roverResult, !reduceMotion {
+            seconds = max(seconds, r.stopAtSecond + 1.2)
         }
-        guard let trace = resourceResult?.trace else { return [] }
-        return trace.map { step in
-            if step.phaseID == "assembly" { return reduceMotion ? 0.5 : 1.1 }
-            if step.plannedHours <= 24 + 1e-9 && definition.missionID == .livingBase { return reduceMotion ? 0.1 : 0.26 }
-            return reduceMotion ? 0.7 : 1.7
-        }
+        return seconds
     }
 
     private func startPlayback(token: Int) {
         playbackTask?.cancel()
-        let durations = playbackDurations()
         let countdownSteps = reduceMotion ? [] : [3, 2, 1, 0]
         playbackTask = Task { @MainActor [weak self] in
             for number in countdownSteps {
                 guard let self, self.attemptToken == token, !Task.isCancelled else { return }
+                await self.waitWhilePaused(token: token)
                 self.countdown = number
                 try? await Task.sleep(nanoseconds: number == 0 ? 450_000_000 : 420_000_000)
             }
-            if let self, self.attemptToken == token { self.countdown = nil }
-            for (index, duration) in durations.enumerated() {
-                guard let self, self.attemptToken == token, !Task.isCancelled else { return }
-                self.playbackIndex = index
-                self.refreshWorld()
-                try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-            }
             guard let self, self.attemptToken == token, !Task.isCancelled else { return }
+            self.countdown = nil
+            for index in self.checkpoints.indices {
+                guard self.attemptToken == token, !Task.isCancelled else { return }
+                await self.present(index, token: token)
+                guard self.attemptToken == token, !Task.isCancelled else { return }
+                await self.waitForAdvance(token: token)
+            }
+            guard self.attemptToken == token, !Task.isCancelled else { return }
             self.finishAttempt(token: token)
+        }
+    }
+
+    /// Moves the world to a checkpoint. Between checkpoints the days run by quickly as motion only;
+    /// with reduced motion the world jumps straight there.
+    private func present(_ index: Int, token: Int) async {
+        let target = checkpoints[index].traceIndex
+        advanceRequested = false
+        if !reduceMotion && !isRover {
+            var step = index == 0 ? 0 : checkpoints[index - 1].traceIndex + 1
+            while step < target {
+                guard attemptToken == token, !Task.isCancelled, !advanceRequested else { break }
+                await waitWhilePaused(token: token)
+                playbackIndex = step
+                refreshWorld()
+                try? await Task.sleep(nanoseconds: 110_000_000)
+                step += 1
+            }
+        }
+        guard attemptToken == token, !Task.isCancelled else { return }
+        advanceRequested = false
+        checkpointIndex = index
+        playbackIndex = target
+        refreshWorld()
+        announce(checkpoints[index])
+    }
+
+    /// Automatic: wait the reading time (pausing stops the clock). Step by step: wait for Next.
+    private func waitForAdvance(token: Int) async {
+        var elapsed = 0.0
+        while attemptToken == token && !Task.isCancelled {
+            if advanceRequested {
+                advanceRequested = false
+                return
+            }
+            if restartDwell {
+                restartDwell = false
+                elapsed = 0
+            }
+            if playbackMode == .automatic && !isPaused {
+                if elapsed >= dwellSeconds(checkpoints[checkpointIndex]) { return }
+                elapsed += 0.1
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+
+    private func waitWhilePaused(token: Int) async {
+        while isPaused && attemptToken == token && !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+
+    private func announce(_ checkpoint: PlaybackCheckpoint) {
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        UIAccessibility.post(notification: .announcement, argument: "\(checkpoint.title). \(checkpoint.text)")
+    }
+
+    // MARK: Playback controls
+
+    func setPlaybackMode(_ mode: PlaybackMode) {
+        guard mode != playbackMode else { return }
+        playbackMode = mode
+        restartDwell = true
+        onModeChange(mode)
+    }
+
+    func pausePlayback() {
+        guard stage == .playback, !isPaused else { return }
+        isPaused = true
+    }
+
+    func resumePlayback() {
+        guard stage == .playback, isPaused else { return }
+        isPaused = false
+        pausedByInterruption = false
+        restartDwell = true
+    }
+
+    /// Next checkpoint (or the result after the last one). Also skips the quick run-up of days.
+    func nextCheckpoint() {
+        guard stage == .playback, countdown == nil else { return }
+        if isPaused {
+            isPaused = false
+            pausedByInterruption = false
+        }
+        advanceRequested = true
+    }
+
+    func replayCheckpoint() {
+        guard let checkpoint = currentCheckpoint else { return }
+        restartDwell = true
+        replayToken += 1
+        refreshWorld()
+        announce(checkpoint)
+    }
+
+    /// The app lost or regained active status. Losing it pauses presentation; the player resumes.
+    func setAppActive(_ active: Bool) {
+        guard stage == .playback else { return }
+        if !active && !isPaused {
+            isPaused = true
+            pausedByInterruption = true
         }
     }
 
@@ -438,6 +572,8 @@ final class MissionSession {
         guard stage == .playback else { return }
         playbackTask?.cancel()
         countdown = nil
+        isPaused = false
+        pausedByInterruption = false
         finishAttempt(token: attemptToken)
     }
 
@@ -465,6 +601,10 @@ final class MissionSession {
         playbackTask?.cancel()
         attemptToken += 1
         countdown = nil
+        checkpoints = []
+        checkpointIndex = 0
+        isPaused = false
+        pausedByInterruption = false
         stars = nil
         notice = nil
         stage = .planning
@@ -651,6 +791,10 @@ final class MissionSession {
             w.stormParticles = step.mood == .storm && stage == .playback
             if stage == .playback && countdown == nil {
                 w.floaters = floaters(for: step, world: w)
+                if let checkpoint = currentCheckpoint, checkpoint.traceIndex == playbackIndex {
+                    w.highlight = WorldSnapshot.highlightTarget(for: checkpoint.focus)
+                    w.highlightToken = replayToken
+                }
             }
             if stage == .playback {
                 if step.mood == .sunlit && w.arrays > 0 && step.generationKW > step.demand.totalKW + 1e-9 {
