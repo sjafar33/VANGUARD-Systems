@@ -1,61 +1,77 @@
 # HANDOFF — Moonbase Academy
 
-Read this with `Moonbase_Academy_Claude_Fable_Handoff.md` (the brief, one folder up) before changing anything.
+Read with `PHASES.md` and the V2 brief (`Moonbase_Academy_V2_Phased_Coding_Prompt.md`, owner upload). The original foundation brief is `../Moonbase_Academy_Claude_Fable_Handoff.md` (historical context only).
 
-## Project facts
+## Project facts (checked 2026-11-14, Phase 0)
 
-- Path: `/Users/sjafari/Downloads/NASA/MoonbaseAcademy` (git repository, branch `main`)
-- Project: `MoonbaseAcademy.xcodeproj`, shared scheme **MoonbaseAcademy** (app + unit tests + UI tests)
-- Deployment target: iOS/iPadOS 17.0. Bundle ID `com.vanguardsystems.moonbaseacademy`. No DEVELOPMENT_TEAM set.
+- Repository: `/Users/sjafari/Downloads/NASA/MoonbaseAcademy`, git. V2 work branch: `v2` (created from `main` at `107b088`). Nothing pushed; no remote configured.
+- No `AGENTS.md` or `CLAUDE.md` in the repository.
+- Project `MoonbaseAcademy.xcodeproj`, shared scheme **MoonbaseAcademy** with three targets: app, `MoonbaseAcademyTests` (unit), `MoonbaseAcademyUITests` (UI).
+- Version: `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION = 1` (all configurations). Deployment target iOS/iPadOS 17.0. Bundle ID `com.vanguardsystems.moonbaseacademy`. No DEVELOPMENT_TEAM in the project file.
 - Toolchain observed: Xcode 27.0, iOS 27.0 simulator SDK, Swift 5 language mode.
-- DerivedData is project-relative (`DerivedData/`, git-ignored) so build and test logs can be read from the repository folder.
-- Unit tests also write a plain summary to `TestResults/last-run.txt` (git-ignored).
-- The UI test writes screenshots to `Screenshots/` (committed).
+- Save schema: `SaveEnvelope.currentSchemaVersion = 1`, JSON in Application Support (`MoonbaseAcademy/save.json`). Fields added after the first release of the schema are optional (`bestStars`, `musicEnabled`, `musicStyle`) so older saves decode. UI tests use an isolated save (`MoonbaseAcademyUITest/save.json`, launch argument `-uiTesting`).
+- DerivedData is project-relative (`DerivedData/`, git-ignored). Unit tests write `TestResults/last-run.txt` (git-ignored). The UI test writes PNGs to `Screenshots/` inside the repository (`.gitattributes` marks them `-diff`); treat them as evidence artifacts, not app resources.
 
-## Verified so far
+## What exists today (main @ 107b088)
 
-| What | Evidence |
+- Four drills with deterministic engines, bundled NASA provenance, labeled variants.
+- Game presentation: full-screen SpriteKit Moon region with curved horizon, ambient life (rover patrol, twinkling and shooting stars, panel glints, beacon), single quest marker; SwiftUI HUD pills, Nova guide, build tray, plan popups, prediction bet, 3-2-1 countdown, floating numbers, phase banners, star result screen with confetti.
+- Audio: synthesized sound effects and two original procedurally composed music tracks (Space ambient default, Lofi chill), with Music, Music style and Sound effects settings. This replaces the old "no audio" note.
+- Settings: base name (saves on leaving the field; tap outside dismisses keyboard), Music, Music style, Sound effects, Reduce motion, Reset all progress (centered system alert), About.
+- Haptics are used for taps, placement, stars and results; there is no separate haptics preference yet.
+
+## V2 baseline (Phase 0 evidence)
+
+### Build
+
+| Evidence | Result |
 |---|---|
-| App target compiles | Xcode test run 2026-11-14 08:56 EST, iPhone 17 simulator, iOS 27.0 |
-| 56 of 56 unit tests pass | Same run: `Executed 56 tests, with 0 failures`. Covers every numeric reference case in brief section 9, invalid input, capacity and exact-zero boundaries, first-exhaustion stop, crew/time scaling, determinism, content validation, save/load/corruption/reset, and the four sensitivity checks |
-| NASA references re-checked | 2026-11-14 automated fetch of all four official sources; see `SCIENCE_AND_DATA.md` |
+| Xcode build log 2026-11-14 15:38 UTC, Debug, iPad Air 11-inch (M4) simulator, after the last commit (15:34 UTC) | Build succeeded |
+| Xcode build logs 16:09 and 16:10 UTC, Debug, destination "SJ iPad" (owner's physical iPad) | Build succeeded |
 
-Not yet verified (do not claim): app launch and visuals on iPhone/iPad simulators, the UI test, VoiceOver, Dynamic Type, rotation, background/resume, airplane mode, physical device.
+These builds were started by the owner. No compiler errors in either log.
 
-## Files and responsibilities
+### Tests
 
-- `Core/Science/SciencePackage.swift`: provenance types, `validateContent(package:)`, `ScienceInputs` with derived storm durations and radio delay.
-- `Core/Simulation/ResourceEngine.swift`: `ResourceEngine`, `RoverEngine`, and the brief's entry points `validateConfiguration`, `simulateResourceMission`, `simulateRoverMission`. Foundation only; deterministic; first boundary crossing stops an attempt; deficits are reported unclamped.
-- `Core/Missions/MissionModels.swift`, `MissionCatalog.swift`: all four drills and their labeled variants. Edit numbers only here, then update the matching tests.
-- `Core/Missions/MissionContent.swift`: child-facing copy, hints, explanations built from results.
-- `Core/Progress/Progress.swift`: `CampaignProgress` (completion awarded once, two attempts kept per drill), `SaveEnvelope`, `SaveStore` (atomic JSON in Application Support; damaged files are preserved as `save-unreadable.json`).
-- `Rendering/IsoArt.swift`: the only projection (`Iso`), z-layers, `IsoPainter`, texture cache.
-- `Rendering/ComponentArt.swift`: factories for habitat, solar array, battery (+charge bars), greenhouse (+plants, glow, shell), shelter (+glow), rover, pads, terrain, sky, Earth. Add new art here following the same canvas/origin pattern.
-- `Rendering/WorldSnapshot.swift`, `WorldScene.swift`: immutable render snapshot; scene reconciles nodes by stable identity; touches only emit `PadID` intents; `WorldCoordinator` retains one scene per world.
-- `Features/Mission/MissionSession.swift`: enum-driven stage machine, intents, playback with attempt tokens (stale completions ignored), world snapshot building.
-- `Features/Mission/MissionView.swift`: responsive shell (iPad wide ≈62/38 split; phone portrait world on top), panels for every stage.
-- `Features/Base/BaseView.swift`, `Features/Science/SourcesView.swift` (sources + settings), `App/` (root, `AppModel`, `LaunchOptions`).
+- Last recorded unit run: `TestResults/last-run.txt`, 2026-11-14 14:47 UTC: 56 passed, 0 failure records. That run predates the two music tests now in the suite (current unit total is 58).
+- The "57 tests, one failure" observation: in the 09:47–09:48 EST (14:47 UTC) run the 57th test was the UI test `MissionOneFlowTests.testMissionOneFromLaunchToRelaunch`, failing at `MissionOneFlowTests.swift:91` "The improved plan should succeed". Its screenshots showed the retry plan with 0 arrays and 0 batteries: the test helper swiped the screen when a button was briefly not hittable, and SpriteKit counted the swipe as a tap on the placed array's pad, removing it. Commit `8a12fd4` changed the helper to wait instead of swipe and made the world ignore drags. The result bundle for that run has since been cleared from DerivedData, so this explanation rests on the log excerpt read during that session plus the code change.
+- **Not yet done in Phase 0:** a fresh full run (unit + UI) on iPhone and iPad after `8a12fd4`. Required before Phase 1 code lands.
 
-## Deliberate departures from the brief
+### Findings
 
-- Added a fourth evidence category, `physicalConstant`, for the SI speed of light so it is not labeled a NASA value.
-- Mission 2 has no cargo; its choices are the per-block air, light and research settings.
-- Storm drill battery visuals show two base batteries plus the charged battery; this is cosmetic.
+| # | Finding | Status | Evidence |
+|---|---|---|---|
+| F1 | Garden playback is 0.26 s per simulated day (0.1 s with reduced motion) | Confirmed | `MissionSession.playbackDurations()` |
+| F2 | Reduced motion shortens reading time (1.7 s → 0.7 s per step; 0.26 → 0.1 s per day) | Confirmed | same function |
+| F3 | Correctly predicting a failure shows "Good thinking!" but earns no prediction star | Confirmed in source | `finishAttempt`: `predicted: success && predictionWasRight == true`; `ResultOverlay` shows "Good thinking!" from `predictionWasRight` alone |
+| F4 | Garden success says "The air maker kept the tank full the whole time" although the drill starts at 3.58 of 7.16 kg | Confirmed | `MissionContent.swift:204` |
+| F5 | Garden failure lead is numerically dense ("ran empty 160 h into the sprouting… needed 0.03 kW more… short 0.2 kWh") and uses block labels, not days | Confirmed | `ExplanationWriter.resource` energyShortage branch |
+| F6 | Mission copy hard-codes standard values ("6-hour shadow", "17 kWh", "33 days", "4 crates") that variants change | Confirmed | `GameCopy.swift` intros, `MissionContent.swift` stories |
+| F7 | "Same starting supplies both times" is always shown, even when cargo (for example a charged battery) differs | Confirmed | `MissionView.swift:825` |
+| F8 | Session playback keeps advancing while the app is in the background (only audio and scene rendering pause); a result can appear while away. Attempt tokens and the stage guard should prevent double recording | Risk, unverified at runtime | `MissionSession.startPlayback`, `MoonbaseAcademyApp` scenePhase handler |
+| F9 | Large text: six `minimumScaleFactor` uses and fixed-width tray/tile cards (118–124 pt) | Confirmed in source; not tested at accessibility sizes | `GameKit.swift`, `BaseView.swift`, `MissionView.swift` |
+| F10 | Home and planning views leave large empty terrain on portrait iPad | Observed in owner screenshots; framing changed since (Moon region) — recheck in Phase 5 | screenshots |
+| F11 | HANDOFF and SUBMISSION were stale (no audio, unverified visuals, placeholder links) | Fixed for HANDOFF in this phase; SUBMISSION deferred to Phase 7 | this file |
 
-## Known gaps
+### Not verified in Phase 0
 
-- Visual acceptance gate not yet passed (no screenshots inspected yet).
-- No audio (cut by the brief's cut order).
-- Base name editing is in Settings only.
+Fresh unit/UI runs; baseline screenshots on iPhone and iPad; interactive reproduction of F3 and F8; Missions 2–4 played end to end at runtime; VoiceOver, Dynamic Type, Switch Control.
 
-## Next bounded tasks (in order)
+## Proposed version for the release phase
 
-1. Run the UI test on an iPhone simulator and an iPad simulator; inspect `Screenshots/`; fix layout or art problems found.
-2. Manual checks from brief section 13 (Dynamic Type XXL, VoiceOver labels, reduced motion, rotation, background during playback).
-3. Play Missions 2–4 end to end in the simulator and capture result screenshots.
-4. Demo video and submission copy (`SUBMISSION.md`).
+`MARKETING_VERSION 2.0`, `CURRENT_PROJECT_VERSION 2` (one build-number bump per uploaded build if distribution is authorized). Signing untouched.
 
-## Commands
+## Phase 1 plan (bounded)
 
-- Build and test: open the project, choose an iPhone or iPad simulator, press ⌘U.
-- Log reading without Xcode: the newest `DerivedData/MoonbaseAcademy/Logs/Test/*.xcresult/Data/data.*` files are zstd-compressed and contain the compiler and test output.
+Goal: a child can follow why the outcome happens, at their own pace. No simulation changes.
+
+1. **Presentation model** in `Features/Mission/MissionSession.swift`: add `PlaybackMode` (`.automatic`, `.stepByStep`) and a checkpoint list derived from the authoritative trace (`[Checkpoint]` with `traceIndex`, kind, text). Extend `MissionStage.playback` handling with `isPaused`, `next()`, `pause()`, `resume()`, `replayExplanation()`; keep `attemptToken` guards so stale tasks cannot finish a later attempt. Trace indices and checkpoint indices stay separate.
+2. **Garden checkpoints**: start, first battery trend, first warning (reserve under a threshold), growth milestones (half, ready), failure or final day. Values come from the trace; days are grouped only in presentation.
+3. **Reading time independent of motion**: automatic dwell based on text length (minimum about 3 s); reduced motion changes animation only. Step-by-step waits for Next.
+4. **Lifecycle**: on scenePhase not active, pause presentation; on return, stay on the same checkpoint with a Resume control.
+5. **UI** in `Features/Mission/MissionView.swift`: Watch automatically / One step at a time choice before launch (remembered in progress as an optional field), Pause/Resume, Next, Replay controls; restrained highlight of the affected object via the existing snapshot (`WorldSnapshot`) and the matching HUD pill.
+6. **Garden failure copy** in `Core/Missions/MissionContent.swift`: lead with the computed recurring deficit, e.g. "The base used 0.6 kWh more than it made each day. The battery covered the gap until day 7." Move hours/kW/step shortfall into the numbers disclosure.
+7. **Accessibility**: post one VoiceOver announcement per checkpoint, never per tick.
+8. **Tests**: checkpoint mapping (failure day matches the trace; no checkpoint invents values), simulation identical across presentation modes, skip/retry/leave never record twice. Manual readability checks on iPhone and iPad.
+
+Risks: SwiftUI animation state tied to `stage`; playback task cancellation; UI test selectors may need updating for new controls.
