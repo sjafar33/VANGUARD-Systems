@@ -40,6 +40,14 @@ struct RootView: View {
         .onAppear {
             model.setSystemReduceMotion(systemReduceMotion)
             KeyboardDismissal.install()
+            SoundFX.shared.startMusic()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active: SoundFX.shared.recover()
+            case .background: SoundFX.shared.pauseForBackground()
+            default: break
+            }
         }
         .onChange(of: systemReduceMotion) { _, newValue in model.setSystemReduceMotion(newValue) }
         .alert("Saved progress could not be opened",

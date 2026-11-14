@@ -61,6 +61,7 @@ final class AppModel {
             canSave = false
         }
         SoundFX.shared.enabled = progress.soundEnabled
+        SoundFX.shared.musicEnabled = progress.musicEnabled ?? true
         baseWorld.onMarkerTapped = { [weak self] id in
             Haptics.tap()
             self?.selectedMission = id
@@ -112,6 +113,12 @@ final class AppModel {
     func setBaseName(_ name: String) {
         let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(24))
         progress.baseName = trimmed.isEmpty ? "Moonbase One" : trimmed
+        save()
+    }
+
+    func setMusicEnabled(_ on: Bool) {
+        progress.musicEnabled = on
+        SoundFX.shared.musicEnabled = on
         save()
     }
 

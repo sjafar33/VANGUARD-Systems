@@ -226,6 +226,8 @@ struct SettingsView: View {
                         .onSubmit { nameFocused = false }
                 }
                 Section("Sound") {
+                    Toggle("Music", isOn: Binding(get: { model.progress.musicEnabled ?? true },
+                                                  set: { model.setMusicEnabled($0) }))
                     Toggle("Sound effects", isOn: Binding(get: { model.progress.soundEnabled },
                                                           set: { model.setSoundEnabled($0) }))
                 }

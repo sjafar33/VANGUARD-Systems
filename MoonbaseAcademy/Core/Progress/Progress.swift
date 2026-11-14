@@ -25,6 +25,8 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     /// Cosmetic layout from the first successful power drill. Never applied as a numeric bonus.
     var builtArrays: Int = 0
     var builtBatteries: Int = 0
+    /// Background music preference. Optional so older saves still load; missing means on.
+    var musicEnabled: Bool?
     /// Best star count per mission (0 to 3). Optional so saves written before stars existed still load.
     var bestStars: [String: Int]?
 

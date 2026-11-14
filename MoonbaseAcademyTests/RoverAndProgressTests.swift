@@ -172,3 +172,17 @@ final class ProgressTests: MoonbaseTestCase {
         XCTAssertEqual(store.load(), .fresh)
     }
 }
+
+final class MusicTests: MoonbaseTestCase {
+    func testLofiLoopIsDeterministicAudibleAndNeverClips() {
+        let rate = 8_000.0
+        let first = LofiComposer.render(sampleRate: rate)
+        let second = LofiComposer.render(sampleRate: rate)
+        XCTAssertEqual(first.count, Int(LofiComposer.loopSeconds() * rate))
+        XCTAssertEqual(first, second)
+        let peak = first.map { abs($0) }.max() ?? 0
+        XCTAssertLessThanOrEqual(peak, 0.81)
+        XCTAssertGreaterThan(peak, 0.5)
+        XCTAssertEqual(LofiComposer.loopSeconds(), 16 * 4 * 60 / 72, accuracy: 1e-9)
+    }
+}
