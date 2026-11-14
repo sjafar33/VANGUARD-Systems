@@ -180,10 +180,8 @@ final class AppModel {
         w.dish = decor.dish
         w.flow = .none
         w.ambient = true
-        w.markers = MissionID.allCases.map { id in
-            let state: MarkerState = progress.isCompleted(id) ? .done : (progress.nextMission == id ? .next : .locked)
-            return MapMarker(mission: id, symbol: MissionCopy.of(id).symbol, state: state)
-        }
+        // One quest marker at a time, standing on the site the next drill will build.
+        w.markers = progress.nextMission.map { [MapMarker(mission: $0, symbol: MissionCopy.of($0).symbol, state: .next)] } ?? []
         return w
     }
 

@@ -95,7 +95,24 @@ struct BaseView: View {
         VStack(spacing: 18) {
             NovaBubble(text: novaText, compact: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            ScrollView(.horizontal, showsIndicators: false) {
+            ViewThatFits(in: .horizontal) {
+                tiles
+                ScrollView(.horizontal, showsIndicators: false) { tiles }
+            }
+            .shake(lockedShake)
+            if let next = model.nextMission {
+                Button {
+                    model.selectedMission = next
+                } label: {
+                    Label("PLAY", systemImage: "play.fill")
+                }
+                .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 64, font: .game(.title)))
+                .accessibilityLabel("Play \(GameCopy.of(next).title)")
+            }
+        }
+    }
+
+    private var tiles: some View {
                 HStack(spacing: 12) {
                     ForEach(MissionID.allCases) { id in
                         MissionTile(id: id, progress: model.progress, isNext: model.nextMission == id) {
@@ -110,18 +127,6 @@ struct BaseView: View {
                 }
                 .padding(.vertical, 6)
                 .padding(.horizontal, 2)
-            }
-            .shake(lockedShake)
-            if let next = model.nextMission {
-                Button {
-                    model.selectedMission = next
-                } label: {
-                    Label("PLAY", systemImage: "play.fill")
-                }
-                .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 64, font: .game(.title)))
-                .accessibilityLabel("Play \(GameCopy.of(next).title)")
-            }
-        }
     }
 }
 

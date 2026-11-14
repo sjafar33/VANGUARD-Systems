@@ -298,7 +298,15 @@ struct BuildTray: View {
     let openPlan: (Int) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ViewThatFits(in: .horizontal) {
+            row
+            ScrollView(.horizontal, showsIndicators: false) { row }
+        }
+        .shake(session.shakeToken)
+        .animation(.default, value: session.shakeToken)
+    }
+
+    private var row: some View {
             HStack(spacing: 12) {
                 if session.isRover {
                     RoverTray(session: session)
@@ -317,9 +325,6 @@ struct BuildTray: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 2)
-        }
-        .shake(session.shakeToken)
-        .animation(.default, value: session.shakeToken)
     }
 
     private var planIndices: [Int] {

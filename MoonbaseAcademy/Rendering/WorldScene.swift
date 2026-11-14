@@ -22,7 +22,7 @@ final class WorldScene: SKScene {
     static let trackStartX: CGFloat = -3
     /// Part of the world that must stay visible, in world coordinates.
     /// Part of the world that must stay visible, including the curved horizon above the base.
-    static let contentRect = CGRect(x: -300, y: -205, width: 600, height: 470)
+    static let contentRect = CGRect(x: -300, y: -205, width: 600, height: 495)
 
     private let world = SKNode()
     private let background = SKSpriteNode(texture: Art.starfield())
@@ -59,7 +59,8 @@ final class WorldScene: SKScene {
     private var touchStart: CGPoint?
     private let skyLayer = SKNode()
     private var twinkles: [(SKSpriteNode, CGPoint)] = []
-    private let beaconTip = SKSpriteNode(texture: Art.glowDot(color: 0xFFB347, diameter: 16))
+    private let beaconTip = SKSpriteNode(texture: Art.glowDot(color: 0xFFB347, diameter: 10))
+    private let bottomShade = SKSpriteNode(texture: Art.bottomShade())
     private var patrolling = false
     private var lastRoverX: CGFloat = 0
     private var skyRunning = false
@@ -123,6 +124,9 @@ final class WorldScene: SKScene {
         flowLayer.zPosition = ZLayer.flow
         world.addChild(flowLayer)
 
+        bottomShade.anchorPoint = CGPoint(x: 0.5, y: 0)
+        bottomShade.zPosition = ZLayer.tint - 5
+        addChild(bottomShade)
         tint.zPosition = ZLayer.tint
         tint.alpha = 0
         tint.colorBlendFactor = 1
@@ -164,6 +168,8 @@ final class WorldScene: SKScene {
         let side = max(size.width, size.height)
         background.size = CGSize(width: side, height: side)
         tint.size = CGSize(width: size.width + 4, height: size.height + 4)
+        bottomShade.size = CGSize(width: size.width + 4, height: max(120, bottom + 60))
+        bottomShade.position = CGPoint(x: 0, y: -size.height / 2)
         let earthSize = max(44, min(84, min(size.width, size.height) * 0.15))
         earth.size = CGSize(width: earthSize, height: earthSize)
         earth.position = CGPoint(x: size.width / 2 - earthSize * 0.8, y: size.height / 2 - top - earthSize * 0.6)
@@ -869,10 +875,11 @@ final class WorldScene: SKScene {
 
     private func markerAnchor(_ mission: MissionID) -> CGPoint {
         switch mission {
-        case .lightsOut: return Iso.point(-2.6, 0.6) + CGPoint(x: 0, y: 50)
-        case .livingBase: return Iso.point(Self.greenhouseSpot) + CGPoint(x: 0, y: 64)
-        case .stormDrill: return Iso.point(Self.shelterSpot) + CGPoint(x: 0, y: 56)
-        case .signalLag: return Iso.point(Self.roverParking) + CGPoint(x: 0, y: 58)
+        // Each pin stands on the empty site that drill will build on.
+        case .lightsOut: return Iso.point(-2.6, 0.6) + CGPoint(x: 0, y: 6)
+        case .livingBase: return Iso.point(3.0, 0.6) + CGPoint(x: 0, y: 6)
+        case .stormDrill: return Iso.point(0.3, 2.9) + CGPoint(x: 0, y: 6)
+        case .signalLag: return Iso.point(3.6, 3.3) + CGPoint(x: 0, y: 6)
         }
     }
 
@@ -884,13 +891,19 @@ final class WorldScene: SKScene {
         for marker in s.markers {
             let node = SKSpriteNode(texture: Art.markerTexture(symbol: marker.state == .done ? "checkmark" : (marker.state == .locked ? "lock.fill" : marker.symbol),
                                                                  state: marker.state))
-            let side: CGFloat = marker.state == .next ? 58 : 40
+            let side: CGFloat = marker.state == .next ? 46 : 32
             node.size = CGSize(width: side, height: side * 1.25)
             node.anchorPoint = CGPoint(x: 0.5, y: 0)
             node.position = markerAnchor(marker.mission)
             node.zPosition = ZLayer.flow + 20
             node.alpha = marker.state == .locked ? 0.8 : 1
             world.addChild(node)
+            let shadow = SKSpriteNode(texture: Art.glowDot(color: 0x0B1426, diameter: 20))
+            shadow.position = CGPoint(x: 0, y: -2)
+            shadow.yScale = 0.35
+            shadow.alpha = 0.5
+            shadow.zPosition = -0.1
+            node.addChild(shadow)
             markerNodes[marker.mission] = node
             if marker.state == .next && !reduceMotion {
                 let up = SKAction.moveBy(x: 0, y: 8, duration: 0.55)

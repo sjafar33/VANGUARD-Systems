@@ -19,9 +19,9 @@ enum Art {
     static let roverCanvas = Canvas(size: CGSize(width: 84, height: 70), origin: CGPoint(x: 38, y: 48))
     static let padCanvas = Canvas(size: CGSize(width: 76, height: 46), origin: CGPoint(x: 38, y: 21))
     /// The Moon's surface: a large curved cap of the sphere, centered under the base.
-    static let terrainCanvas = Canvas(size: CGSize(width: 1240, height: 620), origin: CGPoint(x: 620, y: 290))
-    static let moonRadiusX: CGFloat = 600
-    static let moonRadiusY: CGFloat = 272
+    static let terrainCanvas = Canvas(size: CGSize(width: 1560, height: 1080), origin: CGPoint(x: 780, y: 314))
+    static let moonRadiusX: CGFloat = 760
+    static let moonRadiusY: CGFloat = 300
 
     static func texture(_ key: String, _ canvas: Canvas, draw: (IsoPainter) -> Void) -> SKTexture {
         ArtCache.shared.texture(key, size: canvas.size) { ctx in
@@ -421,81 +421,104 @@ enum Art {
         pt.ctx.restoreGState()
     }
 
+    /// A region of the Moon seen from above: a curved horizon at the top and ground that runs off
+    /// every other edge of the screen, so the surface never shows an edge.
     static func terrain() -> SKSpriteNode {
         let canvas = terrainCanvas
-        let texture = ArtCache.shared.texture("terrain.sphere", size: canvas.size, scale: 2) { ctx in
+        let texture = ArtCache.shared.texture("terrain.region", size: canvas.size, scale: 1.6) { ctx in
             let pt = IsoPainter(ctx: ctx, origin: canvas.origin)
             let center = pt.p(0.5, 0.5)
             let a = moonRadiusX
             let b = moonRadiusY
-            let disc = CGRect(x: center.x - a, y: center.y - b, width: 2 * a, height: 2 * b)
-            let discPath = CGPath(ellipseIn: disc, transform: nil)
-            // Soft glow of sunlight around the limb.
+            let top = center.y - b
+            let bottom = canvas.size.height
+            let surface = CGMutablePath()
+            surface.move(to: CGPoint(x: center.x - a, y: center.y))
+            surface.addCurve(to: CGPoint(x: center.x, y: top),
+                             control1: CGPoint(x: center.x - a, y: center.y - b * 0.5523),
+                             control2: CGPoint(x: center.x - a * 0.5523, y: top))
+            surface.addCurve(to: CGPoint(x: center.x + a, y: center.y),
+                             control1: CGPoint(x: center.x + a * 0.5523, y: top),
+                             control2: CGPoint(x: center.x + a, y: center.y - b * 0.5523))
+            surface.addLine(to: CGPoint(x: center.x + a, y: bottom))
+            surface.addLine(to: CGPoint(x: center.x - a, y: bottom))
+            surface.closeSubpath()
+
+            // Faint glow where sunlight grazes the horizon.
             ctx.saveGState()
-            ctx.setShadow(offset: .zero, blur: 24, color: UIColor(hex: 0x8FB4FF, alpha: 0.25).cgColor)
-            ctx.addPath(discPath)
-            ctx.setFillColor(UIColor(hex: 0x9AA2AE).cgColor)
+            ctx.setShadow(offset: .zero, blur: 26, color: UIColor(hex: 0x9CC0FF, alpha: 0.28).cgColor)
+            ctx.addPath(surface)
+            ctx.setFillColor(UIColor(hex: 0xA3ABB6).cgColor)
             ctx.fillPath()
             ctx.restoreGState()
-            // Sphere shading: lit from the upper left, darker toward the edge (limb).
-            pt.radial(discPath, center: CGPoint(x: center.x - a * 0.22, y: center.y - b * 0.35), radius: a * 1.05,
-                      colors: [UIColor(hex: 0xCDD3DA), UIColor(hex: 0xB7BEC8), UIColor(hex: 0x98A1AD), UIColor(hex: 0x6E7785)])
+
+            // Far ground is darker, the plain around the base is brightest, and the near ground eases off.
+            pt.gradient(surface, from: CGPoint(x: 0, y: top), to: CGPoint(x: 0, y: bottom),
+                        colors: [UIColor(hex: 0x8C95A2), UIColor(hex: 0xB4BBC5), UIColor(hex: 0xC3C9D1),
+                                 UIColor(hex: 0xBEC5CE), UIColor(hex: 0xADB4BE)])
+            pt.radial(surface, center: CGPoint(x: center.x - 180, y: center.y + 60), radius: 760,
+                      colors: [UIColor(white: 1, alpha: 0.13), UIColor(white: 1, alpha: 0)])
+
+            // Limb darkening only along the far horizon.
             ctx.saveGState()
-            ctx.addPath(discPath)
+            ctx.addPath(surface)
             ctx.clip()
+            ctx.clip(to: CGRect(x: 0, y: 0, width: canvas.size.width, height: center.y))
             ctx.translateBy(x: center.x, y: center.y)
             ctx.scaleBy(x: 1, y: b / a)
             if let limb = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
                                      colors: [UIColor(white: 0, alpha: 0).cgColor, UIColor(white: 0, alpha: 0).cgColor,
-                                              UIColor(hex: 0x2A3242, alpha: 0.55).cgColor] as CFArray,
-                                     locations: [0, 0.72, 1]) {
+                                              UIColor(hex: 0x252D3C, alpha: 0.5).cgColor] as CFArray,
+                                     locations: [0, 0.8, 1]) {
                 ctx.drawRadialGradient(limb, startCenter: .zero, startRadius: 0, endCenter: .zero, endRadius: a, options: [])
             }
             ctx.restoreGState()
-            // Thin sunlit rim along the upper-left horizon.
+
+            // Sunlit rim along the upper-left horizon.
             ctx.saveGState()
             ctx.translateBy(x: center.x, y: center.y)
             ctx.scaleBy(x: 1, y: b / a)
-            ctx.addArc(center: .zero, radius: a - 1.5, startAngle: .pi * 1.02, endAngle: .pi * 1.72, clockwise: false)
+            ctx.addArc(center: .zero, radius: a - 1.5, startAngle: .pi * 1.04, endAngle: .pi * 1.7, clockwise: false)
             ctx.restoreGState()
-            ctx.setStrokeColor(UIColor(white: 1, alpha: 0.55).cgColor)
-            ctx.setLineWidth(2.2)
+            ctx.setStrokeColor(UIColor(white: 1, alpha: 0.5).cgColor)
+            ctx.setLineWidth(2)
             ctx.strokePath()
 
             ctx.saveGState()
-            ctx.addPath(discPath)
+            ctx.addPath(surface)
             ctx.clip()
-            var rng = SeededRandom(seed: 2026)
-            func inside(_ q: CGPoint, _ margin: CGFloat = 0) -> Bool {
+            func onSurface(_ q: CGPoint, _ margin: CGFloat = 0) -> Bool {
+                if q.y >= center.y { return abs(q.x - center.x) < a - margin }
                 let dx = (q.x - center.x) / (a - margin)
                 let dy = (q.y - center.y) / (b - margin * 0.5)
                 return dx * dx + dy * dy < 1
             }
-            for _ in 0..<3600 {
-                let q = CGPoint(x: rng.range(disc.minX, disc.maxX), y: rng.range(disc.minY, disc.maxY))
-                guard inside(q) else { continue }
-                let size = rng.range(0.6, 1.9)
+            /// 0 at the horizon, 1 at the bottom of the canvas: drives perspective size and flattening.
+            func depth(_ y: CGFloat) -> CGFloat { max(0, min(1, (y - top) / (bottom - top))) }
+
+            var rng = SeededRandom(seed: 2026)
+            for _ in 0..<5200 {
+                let q = CGPoint(x: rng.range(center.x - a, center.x + a), y: rng.range(top, bottom))
+                guard onSurface(q) else { continue }
+                let near = depth(q.y)
+                let size = rng.range(0.5, 1.7) * (0.6 + 0.7 * near)
                 let dark = rng.unit() > 0.45
-                ctx.setFillColor(UIColor(white: dark ? 0.32 : 1, alpha: rng.range(0.05, 0.15)).cgColor)
+                ctx.setFillColor(UIColor(white: dark ? 0.32 : 1, alpha: rng.range(0.05, 0.14)).cgColor)
                 ctx.fillEllipse(in: CGRect(x: q.x, y: q.y, width: size * 1.6, height: size))
             }
-            // Craters across the whole visible cap. Those near the horizon are flattened by the curve.
+
             var craterRng = SeededRandom(seed: 77)
             let base = pt.p(0.5, 0.5)
             var placed = 0
             var attempts = 0
-            while placed < 46 && attempts < 600 {
+            while placed < 64 && attempts < 900 {
                 attempts += 1
-                let q = CGPoint(x: craterRng.range(disc.minX + 30, disc.maxX - 30), y: craterRng.range(disc.minY + 14, disc.maxY - 20))
-                guard inside(q, 26) else { continue }
-                // Keep the building area clear.
-                let gx = abs(q.x - base.x) / 330
-                let gy = abs(q.y - base.y) / 175
-                if gx + gy < 1 { continue }
-                let edge = (q.y - center.y) / b
-                let squash = max(0.25, 0.5 - 0.22 * edge * edge - (edge < 0 ? 0.12 * -edge : 0))
-                let rx = craterRng.range(8, 34) * (1 - 0.35 * abs((q.x - center.x) / a))
-                drawCrater(pt, at: q, rx: rx, ry: rx * squash)
+                let q = CGPoint(x: craterRng.range(center.x - a + 30, center.x + a - 30), y: craterRng.range(top + 10, bottom - 30))
+                guard onSurface(q, 24) else { continue }
+                if abs(q.x - base.x) / 340 + abs(q.y - base.y) / 185 < 1 { continue }
+                let near = depth(q.y)
+                let rx = craterRng.range(8, 30) * (0.35 + 1.1 * near)
+                drawCrater(pt, at: q, rx: rx, ry: rx * (0.2 + 0.36 * near))
                 placed += 1
             }
             for (gx, gy, r) in [(-3.6, -3.5, 0.62), (4.3, -3.2, 0.7), (-4.0, 3.0, 0.4), (4.9, 1.9, 0.42),
@@ -503,18 +526,18 @@ enum Art {
                 let rect = pt.ellipseRect(cx: gx, cy: gy, z: 0, r: r)
                 drawCrater(pt, at: CGPoint(x: rect.midX, y: rect.midY), rx: rect.width / 2, ry: rect.height / 2)
             }
-            // Rover tracks from the airlock to the parking spot.
             for offset in [-0.07, 0.07] as [CGFloat] {
                 var points: [CGPoint] = []
                 for i in 0...20 {
                     let t = CGFloat(i) / 20
                     points.append(pt.p(0.2 + 2.6 * t + offset, 1.7 + 0.9 * t + 0.35 * sin(t * .pi) - offset))
                 }
-                pt.stroke(points, UIColor(white: 0.3, alpha: 0.16), width: 2.2)
+                pt.stroke(points, UIColor(white: 0.3, alpha: 0.14), width: 2.2)
             }
             var rockRng = SeededRandom(seed: 11)
             for (gx, gy, size) in [(-4.0, -1.0, 1.0), (3.7, -1.1, 0.8), (5.0, 3.1, 1.1), (-1.0, -4.0, 0.9),
-                                   (2.0, 5.25, 0.7), (-3.4, 4.9, 0.8), (4.6, -0.2, 0.6), (-6.2, 1.5, 1.2), (6.6, -2.5, 1.0)] as [(CGFloat, CGFloat, CGFloat)] {
+                                   (2.0, 5.25, 0.7), (-3.4, 4.9, 0.8), (4.6, -0.2, 0.6), (-6.2, 1.5, 1.2),
+                                   (6.6, -2.5, 1.0), (-1.5, 7.4, 1.3), (7.2, 3.6, 1.2)] as [(CGFloat, CGFloat, CGFloat)] {
                 for k in 0..<3 {
                     let s = size * rockRng.range(0.08, 0.16)
                     let dx = CGFloat(k) * 0.16 - 0.12
@@ -523,16 +546,20 @@ enum Art {
                            colors: .init(0xB4BBC4, 0x8F98A4, 0x6D7684))
                 }
             }
-            // The near side fades into darkness: we are zoomed in on a sphere, not looking at a slab.
-            if let fade = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                                     colors: [UIColor(hex: 0x16213A, alpha: 0).cgColor, UIColor(hex: 0x16213A, alpha: 0.65).cgColor,
-                                              UIColor(hex: 0x16213A, alpha: 1).cgColor] as CFArray,
-                                     locations: [0, 0.6, 1]) {
-                ctx.drawLinearGradient(fade, start: CGPoint(x: 0, y: center.y + b * 0.42), end: CGPoint(x: 0, y: disc.maxY), options: [.drawsAfterEndLocation])
-            }
             ctx.restoreGState()
         }
         return sprite(texture, canvas)
+    }
+
+    /// Soft dark gradient at the bottom of the screen so the HUD reads clearly over the ground.
+    static func bottomShade() -> SKTexture {
+        ArtCache.shared.texture("shade.bottom", size: CGSize(width: 8, height: 256), scale: 1) { ctx in
+            if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                  colors: [UIColor(hex: 0x0B1426, alpha: 0).cgColor, UIColor(hex: 0x0B1426, alpha: 0.55).cgColor] as CFArray,
+                                  locations: [0, 1]) {
+                ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: 256), options: [])
+            }
+        }
     }
 
     // MARK: Sky
