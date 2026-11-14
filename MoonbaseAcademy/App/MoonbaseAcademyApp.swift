@@ -37,7 +37,10 @@ struct RootView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear { model.setSystemReduceMotion(systemReduceMotion) }
+        .onAppear {
+            model.setSystemReduceMotion(systemReduceMotion)
+            KeyboardDismissal.install()
+        }
         .onChange(of: systemReduceMotion) { _, newValue in model.setSystemReduceMotion(newValue) }
         .alert("Saved progress could not be opened",
                isPresented: Binding(get: { model.saveIssue != nil }, set: { _ in })) {

@@ -211,6 +211,7 @@ struct SettingsView: View {
     let model: AppModel
     @State private var name = ""
     @State private var confirmReset = false
+    @FocusState private var nameFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -218,22 +219,31 @@ struct SettingsView: View {
             Form {
                 Section("Your base") {
                     TextField("Base name", text: $name)
+                        .focused($nameFocused)
                         .submitLabel(.done)
-                        .onSubmit { model.setBaseName(name) }
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .onSubmit { nameFocused = false }
                 }
                 Section("Sound") {
                     Toggle("Sound effects", isOn: Binding(get: { model.progress.soundEnabled },
                                                           set: { model.setSoundEnabled($0) }))
                 }
-                Section("Motion") {
+                Section {
                     Toggle("Reduce motion", isOn: Binding(get: { model.progress.forceReducedMotion },
                                                           set: { model.setForceReducedMotion($0) }))
+                } header: {
+                    Text("Motion")
+                } footer: {
                     Text("Replaces moving animations with short step-by-step changes. Results are exactly the same.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
-                Section("Progress") {
-                    Button("Reset all progress", role: .destructive) { confirmReset = true }
+                Section {
+                    Button("Reset All Progress", role: .destructive) {
+                        nameFocused = false
+                        confirmReset = true
+                    }
+                } header: {
+                    Text("Progress")
                 }
                 Section("About") {
                     Text("Moonbase Academy by VANGUARD Systems, made for the NASA Space Apps Challenge 2026. Works offline. No accounts, ads or tracking.")
@@ -242,25 +252,35 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            // Tapping anywhere outside the field, or scrolling, puts the keyboard away.
+            .scrollDismissesKeyboard(.immediately)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        model.setBaseName(name)
+                        nameFocused = false
                         dismiss()
                     }
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { nameFocused = false }
+                }
             }
             .onAppear { name = model.progress.baseName }
-            .confirmationDialog("Reset all progress?", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Reset progress", role: .destructive) {
+            .onChange(of: nameFocused) { _, focused in
+                if !focused { model.setBaseName(name) }
+            }
+            .onDisappear { model.setBaseName(name) }
+            .alert("Reset All Progress?", isPresented: $confirmReset) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) {
                     model.resetProgress()
                     name = model.progress.baseName
                 }
-                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This removes completed drills and base improvements on this device.")
+                Text("This removes all completed drills, stars and base upgrades on this device. This can't be undone.")
             }
         }
         .preferredColorScheme(.light)

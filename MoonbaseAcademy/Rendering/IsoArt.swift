@@ -248,10 +248,10 @@ final class ArtCache {
     static let shared = ArtCache()
     private var textures: [String: SKTexture] = [:]
 
-    func texture(_ key: String, size: CGSize, draw: (CGContext) -> Void) -> SKTexture {
+    func texture(_ key: String, size: CGSize, scale: CGFloat = 3, draw: (CGContext) -> Void) -> SKTexture {
         if let cached = textures[key] { return cached }
         let format = UIGraphicsImageRendererFormat()
-        format.scale = 3
+        format.scale = scale
         format.opaque = false
         let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
             draw(context.cgContext)

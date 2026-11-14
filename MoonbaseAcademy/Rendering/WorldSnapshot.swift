@@ -81,6 +81,8 @@ struct WorldSnapshot: Equatable, Sendable {
     var highlightedPads: Set<PadID> = []
     var stormParticles = false
     var floaters: [Floater] = []
+    /// Idle life on the home base: the rover patrols. Sky effects run everywhere.
+    var ambient = false
     var markers: [MapMarker] = []
 
     static func chargeLevel(_ fraction: Double) -> Int {

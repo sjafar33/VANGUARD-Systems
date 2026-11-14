@@ -21,7 +21,8 @@ final class WorldScene: SKScene {
     static let trackY: CGFloat = 4.2
     static let trackStartX: CGFloat = -3
     /// Part of the world that must stay visible, in world coordinates.
-    static let contentRect = CGRect(x: -292, y: -206, width: 584, height: 372)
+    /// Part of the world that must stay visible, including the curved horizon above the base.
+    static let contentRect = CGRect(x: -300, y: -205, width: 600, height: 470)
 
     private let world = SKNode()
     private let background = SKSpriteNode(texture: Art.starfield())
@@ -56,6 +57,12 @@ final class WorldScene: SKScene {
     private var markerKey: [MapMarker] = []
     private var flagPoints: [(Double, CGPoint)] = []
     private var touchStart: CGPoint?
+    private let skyLayer = SKNode()
+    private var twinkles: [(SKSpriteNode, CGPoint)] = []
+    private let beaconTip = SKSpriteNode(texture: Art.glowDot(color: 0xFFB347, diameter: 16))
+    private var patrolling = false
+    private var lastRoverX: CGFloat = 0
+    private var skyRunning = false
 
     override init(size: CGSize) {
         super.init(size: size)
@@ -74,6 +81,16 @@ final class WorldScene: SKScene {
         addChild(background)
         earth.zPosition = ZLayer.earth
         addChild(earth)
+        skyLayer.zPosition = ZLayer.background + 50
+        addChild(skyLayer)
+        var rng = SeededRandom(seed: 42)
+        for _ in 0..<26 {
+            let star = SKSpriteNode(texture: Art.glowDot(color: 0xDDEBFF, diameter: 8))
+            star.setScale(rng.range(0.35, 0.9))
+            star.alpha = rng.range(0.3, 0.9)
+            skyLayer.addChild(star)
+            twinkles.append((star, CGPoint(x: rng.range(-0.5, 0.5), y: rng.range(-0.05, 0.5))))
+        }
         addChild(world)
 
         let terrain = Art.terrain()
@@ -93,6 +110,10 @@ final class WorldScene: SKScene {
         beacon.zPosition = 0.2
         beacon.alpha = 0
         habitat.addChild(beacon)
+        beaconTip.position = CGPoint(x: 4.5, y: 89.5)
+        beaconTip.zPosition = 0.3
+        beaconTip.blendMode = .add
+        habitat.addChild(beaconTip)
         world.addChild(habitat)
 
         rover.position = Iso.point(Self.roverParking)
@@ -150,6 +171,9 @@ final class WorldScene: SKScene {
             storm.position = CGPoint(x: -size.width * 0.2, y: size.height / 2 + 20)
             storm.particlePositionRange = CGVector(dx: size.width * 1.3, dy: 10)
         }
+        for (star, unit) in twinkles {
+            star.position = CGPoint(x: unit.x * size.width, y: unit.y * size.height)
+        }
     }
 
     // MARK: Snapshot reconciliation
@@ -167,6 +191,7 @@ final class WorldScene: SKScene {
         updateFlow(s)
         updateFloaters(s)
         updateMarkers(s)
+        updateAmbient(s)
         current = s
         hasApplied = true
     }
@@ -223,6 +248,7 @@ final class WorldScene: SKScene {
                 node.zPosition = Iso.depth(spot)
                 world.addChild(node)
                 arrayNodes[index] = node
+                addGlint(to: node, seed: index)
                 if animate {
                     node.yScale = 0.08
                     node.alpha = 0
@@ -433,9 +459,19 @@ final class WorldScene: SKScene {
         }
         guard let track = s.roverTrack else {
             cancelRun()
-            rover.position = Iso.point(Self.roverParking)
-            rover.zPosition = Iso.depth(Self.roverParking)
+            if !s.ambient || reduceMotion {
+                rover.removeAction(forKey: "patrol")
+                patrolling = false
+                rover.xScale = 1
+                rover.position = Iso.point(Self.roverParking)
+                rover.zPosition = Iso.depth(Self.roverParking)
+            }
             return
+        }
+        if patrolling {
+            rover.removeAction(forKey: "patrol")
+            patrolling = false
+            rover.xScale = 1
         }
         rover.zPosition = ZLayer.roverOnTrack
         if let run = s.roverRun {
@@ -448,7 +484,8 @@ final class WorldScene: SKScene {
 
     private func cancelRun() {
         removeAction(forKey: "roverRun")
-        rover.removeAllActions()
+        rover.removeAction(forKey: "runMove")
+        rover.removeAction(forKey: "fade")
         rover.alpha = 1
         signalLayer.removeAllChildren()
         lastRunID = nil
@@ -529,10 +566,10 @@ final class WorldScene: SKScene {
         if reduceMotion {
             rover.alpha = 0
             rover.position = stop
-            rover.run(.fadeIn(withDuration: 0.25))
+            rover.run(.fadeIn(withDuration: 0.25), withKey: "fade")
             return
         }
-        rover.run(.move(to: stop, duration: max(0.01, run.stopM / run.speed)))
+        rover.run(.move(to: stop, duration: max(0.01, run.stopM / run.speed)), withKey: "runMove")
         var steps: [SKAction] = []
         if let imageAt = run.imageAtSecond {
             steps.append(.wait(forDuration: imageAt))
@@ -716,6 +753,116 @@ final class WorldScene: SKScene {
                 label.run(.sequence([pop, .scale(to: 1, duration: 0.08), .group([rise, .sequence([.wait(forDuration: 0.65), .fadeOut(withDuration: 0.35)])]), .removeFromParent()]))
             }
         }
+    }
+
+    // MARK: Ambient life
+
+    /// A brief flash of sunlight sliding across a solar panel now and then.
+    private func addGlint(to node: SKNode, seed: Int) {
+        guard !reduceMotion else { return }
+        let glint = SKSpriteNode(texture: Art.glowDot(color: 0xFFFFFF, diameter: 28))
+        glint.position = CGPoint(x: -12, y: 22)
+        glint.yScale = 0.45
+        glint.alpha = 0
+        glint.blendMode = .add
+        glint.zPosition = 0.2
+        node.addChild(glint)
+        let pause = 3.5 + Double(seed) * 1.3
+        let sweep = SKAction.group([.sequence([.fadeAlpha(to: 0.85, duration: 0.18), .fadeAlpha(to: 0, duration: 0.45)]),
+                                    .moveBy(x: 26, y: 8, duration: 0.63)])
+        glint.run(.repeatForever(.sequence([.wait(forDuration: pause, withRange: 2), sweep,
+                                            .moveBy(x: -26, y: -8, duration: 0)])))
+    }
+
+    private func updateAmbient(_ s: WorldSnapshot) {
+        // Sky: twinkling stars and the occasional shooting star, on every screen.
+        if !reduceMotion && !skyRunning {
+            skyRunning = true
+            for (star, _) in twinkles {
+                let low = SKAction.fadeAlpha(to: CGFloat.random(in: 0.1...0.35), duration: Double.random(in: 0.8...2.2))
+                let high = SKAction.fadeAlpha(to: CGFloat.random(in: 0.6...1), duration: Double.random(in: 0.8...2.2))
+                star.run(.repeatForever(.sequence([low, high])), withKey: "twinkle")
+            }
+            run(.repeatForever(.sequence([.wait(forDuration: 4, withRange: 4),
+                                          .run { [weak self] in self?.shootingStar() }])), withKey: "sky")
+            beaconTip.run(.repeatForever(.sequence([.fadeAlpha(to: 1, duration: 0.12), .wait(forDuration: 0.25),
+                                                    .fadeAlpha(to: 0.15, duration: 0.5), .wait(forDuration: 0.9)])), withKey: "blink")
+        } else if reduceMotion && skyRunning {
+            skyRunning = false
+            removeAction(forKey: "sky")
+            twinkles.forEach { $0.0.removeAction(forKey: "twinkle") }
+            beaconTip.removeAction(forKey: "blink")
+            beaconTip.alpha = 0.8
+        }
+        // Base only: the rover goes for a drive around the habitat.
+        let wantsPatrol = s.ambient && s.roverTrack == nil && !reduceMotion
+        if wantsPatrol && !patrolling {
+            startPatrol()
+        } else if !wantsPatrol && patrolling {
+            rover.removeAction(forKey: "patrol")
+            patrolling = false
+            rover.xScale = 1
+            rover.position = Iso.point(Self.roverParking)
+            rover.zPosition = Iso.depth(Self.roverParking)
+        }
+    }
+
+    private func startPatrol() {
+        patrolling = true
+        rover.position = Iso.point(Self.roverParking)
+        lastRoverX = rover.position.x
+        let route: [CGPoint] = [CGPoint(x: 4.3, y: 2.5), CGPoint(x: 4.7, y: 0.4), CGPoint(x: 4.4, y: -1.5),
+                                CGPoint(x: 3.0, y: -1.5), CGPoint(x: 4.5, y: -0.8), CGPoint(x: 4.4, y: 2.3), Self.roverParking]
+        var steps: [SKAction] = [.wait(forDuration: 1.5)]
+        var from = Self.roverParking
+        for (index, to) in route.enumerated() {
+            let distance = hypot(to.x - from.x, to.y - from.y)
+            let move = SKAction.move(to: Iso.point(to), duration: Double(distance) / 0.55)
+            move.timingMode = .easeInEaseOut
+            steps.append(move)
+            steps.append(.run { [weak self] in self?.roverDust() })
+            steps.append(.wait(forDuration: index == 2 || index == route.count - 1 ? 2.2 : 0.6))
+            from = to
+        }
+        rover.run(.repeatForever(.sequence(steps)), withKey: "patrol")
+    }
+
+    private func roverDust() {
+        let dust = SKSpriteNode(texture: Art.glowDot(color: 0xD9DEE5, diameter: 20))
+        dust.position = rover.position + CGPoint(x: 0, y: 2)
+        dust.zPosition = rover.zPosition - 0.5
+        dust.yScale = 0.45
+        dust.alpha = 0.55
+        world.addChild(dust)
+        dust.run(.sequence([.group([.scaleX(to: 2.4, y: 0.9, duration: 0.6), .fadeOut(withDuration: 0.6)]), .removeFromParent()]))
+    }
+
+    private func shootingStar() {
+        guard size.width > 1 else { return }
+        let streak = SKSpriteNode(texture: Art.glowDot(color: 0xCFE6FF, diameter: 12))
+        streak.xScale = 7
+        streak.yScale = 0.22
+        streak.blendMode = .add
+        let startX = CGFloat.random(in: -size.width * 0.45...size.width * 0.35)
+        let startY = size.height * CGFloat.random(in: 0.28...0.48)
+        streak.position = CGPoint(x: startX, y: startY)
+        let angle = -CGFloat.random(in: 0.35...0.6)
+        streak.zRotation = angle
+        streak.alpha = 0
+        skyLayer.addChild(streak)
+        let length = size.width * CGFloat.random(in: 0.25...0.4)
+        let travel = SKAction.moveBy(x: length * cos(angle), y: length * sin(angle), duration: 0.7)
+        travel.timingMode = .easeIn
+        streak.run(.sequence([.group([travel, .sequence([.fadeAlpha(to: 0.95, duration: 0.12), .wait(forDuration: 0.3),
+                                                         .fadeOut(withDuration: 0.28)])]), .removeFromParent()]))
+    }
+
+    override func update(_ currentTime: TimeInterval) {
+        guard patrolling else { return }
+        rover.zPosition = Iso.depth(Iso.grid(from: rover.position))
+        let dx = rover.position.x - lastRoverX
+        if abs(dx) > 0.05 { rover.xScale = dx >= 0 ? 1 : -1 }
+        lastRoverX = rover.position.x
     }
 
     // MARK: Mission markers

@@ -112,7 +112,7 @@ struct MissionView: View {
     @ViewBuilder private var bottomArea: some View {
         switch session.stage {
         case .briefing:
-            VStack(spacing: 10) {
+            VStack(spacing: 24) {
                 NovaBubble(text: session.novaLine, actionLabel: session.isLastIntroLine ? nil : "Tap for more") {
                     session.advanceIntro()
                 }
@@ -121,7 +121,7 @@ struct MissionView: View {
                     .buttonStyle(GameButtonStyle(bevel: session.isLastIntroLine ? GamePalette.go : GamePalette.gold, height: 60))
             }
         case .planning:
-            VStack(spacing: 8) {
+            VStack(spacing: 16) {
                 NovaBubble(text: session.novaLine, compact: true) {
                     if session.tutorial == .powered {
                         session.dismissTutorial()

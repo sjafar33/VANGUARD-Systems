@@ -92,7 +92,7 @@ struct BaseView: View {
     }
 
     private var bottomHUD: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 18) {
             NovaBubble(text: novaText, compact: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             ScrollView(.horizontal, showsIndicators: false) {

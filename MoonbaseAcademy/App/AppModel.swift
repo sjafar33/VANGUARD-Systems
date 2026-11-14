@@ -179,6 +179,7 @@ final class AppModel {
         w.shelter = decor.shelter
         w.dish = decor.dish
         w.flow = .none
+        w.ambient = true
         w.markers = MissionID.allCases.map { id in
             let state: MarkerState = progress.isCompleted(id) ? .done : (progress.nextMission == id ? .next : .locked)
             return MapMarker(mission: id, symbol: MissionCopy.of(id).symbol, state: state)
