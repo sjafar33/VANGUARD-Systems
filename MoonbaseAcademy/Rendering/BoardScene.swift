@@ -49,7 +49,7 @@ final class BoardScene: SKScene {
     private let buildingLayer = SKNode()
     private let ghostNode = SKNode()
     private let selectionRing = SKShapeNode()
-    private var nodes: [String: SKNode] = [:]
+    private var buildingNodes: [String: SKNode] = [:]
     private var nodeKeys: [String: String] = [:]
     private var current = BoardSnapshot()
     private var boardKey = ""
@@ -129,7 +129,7 @@ final class BoardScene: SKScene {
             let look = "\(b.kind.rawValue)-\(b.level)-\(b.kind == .habitat ? s.habitatTint : 0)"
             let target = Iso.point(CGFloat(b.centerX), CGFloat(b.centerY))
             let depth = Iso.depth(CGPoint(x: b.centerX, y: b.centerY))
-            if let node = nodes[b.id], nodeKeys[b.id] == look {
+            if let node = buildingNodes[b.id], nodeKeys[b.id] == look {
                 if node.position != target {
                     node.removeAction(forKey: "move")
                     if animate {
@@ -140,14 +140,14 @@ final class BoardScene: SKScene {
                 }
                 node.zPosition = depth
             } else {
-                let isNew = nodes[b.id] == nil
-                nodes[b.id]?.removeFromParent()
+                let isNew = buildingNodes[b.id] == nil
+                buildingNodes[b.id]?.removeFromParent()
                 let node = BoardArt.building(b, habitatTint: s.habitatTint)
                 node.position = target
                 node.zPosition = depth
                 node.name = "building:\(b.id)"
                 buildingLayer.addChild(node)
-                nodes[b.id] = node
+                buildingNodes[b.id] = node
                 nodeKeys[b.id] = look
                 if animate {
                     // A small pop when something is built or upgraded.
@@ -156,9 +156,9 @@ final class BoardScene: SKScene {
                 }
             }
         }
-        for (id, node) in nodes where !seen.contains(id) {
+        for (id, node) in buildingNodes where !seen.contains(id) {
             node.removeFromParent()
-            nodes[id] = nil
+            buildingNodes[id] = nil
             nodeKeys[id] = nil
         }
         updateSelection(s)
