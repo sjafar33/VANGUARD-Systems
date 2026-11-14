@@ -555,4 +555,72 @@ enum Art {
             }
         }
     }
+
+    // MARK: Game icons
+
+    /// A map pin with a symbol, used for mission markers floating over the base.
+    static func markerTexture(symbol: String, state: MarkerState) -> SKTexture {
+        let key = "marker.\(symbol).\(state)"
+        return ArtCache.shared.texture(key, size: CGSize(width: 80, height: 100)) { ctx in
+            let fill: (UInt32, UInt32) = {
+                switch state {
+                case .next: return (0xFFD66B, 0xF2A93B)
+                case .done: return (0x7EDB6E, 0x43A63E)
+                case .locked: return (0x8A9AB0, 0x5E6F87)
+                }
+            }()
+            let circle = CGRect(x: 8, y: 6, width: 64, height: 64)
+            let pin = CGMutablePath()
+            pin.addEllipse(in: circle)
+            pin.move(to: CGPoint(x: 26, y: 62))
+            pin.addLine(to: CGPoint(x: 40, y: 92))
+            pin.addLine(to: CGPoint(x: 54, y: 62))
+            pin.closeSubpath()
+            ctx.saveGState()
+            ctx.translateBy(x: 0, y: 4)
+            ctx.addPath(pin)
+            ctx.setFillColor(UIColor(hex: 0x0B1426, alpha: 0.45).cgColor)
+            ctx.fillPath()
+            ctx.restoreGState()
+            ctx.saveGState()
+            ctx.addPath(pin)
+            ctx.clip()
+            if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                  colors: [UIColor(hex: fill.0).cgColor, UIColor(hex: fill.1).cgColor] as CFArray, locations: nil) {
+                ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: 6), end: CGPoint(x: 0, y: 92), options: [])
+            }
+            ctx.restoreGState()
+            ctx.addPath(pin)
+            ctx.setStrokeColor(UIColor.white.cgColor)
+            ctx.setLineWidth(3.5)
+            ctx.strokePath()
+            let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .black)
+            if let image = UIImage(systemName: symbol, withConfiguration: config)?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+                let size = image.size
+                let rect = CGRect(x: circle.midX - size.width / 2, y: circle.midY - size.height / 2, width: size.width, height: size.height)
+                ctx.saveGState()
+                ctx.setShadow(offset: CGSize(width: 0, height: 2), blur: 0, color: UIColor(hex: 0x0B1426, alpha: 0.6).cgColor)
+                image.draw(in: rect)
+                ctx.restoreGState()
+            }
+        }
+    }
+
+    /// Picture of a buildable item for the build tray, taken from the same procedural art as the world.
+    private static var iconCache: [CargoKind: UIImage] = [:]
+
+    static func cargoIcon(_ kind: CargoKind) -> UIImage? {
+        if let cached = iconCache[kind] { return cached }
+        let texture: SKTexture?
+        switch kind {
+        case .solarArray: texture = solarArray().texture
+        case .battery, .chargedBattery: texture = batteryBody().texture
+        case .shelterKit: texture = shelterBody().texture
+        case .scienceKit, .onboardComputer, .scienceCamera: texture = nil
+        }
+        guard let cg = texture?.cgImage() else { return nil }
+        let image = UIImage(cgImage: cg, scale: 3, orientation: .up)
+        iconCache[kind] = image
+        return image
+    }
 }

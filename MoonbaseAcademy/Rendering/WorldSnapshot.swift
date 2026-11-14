@@ -29,6 +29,35 @@ struct RoverRun: Equatable, Sendable {
     var stopAtSecond: Double
 }
 
+enum FloaterAnchor: Equatable, Sendable {
+    case arrays
+    case batteries
+    case habitat
+    case greenhouse
+    case shelter
+}
+
+/// A floating feedback number, such as "+1.4 kWh" above the arrays. Shown once per id.
+struct Floater: Equatable, Sendable {
+    var id: Int
+    var text: String
+    var color: UInt32
+    var anchor: FloaterAnchor
+}
+
+enum MarkerState: Equatable, Sendable {
+    case next
+    case done
+    case locked
+}
+
+/// A mission pin floating over the part of the base that drill improves.
+struct MapMarker: Equatable, Sendable {
+    var mission: MissionID
+    var symbol: String
+    var state: MarkerState
+}
+
 /// Immutable description of what the world should show. Built from model state; the renderer owns no
 /// authoritative cargo, energy, oxygen, harvest or mission state.
 struct WorldSnapshot: Equatable, Sendable {
@@ -51,6 +80,8 @@ struct WorldSnapshot: Equatable, Sendable {
     var padsVisible = false
     var highlightedPads: Set<PadID> = []
     var stormParticles = false
+    var floaters: [Floater] = []
+    var markers: [MapMarker] = []
 
     static func chargeLevel(_ fraction: Double) -> Int {
         guard fraction.isFinite, fraction > 1e-6 else { return 0 }

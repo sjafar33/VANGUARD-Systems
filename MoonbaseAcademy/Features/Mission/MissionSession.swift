@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 /// Mutually exclusive stages of one drill.
 enum MissionStage: Equatable {
@@ -39,6 +40,15 @@ struct BaseDecor: Equatable {
     }
 }
 
+/// Up to three stars per attempt. Stars are only earned on a successful drill, and only the best result is kept.
+struct StarResult: Equatable {
+    var finished: Bool
+    var predicted: Bool
+    var bonus: Bool
+
+    var count: Int { [finished, predicted, bonus].filter { $0 }.count }
+}
+
 struct AttemptSummary: Equatable {
     var success: Bool
     var headline: String
@@ -52,6 +62,7 @@ final class MissionSession {
     let definition: MissionDefinition
     let science: ScienceInputs
     let copy: MissionCopy
+    let gameCopy: GameCopy
     private(set) var stage: MissionStage = .briefing
     private(set) var configuration: ResourceConfiguration
     private(set) var roverConfiguration: RoverConfiguration
@@ -66,6 +77,10 @@ final class MissionSession {
     private(set) var firstCompletion = false
     private(set) var tutorial: TutorialStep
     private(set) var notice: String?
+    private(set) var introIndex = 0
+    private(set) var countdown: Int?
+    private(set) var stars: StarResult?
+    private(set) var shakeToken = 0
     var hintVisible = false
     private(set) var sameSettingsForAllBlocks = true
 
@@ -74,13 +89,14 @@ final class MissionSession {
     @ObservationIgnored private let reduceMotion: Bool
     @ObservationIgnored private var attemptToken = 0
     @ObservationIgnored private var playbackTask: Task<Void, Never>?
-    @ObservationIgnored private let onRecord: (AttemptRecord, String?) -> Bool
+    @ObservationIgnored private let onRecord: (AttemptRecord, String?, Int) -> Bool
 
     init(definition: MissionDefinition, science: ScienceInputs, world: WorldCoordinator, decor: BaseDecor,
-         reduceMotion: Bool, firstVisit: Bool, onRecord: @escaping (AttemptRecord, String?) -> Bool) {
+         reduceMotion: Bool, firstVisit: Bool, onRecord: @escaping (AttemptRecord, String?, Int) -> Bool) {
         self.definition = definition
         self.science = science
         self.copy = MissionCopy.of(definition.missionID)
+        self.gameCopy = GameCopy.of(definition.missionID)
         self.world = world
         self.decor = decor
         self.reduceMotion = reduceMotion
@@ -90,6 +106,8 @@ final class MissionSession {
                                                      observedMarkerM: definition.rover?.markerChoicesM.first)
         self.tutorial = (definition.missionID == .lightsOut && definition.variant == nil && firstVisit) ? .placeFirstArray : .done
         world.onPadTapped = { [weak self] pad in self?.padTapped(pad) }
+        world.onFlagTapped = { [weak self] marker in self?.flagTapped(marker) }
+        world.onMarkerTapped = nil
         refreshWorld()
     }
 
@@ -121,6 +139,25 @@ final class MissionSession {
 
     func plan(_ index: Int) -> PhasePlan {
         configuration.plans.indices.contains(index) ? configuration.plans[index] : PhasePlan()
+    }
+
+    /// Resources at the start of the drill for the current cargo choice.
+    var startState: ResourceState {
+        var capacity = definition.initial.baseBatteryCapacityKWh
+        var energy = definition.initial.batteryKWh
+        for item in definition.catalog {
+            capacity += Double(count(item.kind)) * item.batteryCapacityKWh
+            energy += Double(count(item.kind)) * item.batteryInitialKWh
+        }
+        return ResourceState(batteryKWh: min(energy, capacity), batteryCapacityKWh: capacity,
+                             oxygenKg: definition.initial.oxygenKg, oxygenCapacityKg: definition.initial.oxygenCapacityKg,
+                             foodDryKg: definition.initial.foodDryKg, cropGrowthDays: 0)
+    }
+
+    /// What the HUD shows: the live step during a test, otherwise the starting supplies.
+    var displayState: ResourceState {
+        if stage == .playback || stage == .results, let step = currentStep { return step.after }
+        return startState
     }
 
     var currentStep: ResourceSnapshot? {
@@ -155,17 +192,92 @@ final class MissionSession {
     // MARK: Intents
 
     func placeFirstArray() {
-        guard tutorial == .placeFirstArray else { return }
+        guard tutorial == .placeFirstArray, stage == .planning else { return }
         configuration.setCount(.solarArray, max(1, count(.solarArray)))
         tutorial = .powered
         refreshWorld()
     }
 
+    var isLastIntroLine: Bool { introIndex >= gameCopy.intro.count - 1 }
+
+    func advanceIntro() {
+        guard stage == .briefing else { return }
+        if isLastIntroLine {
+            beginPlanning()
+        } else {
+            introIndex += 1
+        }
+    }
+
     func beginPlanning() {
         guard stage == .briefing else { return }
-        if tutorial != .done { tutorial = .done }
         stage = .planning
         refreshWorld()
+    }
+
+    func dismissTutorial() {
+        if tutorial == .powered { tutorial = .done }
+    }
+
+    /// Adds one item from the build tray. Returns false (and shakes) when the lander has no room.
+    @discardableResult
+    func addCargo(_ kind: CargoKind) -> Bool {
+        guard stage == .planning else { return false }
+        if tutorial == .placeFirstArray {
+            guard kind == .solarArray else { return false }
+            placeFirstArray()
+            return true
+        }
+        guard canAdd(kind) else {
+            let atMax = count(kind) >= (definition.item(kind)?.maxCount ?? 0)
+            notice = atMax ? "That's all the \(CargoCopy.name(kind).lowercased()) pads we have." : "The lander is full! Remove something to make room."
+            shakeToken += 1
+            return false
+        }
+        setCount(kind, count(kind) + 1)
+        if tutorial == .powered { tutorial = .done }
+        return true
+    }
+
+    func removeCargo(_ kind: CargoKind) {
+        guard stage == .planning, tutorial != .placeFirstArray else { return }
+        setCount(kind, count(kind) - 1)
+    }
+
+    private func flagTapped(_ marker: Double) {
+        guard stage == .planning, roverPlan != .onboard else { return }
+        setMarker(marker)
+        Haptics.tap()
+    }
+
+    var canLaunch: Bool { canRun && tutorial != .placeFirstArray }
+
+    var unlockText: String? { firstCompletion ? gameCopy.unlock : nil }
+
+    /// What Nova says right now.
+    var novaLine: String {
+        switch stage {
+        case .briefing:
+            return gameCopy.intro[min(introIndex, gameCopy.intro.count - 1)]
+        case .planning:
+            if tutorial == .placeFirstArray { return "Tap the Solar array card below to build your first array!" }
+            if tutorial == .powered {
+                return "Power! The array lights the habitat while the Sun shines. Now a 6-hour shadow is coming, and the lander holds 4 crates. Plan for the dark!"
+            }
+            if let notice { return notice }
+            if let issue = issues.first { return issue.childMessage }
+            if hintVisible { return copy.hint }
+            return gameCopy.planTip
+        case .predicting:
+            return copy.question
+        case .playback:
+            if countdown != nil { return "Test starting. Watch closely!" }
+            if isRover { return "The picture flies to Earth, then STOP flies back. The rover keeps rolling..." }
+            guard let step = currentStep else { return "" }
+            return GameCopy.commentary(step, mission: definition.missionID)
+        case .results:
+            return explanation?.paragraphs.first ?? ""
+        }
     }
 
     func setCount(_ kind: CargoKind, _ value: Int) {
@@ -240,6 +352,7 @@ final class MissionSession {
             return
         }
         guard stage == .planning, definition.missionID == .lightsOut else { return }
+        if tutorial == .powered { tutorial = .done }
         switch pad {
         case .array(let index):
             setCount(.solarArray, index < count(.solarArray) ? count(.solarArray) - 1 : count(.solarArray) + 1)
@@ -249,7 +362,7 @@ final class MissionSession {
     }
 
     func goToPrediction() {
-        guard stage == .planning, canRun else { return }
+        guard stage == .planning, canLaunch else { return }
         notice = nil
         prediction = nil
         stage = .predicting
@@ -279,7 +392,9 @@ final class MissionSession {
             explanation = ExplanationWriter.resource(result, definition: definition, science: science)
         }
         playbackIndex = 0
+        stars = nil
         stage = .playback
+        countdown = reduceMotion ? nil : 3
         refreshWorld()
         startPlayback(token: token)
     }
@@ -299,7 +414,14 @@ final class MissionSession {
     private func startPlayback(token: Int) {
         playbackTask?.cancel()
         let durations = playbackDurations()
+        let countdownSteps = reduceMotion ? [] : [3, 2, 1, 0]
         playbackTask = Task { @MainActor [weak self] in
+            for number in countdownSteps {
+                guard let self, self.attemptToken == token, !Task.isCancelled else { return }
+                self.countdown = number
+                try? await Task.sleep(nanoseconds: number == 0 ? 450_000_000 : 420_000_000)
+            }
+            if let self, self.attemptToken == token { self.countdown = nil }
             for (index, duration) in durations.enumerated() {
                 guard let self, self.attemptToken == token, !Task.isCancelled else { return }
                 self.playbackIndex = index
@@ -315,6 +437,7 @@ final class MissionSession {
     func skipPlayback() {
         guard stage == .playback else { return }
         playbackTask?.cancel()
+        countdown = nil
         finishAttempt(token: attemptToken)
     }
 
@@ -330,13 +453,20 @@ final class MissionSession {
             failedAttempts += 1
             hintVisible = true
         }
-        firstCompletion = onRecord(makeRecord(success: success), earnedBadge)
+        let result = StarResult(finished: success,
+                                predicted: success && predictionWasRight == true,
+                                bonus: success && earnedBadge != nil)
+        stars = result
+        firstCompletion = onRecord(makeRecord(success: success), earnedBadge, result.count)
         refreshWorld()
     }
 
     func retry() {
         playbackTask?.cancel()
         attemptToken += 1
+        countdown = nil
+        stars = nil
+        notice = nil
         stage = .planning
         resourceResult = nil
         roverResult = nil
@@ -350,6 +480,7 @@ final class MissionSession {
         playbackTask?.cancel()
         attemptToken += 1
         world.onPadTapped = nil
+        world.onFlagTapped = nil
     }
 
     private var earnedBadge: String? {
@@ -420,6 +551,41 @@ final class MissionSession {
         world.show(worldSnapshot(), reduceMotion: reduceMotion)
     }
 
+    private func signed(_ value: Double, digits: Int = 1) -> String {
+        (value >= 0 ? "+" : "−") + Format.number(abs(value), digits: digits)
+    }
+
+    /// Floating numbers for one playback step. Consolidated so the garden drill does not flood the screen.
+    private func floaters(for step: ResourceSnapshot, world w: WorldSnapshot) -> [Floater] {
+        let base = (attemptToken * 1000 + playbackIndex) * 4
+        var result: [Floater] = []
+        if definition.missionID == .livingBase {
+            let phaseSteps = resourceResult?.trace.filter { $0.phaseIndex == step.phaseIndex } ?? []
+            guard step.id == phaseSteps.last?.id, step.phaseIndex >= 0 else { return [] }
+            let days = plan(step.phaseIndex).gardenFraction * definition.phases[step.phaseIndex].durationHours / 24
+            if days > 0 {
+                result.append(Floater(id: base, text: "+\(Format.number(days)) days of growth", color: 0x9FE7A4, anchor: .greenhouse))
+            }
+            return result
+        }
+        let solar = step.generationKW * step.elapsedHours
+        if step.mood == .sunlit && w.arrays > 0 && solar > 0.05 {
+            result.append(Floater(id: base, text: "+\(Format.number(solar)) kWh", color: 0xFFD66B, anchor: .arrays))
+        }
+        let energy = step.after.batteryKWh - step.before.batteryKWh
+        if abs(energy) > 0.05 && w.batteries > 0 {
+            result.append(Floater(id: base + 1, text: "\(signed(energy)) kWh", color: energy > 0 ? 0x74DFEC : 0xF7A68C, anchor: .batteries))
+        }
+        let oxygen = step.after.oxygenKg - step.before.oxygenKg
+        if abs(oxygen) > 0.01 {
+            result.append(Floater(id: base + 2, text: "\(signed(oxygen, digits: 2)) kg air", color: oxygen > 0 ? 0x9FE7A4 : 0xF7A68C, anchor: .habitat))
+        }
+        if step.curtailedKWh > 0.05 {
+            result.append(Floater(id: base + 3, text: "\(Format.number(step.curtailedKWh)) kWh wasted", color: 0xC9D1DA, anchor: .arrays))
+        }
+        return result
+    }
+
     func worldSnapshot() -> WorldSnapshot {
         var w = WorldSnapshot()
         w.dish = decor.dish
@@ -429,7 +595,7 @@ final class MissionSession {
         case .lightsOut:
             w.arrays = count(.solarArray)
             w.batteries = count(.battery)
-            w.padsVisible = stage == .planning || tutorial != .done
+            w.padsVisible = stage == .planning
             if tutorial == .placeFirstArray {
                 w.highlightedPads = [.array(0)]
             } else if stage == .planning {
@@ -483,6 +649,9 @@ final class MissionSession {
             }
             w.shelterOccupied = step.sheltered
             w.stormParticles = step.mood == .storm && stage == .playback
+            if stage == .playback && countdown == nil {
+                w.floaters = floaters(for: step, world: w)
+            }
             if stage == .playback {
                 if step.mood == .sunlit && w.arrays > 0 && step.generationKW > step.demand.totalKW + 1e-9 {
                     w.flow = .solarToBase

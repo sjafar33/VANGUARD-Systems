@@ -25,6 +25,18 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     /// Cosmetic layout from the first successful power drill. Never applied as a numeric bonus.
     var builtArrays: Int = 0
     var builtBatteries: Int = 0
+    /// Best star count per mission (0 to 3). Optional so saves written before stars existed still load.
+    var bestStars: [String: Int]?
+
+    func stars(_ id: MissionID) -> Int { bestStars?[id.rawValue] ?? 0 }
+    var totalStars: Int { MissionID.allCases.reduce(0) { $0 + stars($1) } }
+
+    /// Keeps the best result only, so replaying cannot farm stars.
+    mutating func recordStars(_ id: MissionID, _ count: Int) {
+        var all = bestStars ?? [:]
+        all[id.rawValue] = max(all[id.rawValue] ?? 0, min(3, max(0, count)))
+        bestStars = all
+    }
 
     static let maxAttemptsPerMission = 2
 

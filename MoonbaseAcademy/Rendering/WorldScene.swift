@@ -5,7 +5,13 @@ import UIKit
 /// Touches become selection intents; it never changes game state itself.
 final class WorldScene: SKScene {
     var onPadTapped: ((PadID) -> Void)?
+    var onMarkerTapped: ((MissionID) -> Void)?
+    var onFlagTapped: ((Double) -> Void)?
     var reduceMotion = false
+    /// Space covered by the HUD at the top and bottom, in points. The base is framed in what remains.
+    var hudInsets: UIEdgeInsets = .zero {
+        didSet { if hudInsets != oldValue { layoutForSize() } }
+    }
 
     static let arrayPads: [CGPoint] = [CGPoint(x: -2.6, y: 2.1), CGPoint(x: -2.6, y: 1.1), CGPoint(x: -2.6, y: 0.1), CGPoint(x: -2.6, y: -0.9)]
     static let batteryPads: [CGPoint] = [CGPoint(x: -0.9, y: -2.6), CGPoint(x: 0.1, y: -2.6), CGPoint(x: 1.1, y: -2.6), CGPoint(x: 2.1, y: -2.6)]
@@ -45,6 +51,10 @@ final class WorldScene: SKScene {
     private var flowKey: String = ""
     private var hasApplied = false
     private var lastRunID: Int?
+    private var shownFloaters: Set<Int> = []
+    private var markerNodes: [MissionID: SKNode] = [:]
+    private var markerKey: [MapMarker] = []
+    private var flagPoints: [(Double, CGPoint)] = []
 
     override init(size: CGSize) {
         super.init(size: size)
@@ -122,15 +132,19 @@ final class WorldScene: SKScene {
     private func layoutForSize() {
         guard size.width > 1, size.height > 1 else { return }
         let content = Self.contentRect
-        let scale = min(size.width / content.width, size.height / content.height)
+        let top = min(hudInsets.top, size.height * 0.4)
+        let bottom = min(hudInsets.bottom, size.height * 0.55)
+        let available = CGRect(x: -size.width / 2 + 8, y: -size.height / 2 + bottom,
+                               width: size.width - 16, height: max(120, size.height - top - bottom))
+        let scale = min(available.width / content.width, available.height / content.height)
         world.setScale(scale)
-        world.position = CGPoint(x: -content.midX * scale, y: -content.midY * scale)
+        world.position = CGPoint(x: available.midX - content.midX * scale, y: available.midY - content.midY * scale)
         let side = max(size.width, size.height)
         background.size = CGSize(width: side, height: side)
         tint.size = CGSize(width: size.width + 4, height: size.height + 4)
-        let earthSize = max(44, min(84, min(size.width, size.height) * 0.16))
+        let earthSize = max(44, min(84, min(size.width, size.height) * 0.15))
         earth.size = CGSize(width: earthSize, height: earthSize)
-        earth.position = CGPoint(x: size.width / 2 - earthSize * 0.85, y: size.height / 2 - earthSize * 0.85)
+        earth.position = CGPoint(x: size.width / 2 - earthSize * 0.8, y: size.height / 2 - top - earthSize * 0.6)
         if let storm {
             storm.position = CGPoint(x: -size.width * 0.2, y: size.height / 2 + 20)
             storm.particlePositionRange = CGVector(dx: size.width * 1.3, dy: 10)
@@ -150,6 +164,8 @@ final class WorldScene: SKScene {
         updateShelter(s)
         updateRover(s)
         updateFlow(s)
+        updateFloaters(s)
+        updateMarkers(s)
         current = s
         hasApplied = true
     }
@@ -479,7 +495,9 @@ final class WorldScene: SKScene {
             label.zPosition = 0.3
             node.addChild(label)
         }
+        flagPoints = []
         for marker in track.markers {
+            flagPoints.append((marker, Iso.point(x0 + CGFloat(marker), y - 0.36) + CGPoint(x: 8, y: 22)))
             let selected = track.selectedMarker.map { abs($0 - marker) < 1e-9 } ?? false
             let base = Iso.point(x0 + CGFloat(marker), y - 0.36)
             let pole = SKShapeNode()
@@ -490,7 +508,7 @@ final class WorldScene: SKScene {
             pole.lineWidth = 2
             pole.zPosition = 0.4
             node.addChild(pole)
-            let flag = SKShapeNode(rectOf: CGSize(width: 16, height: 10), cornerRadius: 2)
+            let flag = SKShapeNode(rectOf: CGSize(width: selected ? 22 : 18, height: selected ? 14 : 12), cornerRadius: 2)
             flag.position = base + CGPoint(x: 8, y: 25)
             flag.fillColor = selected ? UIColor(hex: 0xF2B84B) : UIColor(hex: 0xEDF1F3)
             flag.strokeColor = UIColor(hex: 0x3A4555)
@@ -602,8 +620,27 @@ final class WorldScene: SKScene {
     // MARK: Touch
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard current.padsVisible, let touch = touches.first else { return }
+        guard let touch = touches.first else { return }
         let location = touch.location(in: world)
+        let tolerance = 34 / max(0.3, world.xScale)
+        if let onMarkerTapped {
+            for (mission, node) in markerNodes where hypot(node.position.x - location.x, node.position.y + 20 - location.y) < tolerance {
+                onMarkerTapped(mission)
+                return
+            }
+        }
+        if let onFlagTapped, trackKey != nil {
+            var best: (Double, CGFloat)?
+            for (marker, point) in flagPoints {
+                let d = hypot(point.x - location.x, point.y - location.y)
+                if d < tolerance, d < (best?.1 ?? .infinity) { best = (marker, d) }
+            }
+            if let best {
+                onFlagTapped(best.0)
+                return
+            }
+        }
+        guard current.padsVisible else { return }
         let candidates = [location, location + CGPoint(x: 0, y: -16)]
         var best: (PadID, CGFloat)?
         for point in candidates {
@@ -618,6 +655,89 @@ final class WorldScene: SKScene {
             }
         }
         if let best { onPadTapped?(best.0) }
+    }
+
+    // MARK: Floating numbers
+
+    private func anchorPoint(_ anchor: FloaterAnchor, _ s: WorldSnapshot) -> CGPoint {
+        func average(_ spots: [CGPoint]) -> CGPoint {
+            guard !spots.isEmpty else { return Iso.point(0, 0) }
+            let gx = spots.map(\.x).reduce(0, +) / CGFloat(spots.count)
+            let gy = spots.map(\.y).reduce(0, +) / CGFloat(spots.count)
+            return Iso.point(gx, gy)
+        }
+        switch anchor {
+        case .arrays: return average(Array(Self.arrayPads.prefix(max(1, s.arrays)))) + CGPoint(x: 0, y: 46)
+        case .batteries: return average(Array(Self.batteryPads.prefix(max(1, s.batteries)))) + CGPoint(x: 0, y: 52)
+        case .habitat: return Iso.point(0, 0) + CGPoint(x: 0, y: 84)
+        case .greenhouse: return Iso.point(Self.greenhouseSpot) + CGPoint(x: 0, y: 52)
+        case .shelter: return Iso.point(Self.shelterSpot) + CGPoint(x: 0, y: 44)
+        }
+    }
+
+    private func updateFloaters(_ s: WorldSnapshot) {
+        if s.floaters.isEmpty { shownFloaters.removeAll() }
+        for (index, floater) in s.floaters.enumerated() where !shownFloaters.contains(floater.id) {
+            shownFloaters.insert(floater.id)
+            let label = SKLabelNode()
+            let font = UIFont.systemFont(ofSize: 22, weight: .black)
+            let rounded = font.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 22) } ?? font
+            label.attributedText = NSAttributedString(string: floater.text, attributes: [
+                .font: rounded,
+                .foregroundColor: UIColor(hex: floater.color),
+                .strokeColor: UIColor(hex: 0x0B1426),
+                .strokeWidth: -5
+            ])
+            label.verticalAlignmentMode = .center
+            label.position = anchorPoint(floater.anchor, s) + CGPoint(x: CGFloat(index % 2) * 18 - 9, y: 0)
+            label.zPosition = ZLayer.flow + 10
+            world.addChild(label)
+            if reduceMotion {
+                label.run(.sequence([.wait(forDuration: 0.9), .fadeOut(withDuration: 0.25), .removeFromParent()]))
+            } else {
+                label.setScale(0.4)
+                let pop = SKAction.scale(to: 1.15, duration: 0.14)
+                pop.timingMode = .easeOut
+                let rise = SKAction.moveBy(x: 0, y: 34, duration: 1.0)
+                rise.timingMode = .easeOut
+                label.run(.sequence([pop, .scale(to: 1, duration: 0.08), .group([rise, .sequence([.wait(forDuration: 0.65), .fadeOut(withDuration: 0.35)])]), .removeFromParent()]))
+            }
+        }
+    }
+
+    // MARK: Mission markers
+
+    private func markerAnchor(_ mission: MissionID) -> CGPoint {
+        switch mission {
+        case .lightsOut: return Iso.point(-2.6, 0.6) + CGPoint(x: 0, y: 50)
+        case .livingBase: return Iso.point(Self.greenhouseSpot) + CGPoint(x: 0, y: 64)
+        case .stormDrill: return Iso.point(Self.shelterSpot) + CGPoint(x: 0, y: 56)
+        case .signalLag: return Iso.point(Self.roverParking) + CGPoint(x: 0, y: 58)
+        }
+    }
+
+    private func updateMarkers(_ s: WorldSnapshot) {
+        guard s.markers != markerKey else { return }
+        markerKey = s.markers
+        markerNodes.values.forEach { $0.removeFromParent() }
+        markerNodes = [:]
+        for marker in s.markers {
+            let node = SKSpriteNode(texture: Art.markerTexture(symbol: marker.state == .done ? "checkmark" : (marker.state == .locked ? "lock.fill" : marker.symbol),
+                                                                 state: marker.state))
+            let side: CGFloat = marker.state == .next ? 58 : 40
+            node.size = CGSize(width: side, height: side * 1.25)
+            node.anchorPoint = CGPoint(x: 0.5, y: 0)
+            node.position = markerAnchor(marker.mission)
+            node.zPosition = ZLayer.flow + 20
+            node.alpha = marker.state == .locked ? 0.8 : 1
+            world.addChild(node)
+            markerNodes[marker.mission] = node
+            if marker.state == .next && !reduceMotion {
+                let up = SKAction.moveBy(x: 0, y: 8, duration: 0.55)
+                up.timingMode = .easeInEaseOut
+                node.run(.repeatForever(.sequence([up, up.reversed()])))
+            }
+        }
     }
 }
 
@@ -640,5 +760,19 @@ final class WorldCoordinator {
     var onPadTapped: ((PadID) -> Void)? {
         get { scene.onPadTapped }
         set { scene.onPadTapped = newValue }
+    }
+
+    var onMarkerTapped: ((MissionID) -> Void)? {
+        get { scene.onMarkerTapped }
+        set { scene.onMarkerTapped = newValue }
+    }
+
+    var onFlagTapped: ((Double) -> Void)? {
+        get { scene.onFlagTapped }
+        set { scene.onFlagTapped = newValue }
+    }
+
+    func setHUDInsets(top: CGFloat, bottom: CGFloat) {
+        scene.hudInsets = UIEdgeInsets(top: top, left: 0, bottom: bottom, right: 0)
     }
 }

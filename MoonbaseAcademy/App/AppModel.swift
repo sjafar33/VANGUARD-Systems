@@ -20,6 +20,8 @@ final class AppModel {
     private(set) var session: MissionSession?
     private(set) var saveIssue: String?
     private(set) var lastSaveError: String?
+    /// Mission whose briefing card is open on the base screen.
+    var selectedMission: MissionID?
     private(set) var systemReduceMotion = false
 
     func setSystemReduceMotion(_ on: Bool) {
@@ -58,6 +60,10 @@ final class AppModel {
             saveIssue = reason + (preserved == nil ? "" : " The original file was kept so it can be checked.")
             canSave = false
         }
+        baseWorld.onMarkerTapped = { [weak self] id in
+            Haptics.tap()
+            self?.selectedMission = id
+        }
         refreshBase()
     }
 
@@ -75,9 +81,10 @@ final class AppModel {
         let firstVisit = !progress.isCompleted(id) && progress.recentAttempts(id).isEmpty
         session = MissionSession(definition: definition, science: science, world: missionWorld,
                                  decor: BaseDecor(progress: progress), reduceMotion: reduceMotion,
-                                 firstVisit: firstVisit) { [weak self] attempt, badge in
-            self?.record(attempt, badge: badge) ?? false
+                                 firstVisit: firstVisit) { [weak self] attempt, badge, stars in
+            self?.record(attempt, badge: badge, stars: stars) ?? false
         }
+        selectedMission = nil
         route = .mission
     }
 
@@ -90,8 +97,9 @@ final class AppModel {
 
     // MARK: Progress
 
-    private func record(_ attempt: AttemptRecord, badge: String?) -> Bool {
+    private func record(_ attempt: AttemptRecord, badge: String?, stars: Int) -> Bool {
         let first = progress.record(attempt, badge: badge)
+        if attempt.success { progress.recordStars(attempt.missionID, stars) }
         if first, attempt.success, attempt.missionID == .lightsOut, let config = attempt.resourceConfiguration {
             progress.builtArrays = config.count(.solarArray)
             progress.builtBatteries = config.count(.battery)
@@ -164,6 +172,10 @@ final class AppModel {
         w.shelter = decor.shelter
         w.dish = decor.dish
         w.flow = .none
+        w.markers = MissionID.allCases.map { id in
+            let state: MarkerState = progress.isCompleted(id) ? .done : (progress.nextMission == id ? .next : .locked)
+            return MapMarker(mission: id, symbol: MissionCopy.of(id).symbol, state: state)
+        }
         return w
     }
 
