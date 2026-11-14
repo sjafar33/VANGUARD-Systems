@@ -526,7 +526,7 @@ final class WorldScene: SKScene {
             steps.append(.wait(forDuration: run.stopAtSecond))
         }
         steps.append(.run { [weak self] in self?.flashRover(color: 0x53C6D7) })
-        run(.sequence(steps), withKey: "roverRun")
+        self.run(.sequence(steps), withKey: "roverRun")
     }
 
     private func flashRover(color: UInt32) {

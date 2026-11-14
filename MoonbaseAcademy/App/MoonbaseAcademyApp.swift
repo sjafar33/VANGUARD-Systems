@@ -1,3 +1,4 @@
+import SpriteKit
 import SwiftUI
 
 @main
