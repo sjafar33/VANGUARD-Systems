@@ -701,14 +701,16 @@ struct PowerBalance: View {
         let breathe = Double(session.definition.initial.crewCount) * session.science.oxygenKgPerPersonDay
         let daily = session.definition.missionID == .livingBase
         HStack(spacing: 10) {
-            meter("bolt.fill", "Makes", daily ? "\(Format.number(supply * 24)) kWh/day" : Format.kW(supply), Theme.energyInk)
-            meter("powerplug.fill", "Uses", daily ? "\(Format.number(demand * 24)) kWh/day" : Format.kW(demand),
+            // Power (kW) is a rate; the garden drill shows a day's energy (kWh) instead, so the labels say which.
+            meter("bolt.fill", daily ? "Energy made" : "Power in", daily ? "\(Format.number(supply * 24)) kWh/day" : Format.kW(supply), Theme.energyInk)
+            meter("powerplug.fill", daily ? "Energy used" : "Power used", daily ? "\(Format.number(demand * 24)) kWh/day" : Format.kW(demand),
                   demand > supply + 1e-9 ? Theme.warningInk : Theme.ink)
             meter("wind", "Air made", "\(Format.number(oxygen)) of \(Format.number(breathe, digits: 2)) kg/day",
                   oxygen + 1e-9 < breathe ? Theme.warningInk : Theme.plantInk)
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.panel))
+        .accessibilityHint(UnitHelp.powerAndEnergy)
     }
 
     private func meter(_ symbol: String, _ title: String, _ value: String, _ color: Color) -> some View {
@@ -741,7 +743,7 @@ struct BetOverlay: View {
                         .foregroundStyle(Theme.ink)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Label("Guess right to earn a star", systemImage: "star.fill")
+                Label("Guess right to earn a star, even if the drill fails", systemImage: "star.fill")
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.amberInk)
                 PlaybackModePicker(session: session)
@@ -808,11 +810,11 @@ struct ResultOverlay: View {
                             .background(Capsule().fill(LinearGradient(colors: [GamePalette.gold.top, GamePalette.gold.bottom], startPoint: .top, endPoint: .bottom)))
                     }
                     NovaBubble(text: explanationLead, compact: true)
-                    if let right = session.predictionWasRight, let prediction = session.prediction {
-                        Label(right ? "You predicted \"\(prediction.label)\". Good thinking!" : "You predicted \"\(prediction.label)\". Now you know why!",
-                              systemImage: right ? "brain.head.profile" : "sparkles")
+                    if let line = predictionLine {
+                        Label(line.text, systemImage: line.symbol)
                             .font(.system(.subheadline, design: .rounded).weight(.heavy))
                             .foregroundStyle(Theme.ink)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     if !success {
                         Label(session.copy.hint, systemImage: "lightbulb.fill")
@@ -827,7 +829,10 @@ struct ResultOverlay: View {
                             Text("Last try vs this try").font(.system(.subheadline, design: .rounded).weight(.black)).foregroundStyle(Theme.ink)
                             AttemptLine(title: "Last", summary: previous)
                             AttemptLine(title: "Now", summary: current)
-                            Text("Same starting supplies both times.").font(.caption).foregroundStyle(Theme.inkSecondary)
+                            Text(previous.setup == current.setup
+                                 ? "Both tries used the same plan."
+                                 : "Both tries started from the same base. Only your plan changed.")
+                                .font(.caption).foregroundStyle(Theme.inkSecondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
@@ -869,6 +874,19 @@ struct ResultOverlay: View {
         }
     }
 
+    /// Matches the prediction star exactly: a correct Yes or No earns it, pass or fail.
+    private var predictionLine: (text: String, symbol: String)? {
+        guard let prediction = session.prediction else { return nil }
+        switch session.predictionWasRight {
+        case .some(true):
+            return ("You predicted \"\(prediction.label)\" and you were right. Prediction star earned!", "brain.head.profile")
+        case .some(false):
+            return ("You predicted \"\(prediction.label)\". Now you know why it went the other way!", "sparkles")
+        case .none:
+            return ("You weren't sure, and that's okay. Now you've seen what happens, so next time you can make a guess.", "eye.fill")
+        }
+    }
+
     private var explanationLead: String {
         let paragraphs = session.explanation?.paragraphs ?? []
         return paragraphs.prefix(2).joined(separator: " ")
@@ -897,6 +915,12 @@ struct ResultOverlay: View {
                     }
                     ForEach(Array(e.paragraphs.dropFirst(2)), id: \.self) { paragraph in
                         Text(paragraph).font(.system(.subheadline, design: .rounded)).foregroundStyle(Theme.ink)
+                    }
+                    if !session.isRover {
+                        Label(UnitHelp.powerAndEnergy, systemImage: "bolt.badge.clock.fill")
+                            .font(.system(.caption, design: .rounded).weight(.semibold))
+                            .foregroundStyle(Theme.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }

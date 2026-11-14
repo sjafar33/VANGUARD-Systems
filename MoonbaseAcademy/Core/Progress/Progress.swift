@@ -14,6 +14,15 @@ struct AttemptRecord: Codable, Equatable, Sendable {
     var roverConfiguration: RoverConfiguration?
 }
 
+/// One of the three separate stars a drill can give. Each is earned on its own:
+/// finishing the drill, predicting the outcome correctly (pass or fail), and the drill's bonus.
+/// Only `completed` unlocks the next drill.
+enum Achievement: String, Codable, CaseIterable, Sendable, Hashable {
+    case completed
+    case predicted
+    case bonus
+}
+
 struct CampaignProgress: Codable, Equatable, Sendable {
     var baseName: String = "Moonbase One"
     var completedMissions: [MissionID] = []
@@ -33,14 +42,45 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     /// How the player likes to watch tests. Optional so older saves still load; missing means automatic.
     var playbackMode: PlaybackMode?
 
-    func stars(_ id: MissionID) -> Int { bestStars?[id.rawValue] ?? 0 }
+    /// Which stars each drill has earned, kept as separate achievements. Optional so older saves still load;
+    /// a drill missing here is rebuilt from the older fields by `legacyAchievements`.
+    var achievements: [String: [Achievement]]?
+
+    func achievementSet(_ id: MissionID) -> Set<Achievement> {
+        if let stored = achievements?[id.rawValue] { return Set(stored) }
+        return legacyAchievements(id)
+    }
+
+    /// Saves made before separate achievements kept only a best star count, and gave stars only for a
+    /// finished drill. Completion and the bonus badge are saved on their own, so the stars can be rebuilt
+    /// exactly: completion, the bonus if its badge was earned, and a correct prediction for any star left over.
+    /// Nothing is ever taken away: `stars` never reports less than the old count.
+    func legacyAchievements(_ id: MissionID) -> Set<Achievement> {
+        var set = Set<Achievement>()
+        guard completedMissions.contains(id) else { return set }
+        set.insert(.completed)
+        let legacy = bestStars?[id.rawValue]
+        if let badge = MissionCopy.badge(id), badges.contains(badge), legacy == nil || (legacy ?? 0) >= 2 {
+            set.insert(.bonus)
+        }
+        if let legacy, legacy > set.count { set.insert(.predicted) }
+        return set
+    }
+
+    func stars(_ id: MissionID) -> Int { min(3, max(achievementSet(id).count, bestStars?[id.rawValue] ?? 0)) }
     var totalStars: Int { MissionID.allCases.reduce(0) { $0 + stars($1) } }
 
-    /// Keeps the best result only, so replaying cannot farm stars.
-    mutating func recordStars(_ id: MissionID, _ count: Int) {
-        var all = bestStars ?? [:]
-        all[id.rawValue] = max(all[id.rawValue] ?? 0, min(3, max(0, count)))
-        bestStars = all
+    /// Adds newly earned achievements. Earned stars are never removed, so replaying cannot lose them
+    /// and cannot farm extra ones either (each achievement counts once).
+    mutating func recordAchievements(_ id: MissionID, _ earned: Set<Achievement>) {
+        var set = achievementSet(id).union(earned)
+        if !completedMissions.contains(id) { set.remove(.completed) }
+        var all = achievements ?? [:]
+        all[id.rawValue] = Achievement.allCases.filter { set.contains($0) }
+        achievements = all
+        var best = bestStars ?? [:]
+        best[id.rawValue] = max(best[id.rawValue] ?? 0, set.count)
+        bestStars = best
     }
 
     static let maxAttemptsPerMission = 2

@@ -47,6 +47,14 @@ struct StarResult: Equatable {
     var bonus: Bool
 
     var count: Int { [finished, predicted, bonus].filter { $0 }.count }
+
+    var achievements: Set<Achievement> {
+        var set = Set<Achievement>()
+        if finished { set.insert(.completed) }
+        if predicted { set.insert(.predicted) }
+        if bonus { set.insert(.bonus) }
+        return set
+    }
 }
 
 struct AttemptSummary: Equatable {
@@ -98,7 +106,7 @@ final class MissionSession {
     @ObservationIgnored private let reduceMotion: Bool
     @ObservationIgnored private var attemptToken = 0
     @ObservationIgnored private var playbackTask: Task<Void, Never>?
-    @ObservationIgnored private let onRecord: (AttemptRecord, String?, Int) -> Bool
+    @ObservationIgnored private let onRecord: (AttemptRecord, String?, Set<Achievement>) -> Bool
     @ObservationIgnored private let onModeChange: (PlaybackMode) -> Void
     @ObservationIgnored private var advanceRequested = false
     @ObservationIgnored private var restartDwell = false
@@ -106,11 +114,11 @@ final class MissionSession {
     init(definition: MissionDefinition, science: ScienceInputs, world: WorldCoordinator, decor: BaseDecor,
          reduceMotion: Bool, firstVisit: Bool, playbackMode: PlaybackMode = .automatic,
          onModeChange: @escaping (PlaybackMode) -> Void = { _ in },
-         onRecord: @escaping (AttemptRecord, String?, Int) -> Bool) {
+         onRecord: @escaping (AttemptRecord, String?, Set<Achievement>) -> Bool) {
         self.definition = definition
         self.science = science
-        self.copy = MissionCopy.of(definition.missionID)
-        self.gameCopy = GameCopy.of(definition.missionID)
+        self.copy = MissionCopy.of(definition, science: science)
+        self.gameCopy = GameCopy.of(definition, science: science)
         self.world = world
         self.decor = decor
         self.reduceMotion = reduceMotion
@@ -589,11 +597,12 @@ final class MissionSession {
             failedAttempts += 1
             hintVisible = true
         }
+        // Each star is its own achievement: a correct prediction counts even when the drill fails.
         let result = StarResult(finished: success,
-                                predicted: success && predictionWasRight == true,
+                                predicted: predictionWasRight == true,
                                 bonus: success && earnedBadge != nil)
         stars = result
-        firstCompletion = onRecord(makeRecord(success: success), earnedBadge, result.count)
+        firstCompletion = onRecord(makeRecord(success: success), earnedBadge, result.achievements)
         refreshWorld()
     }
 

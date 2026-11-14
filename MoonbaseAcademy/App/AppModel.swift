@@ -86,8 +86,8 @@ final class AppModel {
                                  decor: BaseDecor(progress: progress), reduceMotion: reduceMotion,
                                  firstVisit: firstVisit,
                                  playbackMode: progress.playbackMode ?? .automatic,
-                                 onModeChange: { [weak self] mode in self?.setPlaybackMode(mode) }) { [weak self] attempt, badge, stars in
-            self?.record(attempt, badge: badge, stars: stars) ?? false
+                                 onModeChange: { [weak self] mode in self?.setPlaybackMode(mode) }) { [weak self] attempt, badge, earned in
+            self?.record(attempt, badge: badge, earned: earned) ?? false
         }
         selectedMission = nil
         route = .mission
@@ -107,9 +107,10 @@ final class AppModel {
 
     // MARK: Progress
 
-    private func record(_ attempt: AttemptRecord, badge: String?, stars: Int) -> Bool {
+    private func record(_ attempt: AttemptRecord, badge: String?, earned: Set<Achievement>) -> Bool {
+        // Completion (which unlocks the next drill) is recorded first, so `completed` is only kept for a real success.
         let first = progress.record(attempt, badge: badge)
-        if attempt.success { progress.recordStars(attempt.missionID, stars) }
+        progress.recordAchievements(attempt.missionID, earned)
         if first, attempt.success, attempt.missionID == .lightsOut, let config = attempt.resourceConfiguration {
             progress.builtArrays = config.count(.solarArray)
             progress.builtBatteries = config.count(.battery)
@@ -202,7 +203,7 @@ final class AppModel {
         w.flow = .none
         w.ambient = true
         // One quest marker at a time, standing on the site the next drill will build.
-        w.markers = progress.nextMission.map { [MapMarker(mission: $0, symbol: MissionCopy.of($0).symbol, state: .next)] } ?? []
+        w.markers = progress.nextMission.map { [MapMarker(mission: $0, symbol: MissionCopy.symbol($0), state: .next)] } ?? []
         return w
     }
 

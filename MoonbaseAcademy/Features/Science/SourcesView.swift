@@ -89,17 +89,19 @@ struct SourcesView: View {
         "Oxygen tank: 7.16 kg, about four days for two people. Each drill starts half full.",
         "Solar array: 1 kW in sunlight. Battery: 4 kWh. Cargo point costs.",
         "Garden: 16 hours of light a day for full growth; 0.01 kW when the lights are off.",
-        "Garden drill: 17 kWh of energy available each day.",
-        "Storm drill: 0.8 kW available on average; shelter takes 3 kWh to build; the crew must be inside for the whole storm.",
-        "Rover: drives at a steady 1 m/s and stops instantly. The yellow bay is 5 to 6 m.",
+        "Garden drill: 17 kWh of energy available each day (16 kWh in the harder version).",
+        "Storm drill: 0.8 kW available on average; shelter takes 3 kWh to build; the crew must be inside for the whole storm. The lander holds 4 crates (3 in the harder version).",
+        "Rover: drives at a steady 1 m/s (0.75 m/s in the harder version) and stops instantly. The yellow bay is 5 to 6 m.",
         "Power and air use stay the same within each drill step. This is a training model, not an electrical simulator."
     ]
 
     static let limits = [
-        "Radiation dose. The storm drill uses a simple shelter rule and never calculates a dose.",
+        "Radiation dose. The storm drill uses a simple shelter rule and never calculates a dose. The storm's timing was recorded near Earth and does not by itself tell us the dose on the Moon's surface.",
+        "Lettuce on the Moon. The garden uses how long lettuce took on the space station as a training rule. It does not prove lettuce would grow the same way on the Moon.",
+        "Training numbers. Power, battery, cargo, shadow length and rover numbers are game assumptions, not NASA measurements.",
         "Carbon dioxide, water, heat and full nutrition.",
         "Equipment failures and repairs.",
-        "The real lunar day and night. The six-hour shadow drill is not a lunar night, which lasts about two weeks.",
+        "The real lunar day and night. The shadow drill (6 hours, or 9 in the harder version) is not a lunar night, which lasts about two weeks.",
         "Rover braking distance, rough ground and radio scheduling.",
         "Changes in the Moon's distance during its orbit."
     ]

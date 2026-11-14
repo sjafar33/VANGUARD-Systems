@@ -3,50 +3,68 @@ import Foundation
 /// The game voice: Nova's lines, star goals and rewards. Short sentences for readers aged 7 to 12.
 struct GameCopy {
     let title: String
-    let intro: [String]
-    let planTip: String
+    var intro: [String]
+    var planTip: String
     let bonusStar: String
     let unlock: String
 
+    /// Titles and lines that never depend on a drill's numbers (used on the base map).
     static func of(_ id: MissionID) -> GameCopy {
         switch id {
         case .lightsOut:
             return GameCopy(
                 title: "Lights Out",
-                intro: ["Hi, I'm Nova, your base robot! Our habitat has no power yet.",
-                        "Solar arrays make power in sunlight. But a 6-hour shadow drill is coming, with no sun at all.",
-                        "Build a power system that lasts through the dark!"],
+                intro: ["Hi, I'm Nova, your base robot! Our habitat has no power yet."],
                 planTip: "Tip: arrays only work in sunlight. What could keep power for the shadow?",
                 bonusStar: "Power the observation",
                 unlock: "Solar farm built on your base!")
         case .livingBase:
             return GameCopy(
                 title: "The Living Base",
-                intro: ["Astronauts love fresh food! Let's grow lettuce in the greenhouse.",
-                        "NASA grew lettuce on the space station in 33 days. We have 33 days and 17 kWh of energy each day.",
-                        "Keep the air maker running too. Plants and people both need power!"],
+                intro: ["Astronauts love fresh food! Let's grow lettuce in the greenhouse."],
                 planTip: "Tap a plan card to set the greenhouse lights and the air maker.",
                 bonusStar: "Do some research",
                 unlock: "Greenhouse built on your base!")
         case .stormDrill:
             return GameCopy(
                 title: "Storm Drill",
-                intro: ["A solar storm drill! Its timing comes from a real storm seen on September 10, 2017.",
-                        "The crew must stay in a shelter for the whole storm: about 98 hours.",
-                        "The lander carries 4 crates. Choose your cargo wisely!"],
-                planTip: "The shelter is a must. Building it uses 3 kWh of battery.",
+                intro: ["A solar storm drill! Its timing comes from a real storm recorded near Earth."],
+                planTip: "The shelter is a must. Building it uses battery energy.",
                 bonusStar: "Run storm science",
                 unlock: "Storm shelter built on your base!")
         case .signalLag:
             return GameCopy(
                 title: "Signal Lag",
-                intro: ["Mission Control on Earth drives our rover using its camera pictures.",
-                        "Radio signals take time to cross 384,400 km of space, even at the speed of light.",
-                        "Park the rover in the yellow bay. Tap a flag to choose when Earth sends STOP!"],
+                intro: ["Mission Control on Earth drives our rover using its camera pictures."],
                 planTip: "Tap a flag on the track, or pick one below. When will STOP arrive?",
                 bonusStar: "Photo with the camera",
                 unlock: "Radio dish built on your base!")
         }
+    }
+
+    /// The full briefing for one drill, with numbers read from that drill (standard or harder variant).
+    static func of(_ d: MissionDefinition, science s: ScienceInputs) -> GameCopy {
+        var copy = of(d.missionID)
+        switch d.missionID {
+        case .lightsOut:
+            let shadow = d.phases.last?.durationHours ?? 0
+            copy.intro += ["Solar arrays make power in sunlight. But a \(Words.hourAdjective(shadow)) shadow drill is coming, with no sun at all.",
+                           "Build a power system that lasts through the dark!"]
+        case .livingBase:
+            let days = Words.number(d.totalHours / 24)
+            let daily = Words.kWh((d.phases.first?.baseSupplyKW ?? 0) * 24)
+            copy.intro += ["Lettuce grown on the space station took about \(Words.number(s.cropReferenceDays)) days. Our drill lasts \(days) days, with \(daily) of energy each day.",
+                           "Keep the air maker running too. Plants and people both need power!"]
+        case .stormDrill:
+            let storm = d.totalHours
+            copy.intro += ["That storm started on \(Words.date(s.stormThresholdCrossing)). The crew must stay in a shelter for the whole storm: about \(Int(storm.rounded())) hours.",
+                           "The lander has room for \(d.cargoBudget) crates. Choose your cargo wisely!"]
+            copy.planTip = "The shelter is a must. Building it uses \(Words.kWh(d.item(.shelterKit)?.assemblyEnergyKWh ?? 0)) of battery."
+        case .signalLag:
+            copy.intro += ["Radio signals take time to cross \(Words.km(s.moonDistanceKm)) of space, even at the speed of light.",
+                           "Park the rover in the yellow bay. Tap a flag to choose when Earth sends STOP!"]
+        }
+        return copy
     }
 
     static func rank(stars: Int) -> String {
@@ -65,7 +83,9 @@ struct GameCopy {
         if codes.contains(.oxygenRanOut) { return "Uh-oh! The air tank is empty." }
         if codes.contains(.foodRanOut) { return "The food supply ran out!" }
         if codes.contains(.noShelter) { return "No shelter! The crew has nowhere safe to go." }
-        if codes.contains(.assembledShelter) { return "Building the shelter. That uses 3 kWh of battery." }
+        if codes.contains(.assembledShelter) {
+            return "Building the shelter. That uses \(Words.kWh(max(0, step.before.batteryKWh - step.after.batteryKWh))) of battery."
+        }
         if mission == .livingBase {
             if codes.contains(.cropGrowing) { return "\(step.label): the lettuce is growing!" }
             return "\(step.label): the greenhouse is dark, so nothing grows."

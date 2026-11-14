@@ -43,11 +43,11 @@ These builds were started by the owner. No compiler errors in either log.
 |---|---|---|---|
 | F1 | Garden playback is 0.26 s per simulated day (0.1 s with reduced motion) | Addressed in Phase 1 (untested) | `MissionSession.playbackDurations()` |
 | F2 | Reduced motion shortens reading time (1.7 s → 0.7 s per step; 0.26 → 0.1 s per day) | Addressed in Phase 1 (untested) | same function |
-| F3 | Correctly predicting a failure shows "Good thinking!" but earns no prediction star | Confirmed in source | `finishAttempt`: `predicted: success && predictionWasRight == true`; `ResultOverlay` shows "Good thinking!" from `predictionWasRight` alone |
-| F4 | Garden success says "The air maker kept the tank full the whole time" although the drill starts at 3.58 of 7.16 kg | Confirmed | `MissionContent.swift:204` |
+| F3 | (Addressed in Phase 2, untested) Correctly predicting a failure shows "Good thinking!" but earns no prediction star | Confirmed in source | `finishAttempt`: `predicted: success && predictionWasRight == true`; `ResultOverlay` shows "Good thinking!" from `predictionWasRight` alone |
+| F4 | (Addressed in Phase 2, untested) Garden success says "The air maker kept the tank full the whole time" although the drill starts at 3.58 of 7.16 kg | Confirmed | `MissionContent.swift:204` |
 | F5 | (Addressed in Phase 1, untested) Garden failure lead is numerically dense ("ran empty 160 h into the sprouting… needed 0.03 kW more… short 0.2 kWh") and uses block labels, not days | Confirmed | `ExplanationWriter.resource` energyShortage branch |
-| F6 | Mission copy hard-codes standard values ("6-hour shadow", "17 kWh", "33 days", "4 crates") that variants change | Confirmed | `GameCopy.swift` intros, `MissionContent.swift` stories |
-| F7 | "Same starting supplies both times" is always shown, even when cargo (for example a charged battery) differs | Confirmed | `MissionView.swift:825` |
+| F6 | (Addressed in Phase 2, untested) Mission copy hard-codes standard values ("6-hour shadow", "17 kWh", "33 days", "4 crates") that variants change | Confirmed | `GameCopy.swift` intros, `MissionContent.swift` stories |
+| F7 | (Addressed in Phase 2, untested) "Same starting supplies both times" is always shown, even when cargo (for example a charged battery) differs | Confirmed | `MissionView.swift:825` |
 | F8 | Session playback keeps advancing while the app is in the background (only audio and scene rendering pause); a result can appear while away. Attempt tokens and the stage guard should prevent double recording | Addressed in Phase 1: presentation pauses when the scene is not active and waits for Resume (untested) | `MissionSession.startPlayback`, `MoonbaseAcademyApp` scenePhase handler |
 | F9 | Large text: six `minimumScaleFactor` uses and fixed-width tray/tile cards (118–124 pt) | Confirmed in source; not tested at accessibility sizes | `GameKit.swift`, `BaseView.swift`, `MissionView.swift` |
 | F10 | Home and planning views leave large empty terrain on portrait iPad | Observed in owner screenshots; framing changed since (Moon region) — recheck in Phase 5 | screenshots |
@@ -93,3 +93,36 @@ What changed:
 Not verified yet: the project has not been compiled since these changes (Xcode was on another Space and could not be driven), and no unit, UI, device, VoiceOver or Dynamic Type run has happened. Reading times are estimates, not tested with children.
 
 Known limits: F3, F4, F6, F7 are left for Phase 2 as planned. Rover mission is a single checkpoint.
+
+## Phase 2 checkpoint (rewards and scientific narration)
+
+### Reward policy
+- Each drill has three separate achievements (`Achievement`): **completed** (the drill succeeded), **predicted** (a Yes or No prediction matched the outcome, whether the drill passed or failed), and **bonus** (the drill's existing bonus; it still needs a successful run).
+- "Not sure" never earns the prediction star and is never turned into a correct guess. Its result line says: "You weren't sure, and that's okay. Now you've seen what happens, so next time you can make a guess."
+- Achievements accumulate per drill across attempts (standard and harder version share one set) and are never removed. A star counts once, so replays cannot farm stars, and a later failed replay keeps earlier stars and completion.
+- Only completion unlocks the next drill (`isUnlocked` still reads `completedMissions`). `recordAchievements` drops `completed` if the drill was not actually completed.
+
+### Save compatibility
+- New optional field `CampaignProgress.achievements: [String: [Achievement]]?`. Schema version stays 1; older saves decode unchanged.
+- For a drill with no stored achievements, `legacyAchievements` rebuilds them from the older fields: `completed` if the drill is in `completedMissions`, `bonus` if its badge is in `badges` (and the old count allows it), and `predicted` for any star left over. Old saves only gave stars for finished drills, so this is exact in normal cases; when it is ambiguous (old count 2 with a badge), it picks the bonus because the badge is verifiable.
+- `stars(_:)` never reports less than the old `bestStars` count, and `bestStars` is still updated, so star totals never drop.
+- Saves from before stars existed now show credit for completed drills (and earned badges) instead of 0.
+
+### Narration corrections (examples)
+- Garden success: "The air maker kept the tank full the whole time" is replaced by what the trace shows, e.g. "The air maker made more oxygen than the crew breathed, so the air tank filled from 3.58 kg to 7.16 kg." If the tank dipped: "The air tank went down to X at its lowest (about N h of air), but it never ran out."
+- Garden success: the lettuce-ready day comes from the trace.
+- Lights Out success: the oxygen-tank sentence only appears when the tank actually went down, with its before and after values.
+- Lights Out failure: "No battery, no power in the dark" only when the shadow caused it (with no arrays the power fails in sunlight).
+- Storm failure: "Building the shelter took X out of the battery first. The air maker and research together needed A kW of power, but only B kW was coming in, so the battery drained until it was empty." Names only what was running; handles failure during shelter building.
+- Storm success: research energy and oxygen change only when they happened, plus "The game does not calculate a radiation dose, and the storm's timing near Earth does not tell us the dose on the Moon."
+- No harvest: ISS lettuce timing labelled as a training rule that does not prove the same growth on the Moon.
+- Curtailed energy says "sunshine energy" only in drills with solar arrays. Rover: the "no camera" sentence only when no camera was carried. Crew count is read from the drill.
+- All story, goal, question, hint and briefing numbers come from the drill definition or the science inputs (`MissionCopy.of(_:science:)`, `GameCopy.of(_:science:)`, `Words`), so harder versions show 9 hours, 16 kWh, 3 crates and the slower rover's values.
+- "Same starting supplies both times" replaced with "Both tries started from the same base. Only your plan changed." (or "Both tries used the same plan.").
+- Power vs energy: planning meters say "Power in / Power used" (kW) or "Energy made / Energy used" (kWh per day); the numbers section and a VoiceOver hint explain: "kW is power: how fast energy is being used right now. kWh is energy: how much is used over time. Using 1 kW for 1 hour uses 1 kWh."
+- Sources screen limits now include the near-Earth timing vs lunar dose point, the ISS lettuce limit, and that game numbers are assumptions; assumptions list notes harder-version values.
+
+### Tests added
+`MoonbaseAcademyTests/RewardAndNarrationTests.swift`: prediction star on a failure without unlocking, completed never kept without success, achievements across attempts and failed replay, StarResult mapping, legacy rebuild, pre-star saves, an older save file loading and re-saving, session tests for a correct "No" on a failed drill and for "Not sure", and narration tests (garden air story both ways, Lights Out oxygen and no-array copy, storm shortage and success, variant copy, copy following science inputs).
+
+Not verified: not compiled or run by me (Xcode cannot be driven while the desktop is a full-screen Space). No device, VoiceOver or Dynamic Type checks.

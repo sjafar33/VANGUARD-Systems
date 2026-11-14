@@ -146,7 +146,7 @@ struct MissionTile: View {
                     Circle().fill(bevel.edge).offset(y: 3)
                     Circle().fill(LinearGradient(colors: [bevel.top, bevel.bottom], startPoint: .top, endPoint: .bottom))
                     Circle().strokeBorder(Color.white.opacity(0.6), lineWidth: 2)
-                    Image(systemName: unlocked ? MissionCopy.of(id).symbol : "lock.fill")
+                    Image(systemName: unlocked ? MissionCopy.symbol(id) : "lock.fill")
                         .font(.system(size: 24, weight: .black))
                         .gameText()
                 }
@@ -184,7 +184,6 @@ struct MissionBriefCard: View {
 
     var body: some View {
         let game = GameCopy.of(mission)
-        let copy = MissionCopy.of(mission)
         let done = model.progress.isCompleted(mission)
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea()
@@ -193,7 +192,7 @@ struct MissionBriefCard: View {
             VStack(spacing: 14) {
                 Ribbon(text: game.title)
                     .padding(.top, -34)
-                Label(copy.topic, systemImage: copy.symbol)
+                Label(MissionCopy.topic(mission), systemImage: MissionCopy.symbol(mission))
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.inkSecondary)
                 NovaBubble(text: game.intro[0], compact: true)
