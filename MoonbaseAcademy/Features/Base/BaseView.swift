@@ -128,10 +128,14 @@ struct BaseView: View {
                 sheet = .earn
             }
         }
-        .onChange(of: model.goalToast) { _, goal in
-            guard goal != nil else { return }
+        // `initial` matters: a goal finished inside a drill or a base test is already set when this
+        // screen comes back, and it must still fade out.
+        .onChange(of: model.goalToast, initial: true) { _, goal in
+            guard let goal else { return }
             Haptics.success()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { model.goalToast = nil }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
+                if model.goalToast == goal { model.goalToast = nil }
+            }
         }
         .onChange(of: sheet) { _, _ in updateInsets() }
         .onChange(of: base.coins) { old, new in
@@ -176,7 +180,7 @@ struct BaseView: View {
         case .playStorm: play(.stormDrill)
         case .playSignal: play(.signalLag)
         case .learnPlants:
-            if let science = model.science { lesson = LessonLibrary.lesson(LessonLibrary.plantsAndAirID, science: science) }
+            lesson = model.lesson(LessonLibrary.plantsAndAirID)
         case .decorate: sheet = .style
         case .upgradeHabitat: model.selectBuilding("habitat")
         }
@@ -193,7 +197,7 @@ struct BaseView: View {
     private func go(_ option: EarnOption) {
         switch option.action {
         case .lesson(let id):
-            if let science = model.science { lesson = LessonLibrary.lesson(id, science: science) }
+            lesson = model.lesson(id)
         case .drill(let id):
             model.selectedMission = id
         }

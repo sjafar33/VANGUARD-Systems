@@ -40,6 +40,18 @@ final class AppModel {
     var readAloud: Bool { progress.readAloud ?? false }
     var hapticsEnabled: Bool { progress.hapticsEnabled ?? true }
     var playbackMode: PlaybackMode { progress.playbackMode ?? .automatic }
+    var learnLevel: LearnLevel { progress.learnLevel ?? .builder }
+
+    func setLearnLevel(_ level: LearnLevel) {
+        progress.learnLevel = level
+        save()
+    }
+
+    /// A lesson ready to play at the chosen level, with a fresh pick of questions.
+    func lesson(_ id: String) -> Lesson? {
+        guard let science else { return nil }
+        return LessonLibrary.lesson(id, science: science, level: learnLevel)
+    }
 
     var reduceMotion: Bool { systemReduceMotion || progress.forceReducedMotion }
 

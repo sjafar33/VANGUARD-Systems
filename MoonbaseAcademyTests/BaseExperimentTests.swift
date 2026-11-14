@@ -180,6 +180,40 @@ final class BaseExperimentTests: MoonbaseTestCase {
         XCTAssertTrue(text.contains(Words.kWh(needed)), "The shadow energy question uses the drill's own numbers")
     }
 
+    func testEveryLessonQuestionIsValidAtEveryLevel() throws {
+        let s = try science()
+        let topics = LessonLibrary.plantsTopics(science: s) + LessonLibrary.powerTopics()
+        for topic in topics {
+            for level in LearnLevel.allCases {
+                XCTAssertGreaterThanOrEqual(topic.questions.filter { $0.level == level }.count, 2,
+                                            "\(topic.fact.title) needs more than one question at \(level.title)")
+            }
+            for q in topic.questions {
+                XCTAssertTrue(q.options.indices.contains(q.correctIndex), q.prompt)
+                XCTAssertEqual(Set(q.options).count, q.options.count, "Options must differ: \(q.prompt)")
+                XCTAssertEqual(q.options.count, q.level == .explorer ? 2 : 3, q.prompt)
+                let mixed = q.shuffled()
+                XCTAssertEqual(mixed.options[mixed.correctIndex], q.options[q.correctIndex], "Shuffling keeps the right answer right")
+            }
+        }
+        for level in LearnLevel.allCases {
+            for lesson in LessonLibrary.all(science: s, level: level) {
+                XCTAssertEqual(lesson.questionCount * 2, lesson.cards.count, "Every fact is followed by one question")
+                for card in lesson.cards {
+                    if case .question(let q) = card { XCTAssertEqual(q.level, level) }
+                }
+            }
+        }
+    }
+
+    func testTheLearnLevelIsSavedAndOldSavesDefaultToBuilder() throws {
+        XCTAssertNil(CampaignProgress().learnLevel)
+        var progress = CampaignProgress()
+        progress.learnLevel = .engineer
+        let data = try JSONEncoder().encode(progress)
+        XCTAssertEqual(try JSONDecoder().decode(CampaignProgress.self, from: data).learnLevel, .engineer)
+    }
+
     // MARK: What the engine says about real bases
 
     func testOneArrayOneBatteryRunsOutAtFullAir() throws {

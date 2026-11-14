@@ -78,8 +78,8 @@ struct GameCopy {
             title: "Test My Base",
             intro: ["This test is about YOUR base. No lander and no spare crates: only what you really built.",
                     "You have \(gear.summary). A \(Words.hourAdjective(shadow)) shadow is coming, with no sun at all.",
-                    "Choose how hard the air maker works, then test it!"],
-            planTip: "Tap a plan card to set the air maker. Less air saves power, but the crew breathes from the tank.",
+                    "Set the air maker for sunlight and for the shadow, then test it!"],
+            planTip: "Tap Off, Half or Full to set the air maker. Less air saves power, but the crew breathes from the tank.",
             bonusStar: "Power the observation",
             unlock: "Your base passed its first shadow test!")
     }

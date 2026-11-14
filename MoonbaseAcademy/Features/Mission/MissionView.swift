@@ -143,6 +143,9 @@ struct MissionView: View {
     }
 
     private func updateInsets() {
+        // While a dialog covers the screen there are no bottom controls to measure. Keep the world framed
+        // as it was, so it does not shrink or jump behind the dialog.
+        guard session.stage != .predicting, session.stage != .results else { return }
         model.missionWorld.setHUDInsets(top: topHeight + 4, bottom: bottomHeight + 4)
     }
 
@@ -409,9 +412,16 @@ struct BuildTray: View {
                         }
                     }
                     ForEach(planIndices, id: \.self) { index in
-                        PlanCard(session: session, index: index) { openPlan(index) }
-                            .disabled(session.tutorial == .placeFirstArray)
-                            .opacity(session.tutorial == .placeFirstArray ? 0.5 : 1)
+                        Group {
+                            if session.definition.missionID == .livingBase {
+                                PlanCard(session: session, index: index) { openPlan(index) }
+                            } else {
+                                // Two-part drills: the switches sit right on the card. No popup needed.
+                                QuickPlanCard(session: session, index: index) { openPlan(index) }
+                            }
+                        }
+                        .disabled(session.tutorial == .placeFirstArray)
+                        .opacity(session.tutorial == .placeFirstArray ? 0.5 : 1)
                     }
                 }
             }
@@ -699,6 +709,105 @@ struct PlanCard: View {
     }
 }
 
+/// A plan card with its switches right on it. One tap changes the air maker or the science, and the
+/// card says at once what that does to the battery and the air. The full numbers are one tap away.
+struct QuickPlanCard: View {
+    let session: MissionSession
+    let index: Int
+    let openDetails: () -> Void
+    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 236
+
+    var body: some View {
+        let phase = session.definition.phases[index]
+        let plan = session.plan(index)
+        let a = session.definition.assumptions
+        let demand = a.essentialLoadKW + a.fullGeneratorKW * plan.airFraction + (phase.research?.powerKWPerLevel ?? 0) * plan.researchLevel
+        let supply = phase.baseSupplyKW + Double(session.count(.solarArray)) * phase.solarKWPerArray
+        let oxygen = a.fullGeneratorKgPerDay * plan.airFraction
+        let breathe = Double(session.definition.initial.crewCount) * session.science.oxygenKgPerPersonDay
+        let draining = demand > supply + 1e-9
+        let fromTank = oxygen + 1e-9 < breathe
+        let title = PlanCard.title(session, index)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: PlanCard.icon(phase.mood))
+                    .font(.system(size: 17, weight: .black))
+                    .gameText()
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(PlanCard.bevel(phase.mood).bottom))
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(.game(.subheadline))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Button(action: openDetails) {
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Theme.energyInk)
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("\(title) plan")
+                .accessibilityHint("Shows the numbers for this part")
+            }
+            Label("Air maker", systemImage: "wind")
+                .font(.system(.caption, design: .rounded).weight(.heavy))
+                .foregroundStyle(Theme.inkSecondary)
+            HStack(spacing: 6) {
+                ForEach(phase.allowedAirFractions, id: \.self) { value in
+                    chip(MissionSession.airLabel(value), selected: abs(value - plan.airFraction) < 1e-9,
+                         label: "\(title), air maker: \(MissionSession.airLabel(value))") {
+                        session.setAir(index, value)
+                    }
+                }
+            }
+            if let research = phase.research {
+                let on = plan.researchLevel > 0
+                chip(on ? "Science: On" : "Science: Off", selected: on,
+                     label: "\(title), science: \(on ? "on" : "off")") {
+                    session.setResearch(index, on ? 0 : (research.levels.max() ?? 1))
+                }
+            }
+            Label(draining ? "Drains the battery: \(Format.kW(demand - supply))" : "Spare power: \(Format.kW(supply - demand))",
+                  systemImage: draining ? "battery.25percent" : "bolt.fill")
+                .font(.system(.caption, design: .rounded).weight(.heavy))
+                .foregroundStyle(draining ? Theme.warningInk : Theme.plantInk)
+                .fixedSize(horizontal: false, vertical: true)
+            Label(fromTank ? "Crew breathes from the tank" : "Air maker keeps up",
+                  systemImage: fromTank ? "lungs.fill" : "checkmark.circle.fill")
+                .font(.system(.caption, design: .rounded).weight(.heavy))
+                .foregroundStyle(fromTank ? Theme.warningInk : Theme.plantInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .frame(width: cardWidth, alignment: .leading)
+        .background(GameCardBackground())
+        .accessibilityElement(children: .contain)
+    }
+
+    private func chip(_ text: String, selected: Bool, label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            Haptics.tap()
+            SoundFX.shared.play(.tap)
+            action()
+        } label: {
+            Text(text)
+                .font(.system(.subheadline, design: .rounded).weight(.black))
+                .foregroundStyle(selected ? Color.white : Theme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(selected ? Theme.energyInk : Theme.panel))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(selected ? Color.white.opacity(0.7) : Theme.panelLine, lineWidth: 1.5))
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
 struct RoverTray: View {
     let session: MissionSession
     @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 118
@@ -926,6 +1035,11 @@ struct PowerBalance: View {
 
 // MARK: Prediction
 
+struct BetChoice {
+    let text: String
+    let symbol: String
+}
+
 struct BetOverlay: View {
     let session: MissionSession
     var readAloud = false
@@ -943,9 +1057,47 @@ struct BetOverlay: View {
         .accessibilityAction(.escape) { session.backToPlanning() }
     }
 
+    /// The two outcomes in the drill's own words, so the guess is about what happens, not "Yes" or "No".
+    private var outcomes: [BetChoice] {
+        switch session.definition.missionID {
+        case .lightsOut:
+            return [BetChoice(text: "Lights stay on", symbol: "lightbulb.fill"),
+                    BetChoice(text: "Lights go out", symbol: "lightbulb.slash.fill")]
+        case .livingBase:
+            return [BetChoice(text: "Lettuce is ready", symbol: "leaf.fill"),
+                    BetChoice(text: "Not ready yet", symbol: "hourglass")]
+        case .stormDrill:
+            return [BetChoice(text: "Enough air left", symbol: "wind"),
+                    BetChoice(text: "Air runs low", symbol: "exclamationmark.triangle.fill")]
+        case .signalLag:
+            return [BetChoice(text: "Stops in the bay", symbol: "checkmark.circle.fill"),
+                    BetChoice(text: "Misses the bay", symbol: "xmark.circle.fill")]
+        }
+    }
+
+    private func betButton(_ choice: BetChoice, bevel: GamePalette.Bevel, prediction: Prediction) -> some View {
+        Button {
+            Haptics.thump()
+            session.run(predicting: prediction)
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: choice.symbol).font(.system(size: 30, weight: .black))
+                Text(choice.text)
+                    .font(.game(.headline))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+            }
+            .padding(.horizontal, 6)
+        }
+        .buttonStyle(GameButtonStyle(bevel: bevel, height: 100, font: .game(.headline)))
+        .accessibilityLabel(prediction.label)
+        .accessibilityHint(choice.text)
+    }
+
     private var card: some View {
             VStack(spacing: 14) {
-                Ribbon(text: "Make a prediction!", bevel: GamePalette.energy)
+                Ribbon(text: "What will happen?", bevel: GamePalette.energy)
                     .padding(.top, -34)
                     .accessibilityFocused($titleFocused)
                 HStack(alignment: .top, spacing: 10) {
@@ -957,21 +1109,20 @@ struct BetOverlay: View {
                     Spacer(minLength: 0)
                     ReadAloudButton(enabled: readAloud, text: session.copy.question, size: 40)
                 }
-                Label("Guess right to earn a star, even if the drill fails", systemImage: "star.fill")
+                HStack(spacing: 10) {
+                    betButton(outcomes[0], bevel: GamePalette.go, prediction: .yes)
+                    betButton(outcomes[1], bevel: GamePalette.coral, prediction: .no)
+                }
+                Label(session.isBaseTest ? "Lock in your guess, then watch what really happens!"
+                                         : "Guess right to earn a star, even if the drill fails",
+                      systemImage: "star.fill")
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.amberInk)
-                PlaybackModePicker(session: session)
-                HStack(spacing: 10) {
-                    Button { session.run(predicting: .yes) } label: { Label("Yes", systemImage: "hand.thumbsup.fill") }
-                        .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 60))
-                        .accessibilityLabel("Yes")
-                    Button { session.run(predicting: .no) } label: { Label("No", systemImage: "hand.thumbsdown.fill") }
-                        .buttonStyle(GameButtonStyle(bevel: GamePalette.coral, height: 60))
-                        .accessibilityLabel("No")
-                }
-                Button { session.run(predicting: .unsure) } label: { Text("Not sure") }
-                    .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 48, font: .game(.headline)))
+                    .fixedSize(horizontal: false, vertical: true)
+                Button { session.run(predicting: .unsure) } label: { Text("Not sure? Just watch") }
+                    .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 46, font: .game(.headline)))
                     .accessibilityLabel("Not sure")
+                PlaybackModePicker(session: session)
                 Button("Change my plan") { session.backToPlanning() }
                     .font(.system(.subheadline, design: .rounded).weight(.heavy))
                     .foregroundStyle(Theme.energyInk)
@@ -1194,7 +1345,7 @@ struct PlaybackModePicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("First, choose how to watch:")
+            Text("How do you want to watch?")
                 .font(.system(.subheadline, design: .rounded).weight(.heavy))
                 .foregroundStyle(Theme.inkSecondary)
             HStack(spacing: 4) {

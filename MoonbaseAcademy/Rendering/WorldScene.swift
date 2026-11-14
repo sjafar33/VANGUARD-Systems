@@ -112,6 +112,12 @@ final class WorldScene: SKScene {
         terrain.position = Iso.point(0, 0)
         terrain.zPosition = ZLayer.terrain
         world.addChild(terrain)
+        // Ground below the drawn terrain, so no empty space can show under it on tall screens.
+        let ground = SKSpriteNode(color: UIColor(hex: 0xADB4BE), size: CGSize(width: Art.terrainCanvas.size.width, height: 3000))
+        ground.anchorPoint = CGPoint(x: 0.5, y: 1)
+        ground.position = CGPoint(x: terrain.position.x, y: terrain.position.y - (Art.terrainCanvas.size.height - Art.terrainCanvas.origin.y) + 2)
+        ground.zPosition = ZLayer.terrain - 1
+        world.addChild(ground)
 
         for (index, spot) in Self.arrayPads.enumerated() { addPad(.array(index), at: spot) }
         for (index, spot) in Self.batteryPads.enumerated() { addPad(.battery(index), at: spot) }

@@ -356,6 +356,7 @@ struct LearnListView: View {
                     Text("Learn with Nova and earn Moon coins. Answer right on the first try for the most coins.")
                         .font(.system(.subheadline, design: .rounded).weight(.heavy))
                         .foregroundStyle(.secondary)
+                    levelPicker
                     if let science = model.science {
                         ForEach(LessonLibrary.all(science: science)) { lesson in
                             lessonRow(lesson)
@@ -378,6 +379,42 @@ struct LearnListView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    /// Pick how hard the questions are. Same facts and coins at every level; change it any time.
+    private var levelPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Question level").font(.game(.headline)).foregroundStyle(Theme.ink)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { levelButtons }
+                VStack(spacing: 6) { levelButtons }
+            }
+            Text("\(model.learnLevel.blurb) Questions change each time you play.")
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(GameCardBackground(corner: 18))
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder private var levelButtons: some View {
+        ForEach(LearnLevel.allCases) { level in
+            let selected = model.learnLevel == level
+            Button {
+                Haptics.tap()
+                model.setLearnLevel(level)
+            } label: {
+                Label(level.title, systemImage: level.symbol)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .buttonStyle(GameButtonStyle(bevel: selected ? GamePalette.gold : GamePalette.steel, height: 46, font: .game(.subheadline)))
+            .accessibilityLabel("Question level: \(level.title)")
+            .accessibilityAddTraits(selected ? .isSelected : [])
+        }
     }
 
     private func lessonRow(_ lesson: Lesson) -> some View {
@@ -408,7 +445,7 @@ struct LearnListView: View {
                     .foregroundStyle(Theme.inkSecondary)
             }
             Button {
-                open(lesson)
+                open(model.lesson(lesson.id) ?? lesson)
             } label: {
                 Label(done ? "Play again" : "Start lesson", systemImage: "play.fill")
             }

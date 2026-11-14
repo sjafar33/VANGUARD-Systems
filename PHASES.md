@@ -80,3 +80,14 @@ Source brief: `Moonbase_Academy_Base_Builder_Feedback_Prompt.md` (owner, 2026-11
 1. Owner: Cmd-U on the iPad Air 11-inch (M4) simulator. Compile errors: `gunzip -c DerivedData/MoonbaseAcademy/Logs/Build/<newest>.xcactivitylog | tr '\r' '\n' | grep -a "error:"`.
 2. Play-test from Settings -> Reset All Progress: array -> battery -> Lights Out -> fix station -> test base (fails at full air with 1+1) -> turn air to Half in the shadow or build a second array -> pass.
 3. Not done from the brief: Phases 3-6 (learning presets, non-recolour customization, base tests for food/storm/comms, balance and submission docs).
+
+## Play-test round 1 (2026-11-14, about 16:50 Toronto) — owner feedback from the iPad
+
+Verified by build log: commits `12dd3c9` and `38e91c6` compile (app target, simulator and SJ iPad). Unit and UI tests still not run.
+
+Fixed or changed in this round (NOT yet compiled):
+- **Black band under the drill world** while the prediction or result dialog was open: the world was being re-framed against an empty control area. The framing is now kept while a dialog is up, and the ground continues below the drawn terrain.
+- **"Goal complete" toast stayed on screen** when the goal was finished inside a drill or base test. It now always fades after 2.8 s.
+- **Plan controls without a popup:** in Lights Out, Storm Drill and Test My Base the air-maker (Off / Half / Full) and science switches sit on the plan card, with a live line for "drains the battery / spare power" and "air maker keeps up / crew breathes from the tank". The popup remains behind the info button. The garden drill keeps its popup.
+- **Prediction dialog:** now "What will happen?" with two big outcome buttons in the drill's own words (for example "Lights stay on" / "Lights go out"); "Not sure? Just watch"; the watch-mode choice moved below. VoiceOver labels stay Yes / No / Not sure. Test My Base no longer promises a star.
+- **Lessons:** three question levels (Explorer: two choices; Builder: three choices; Mission Engineer: sums and reasons), chosen in Learn and saved (`CampaignProgress.learnLevel`, optional). Each fact has a pool of six questions (two per level); one is picked per play and the answer order is shuffled. 54 questions across the two lessons. Facts, sources and coins are the same at every level.

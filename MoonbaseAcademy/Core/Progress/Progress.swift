@@ -62,6 +62,8 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     var draft: MissionDraft?
     /// The base board (coins, buildings, lessons, looks). Optional so older saves load; see `baseState`.
     var base: BaseState?
+    /// How hard lesson questions are. Optional so older saves load; missing means Builder.
+    var learnLevel: LearnLevel?
 
     /// The saved base, or a starting base built from what this save already completed.
     var baseState: BaseState { base ?? BaseState.starting(from: self) }

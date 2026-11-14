@@ -21,7 +21,7 @@ struct LessonView: View {
     @Environment(\.appReduceMotion) private var reduceMotion
 
     private var card: LessonCard { lesson.cards[index] }
-    private var coinsPerAnswer: Int { firstTime ? 10 : 3 }
+    private var coinsPerAnswer: Int { firstTime ? BaseState.lessonCoinsPerAnswer : BaseState.lessonReplayPerAnswer }
 
     var body: some View {
         ZStack {
