@@ -405,6 +405,7 @@ struct StarSlot: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.5)) { shown = true }
                 Haptics.thump()
+                SoundFX.shared.play(.star)
             }
         }
         .accessibilityElement(children: .ignore)

@@ -221,6 +221,10 @@ struct SettingsView: View {
                         .submitLabel(.done)
                         .onSubmit { model.setBaseName(name) }
                 }
+                Section("Sound") {
+                    Toggle("Sound effects", isOn: Binding(get: { model.progress.soundEnabled },
+                                                          set: { model.setSoundEnabled($0) }))
+                }
                 Section("Motion") {
                     Toggle("Reduce motion", isOn: Binding(get: { model.progress.forceReducedMotion },
                                                           set: { model.setForceReducedMotion($0) }))

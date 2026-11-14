@@ -60,6 +60,7 @@ final class AppModel {
             saveIssue = reason + (preserved == nil ? "" : " The original file was kept so it can be checked.")
             canSave = false
         }
+        SoundFX.shared.enabled = progress.soundEnabled
         baseWorld.onMarkerTapped = { [weak self] id in
             Haptics.tap()
             self?.selectedMission = id
@@ -111,6 +112,12 @@ final class AppModel {
     func setBaseName(_ name: String) {
         let trimmed = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(24))
         progress.baseName = trimmed.isEmpty ? "Moonbase One" : trimmed
+        save()
+    }
+
+    func setSoundEnabled(_ on: Bool) {
+        progress.soundEnabled = on
+        SoundFX.shared.enabled = on
         save()
     }
 

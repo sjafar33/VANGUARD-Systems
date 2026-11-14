@@ -77,7 +77,10 @@ struct MissionView: View {
             showBanner(for: newPhase)
         }
         .onChange(of: session.countdown) { old, value in
-            if value != nil { Haptics.thump() }
+            if let value {
+                Haptics.thump()
+                SoundFX.shared.play(value == 0 ? .go : .tick)
+            }
             if old != nil, value == nil, session.stage == .playback, let phase = session.currentStep?.phaseID,
                session.definition.missionID != .livingBase {
                 showBanner(for: phase)
@@ -339,11 +342,13 @@ struct BuildCard: View {
         Button {
             if session.addCargo(item.kind) {
                 Haptics.thump()
+                SoundFX.shared.play(.pop)
                 guard !reduceMotion else { return }
                 pop = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { pop = false }
             } else {
                 Haptics.warning()
+                SoundFX.shared.play(.denied)
             }
         } label: {
             VStack(spacing: 4) {
@@ -386,6 +391,7 @@ struct BuildCard: View {
             if count > 0 && session.tutorial != .placeFirstArray {
                 RoundIconButton(symbol: "minus", label: "Remove \(name.lowercased())", bevel: GamePalette.coral, size: 32) {
                     session.removeCargo(item.kind)
+                    SoundFX.shared.play(.remove)
                 }
                 .offset(x: -8, y: -10)
             }
@@ -551,6 +557,7 @@ struct RoverTray: View {
         return Button {
             session.setRoverPlan(plan)
             Haptics.thump()
+            SoundFX.shared.play(.pop)
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: symbol)
@@ -841,7 +848,15 @@ struct ResultOverlay: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .onAppear { success ? Haptics.success() : Haptics.warning() }
+        .onAppear {
+            if success {
+                Haptics.success()
+                SoundFX.shared.play(.success)
+            } else {
+                Haptics.warning()
+                SoundFX.shared.play(.fail)
+            }
+        }
     }
 
     private var explanationLead: String {
