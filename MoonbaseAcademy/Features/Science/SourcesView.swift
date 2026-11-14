@@ -228,6 +228,13 @@ struct SettingsView: View {
                 Section("Sound") {
                     Toggle("Music", isOn: Binding(get: { model.progress.musicEnabled ?? true },
                                                   set: { model.setMusicEnabled($0) }))
+                    Picker("Music style", selection: Binding(get: { model.progress.musicStyle ?? .spaceAmbient },
+                                                             set: { model.setMusicStyle($0) })) {
+                        ForEach(MusicStyle.allCases, id: \.self) { style in
+                            Text(style.label).tag(style)
+                        }
+                    }
+                    .disabled(!(model.progress.musicEnabled ?? true))
                     Toggle("Sound effects", isOn: Binding(get: { model.progress.soundEnabled },
                                                           set: { model.setSoundEnabled($0) }))
                 }

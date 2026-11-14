@@ -26,7 +26,17 @@ final class SoundFX {
 
     private let musicNode = AVAudioPlayerNode()
     private let musicFormat = AVAudioFormat(standardFormatWithSampleRate: 22_050, channels: 1)
-    private var musicBuffer: AVAudioPCMBuffer?
+    private var musicBuffers: [MusicStyle: AVAudioPCMBuffer] = [:]
+
+    var musicStyle: MusicStyle = .spaceAmbient {
+        didSet {
+            guard musicStyle != oldValue else { return }
+            let wasPlaying = musicPlaying
+            musicNode.stop()
+            musicPlaying = false
+            if wasPlaying || musicEnabled { startMusic() }
+        }
+    }
     private var rendering = false
     private var musicPlaying = false
     private var fadeTask: Task<Void, Never>?
@@ -66,13 +76,14 @@ final class SoundFX {
 
     func startMusic() {
         guard musicEnabled, !musicPlaying, !LaunchOptions.isUITesting else { return }
-        guard let buffer = musicBuffer else {
+        let style = musicStyle
+        guard let buffer = musicBuffers[style] else {
             guard !rendering, musicFormat != nil else { return }
             rendering = true
             Task.detached(priority: .utility) {
-                let samples = LofiComposer.render(sampleRate: 22_050)
+                let samples = style.render(sampleRate: 22_050)
                 await MainActor.run {
-                    SoundFX.shared.finishRendering(samples)
+                    SoundFX.shared.finishRendering(samples, style: style)
                 }
             }
             return
@@ -86,7 +97,7 @@ final class SoundFX {
         fade(to: 0.42, over: 2.5)
     }
 
-    private func finishRendering(_ samples: [Float]) {
+    private func finishRendering(_ samples: [Float], style: MusicStyle) {
         rendering = false
         guard let format = musicFormat,
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)),
@@ -95,7 +106,7 @@ final class SoundFX {
             for i in 0..<samples.count { channel[i] = source[i] }
         }
         buffer.frameLength = AVAudioFrameCount(samples.count)
-        musicBuffer = buffer
+        musicBuffers[style] = buffer
         startMusic()
     }
 

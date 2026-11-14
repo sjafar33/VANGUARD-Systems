@@ -186,3 +186,15 @@ final class MusicTests: MoonbaseTestCase {
         XCTAssertEqual(LofiComposer.loopSeconds(), 16 * 4 * 60 / 72, accuracy: 1e-9)
     }
 }
+
+final class AmbientMusicTests: MoonbaseTestCase {
+    func testAmbientLoopIsDeterministicAndNeverClips() {
+        let rate = 8_000.0
+        let first = LofiComposer.renderAmbient(sampleRate: rate)
+        XCTAssertEqual(first.count, Int(LofiComposer.ambientLoopSeconds() * rate))
+        XCTAssertEqual(first, LofiComposer.renderAmbient(sampleRate: rate))
+        let peak = first.map { abs($0) }.max() ?? 0
+        XCTAssertLessThanOrEqual(peak, 0.81)
+        XCTAssertGreaterThan(peak, 0.5)
+    }
+}

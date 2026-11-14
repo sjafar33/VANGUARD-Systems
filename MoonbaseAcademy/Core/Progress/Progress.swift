@@ -27,6 +27,7 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     var builtBatteries: Int = 0
     /// Background music preference. Optional so older saves still load; missing means on.
     var musicEnabled: Bool?
+    var musicStyle: MusicStyle?
     /// Best star count per mission (0 to 3). Optional so saves written before stars existed still load.
     var bestStars: [String: Int]?
 
