@@ -22,6 +22,9 @@ struct CampaignProgress: Codable, Equatable, Sendable {
     var attempts: [String: [AttemptRecord]] = [:]
     var soundEnabled: Bool = true
     var forceReducedMotion: Bool = false
+    /// Cosmetic layout from the first successful power drill. Never applied as a numeric bonus.
+    var builtArrays: Int = 0
+    var builtBatteries: Int = 0
 
     static let maxAttemptsPerMission = 2
 

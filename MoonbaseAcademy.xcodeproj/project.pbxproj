@@ -73,28 +73,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A10000000000000000000005 /* MoonbaseAcademy */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A10000000000000000000043 /* Build configuration list for PBXNativeTarget "MoonbaseAcademy" */;
-			buildPhases = (
-				A10000000000000000000020 /* Sources */,
-				A10000000000000000000021 /* Frameworks */,
-				A10000000000000000000022 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				A10000000000000000000008 /* MoonbaseAcademy */,
-			);
-			name = MoonbaseAcademy;
-			packageProductDependencies = (
-			);
-			productName = MoonbaseAcademy;
-			productReference = A10000000000000000000006 /* MoonbaseAcademy.app */;
-			productType = "com.apple.product-type.application";
-		};
 		A10000000000000000000004 /* MoonbaseAcademyTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10000000000000000000046 /* Build configuration list for PBXNativeTarget "MoonbaseAcademyTests" */;
@@ -117,6 +95,28 @@
 			productName = MoonbaseAcademyTests;
 			productReference = A10000000000000000000007 /* MoonbaseAcademyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A10000000000000000000005 /* MoonbaseAcademy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000043 /* Build configuration list for PBXNativeTarget "MoonbaseAcademy" */;
+			buildPhases = (
+				A10000000000000000000020 /* Sources */,
+				A10000000000000000000021 /* Frameworks */,
+				A10000000000000000000022 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000008 /* MoonbaseAcademy */,
+			);
+			name = MoonbaseAcademy;
+			packageProductDependencies = (
+			);
+			productName = MoonbaseAcademy;
+			productReference = A10000000000000000000006 /* MoonbaseAcademy.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
