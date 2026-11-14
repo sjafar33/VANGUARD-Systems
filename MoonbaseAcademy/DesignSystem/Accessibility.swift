@@ -42,8 +42,8 @@ final class Narrator {
     private(set) var isSpeaking = false
     private(set) var lastText = ""
 
-    @ObservationIgnored private let synthesizer = AVSpeechSynthesizer()
-    @ObservationIgnored private let delegate = SpeechDelegate()
+    private let synthesizer = AVSpeechSynthesizer()
+    private let delegate = SpeechDelegate()
     @ObservationIgnored private var currentID: ObjectIdentifier?
 
     private init() {

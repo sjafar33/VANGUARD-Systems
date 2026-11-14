@@ -10,7 +10,7 @@ final class FocusAccessibilityTests: MoonbaseTestCase {
         return SaveStore(fileURL: directory.appendingPathComponent("save.json"))
     }
 
-    override func tearDown() {
+    override nonisolated func tearDown() {
         Haptics.enabled = true
         super.tearDown()
     }
