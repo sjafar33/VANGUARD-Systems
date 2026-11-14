@@ -201,13 +201,19 @@ enum BoardArt {
             body = group
         case .landingStation:
             body = b.isWorking ? stationRestored(animated: animated) : stationRuin(animated: animated)
+        case .flag:
+            body = flag(animated: animated)
+        case .lamp:
+            body = lamp(animated: animated)
+        case .rockGarden:
+            body = rockGarden(animated: animated)
         }
         body.zPosition = 1
         // Higher levels stand a little taller.
         body.setScale(1 + CGFloat(b.level - 1) * 0.06)
         node.addChild(body)
         // The landing station has no levels: it is either a ruin or repaired.
-        if b.kind != .landingStation {
+        if b.kind != .landingStation && !b.kind.isDecoration {
             node.addChild(levelPips(b.level, height: pipHeight(b.kind)))
         }
         if animated && b.level >= BuildingKind.maxLevel {
@@ -292,7 +298,96 @@ enum BoardArt {
         case .solarArray: return 52
         case .battery: return 60
         case .landingStation: return 64
+        case .flag, .lamp, .rockGarden: return 60
         }
+    }
+
+    // MARK: Decorations (looks only)
+
+    static let decorCanvas = Art.Canvas(size: CGSize(width: 72, height: 84), origin: CGPoint(x: 32, y: 64))
+
+    private static func flag(animated: Bool) -> SKNode {
+        let group = SKNode()
+        group.addChild(Art.sprite("board.decor.flagpole", decorCanvas) { pt in
+            pt.softShadow(cx: 0.08, cy: 0, r: 0.2)
+            pt.box(-0.12, -0.12, 0.12, 0.12, z1: 5, colors: .init(0xC3CBD6, 0x97A2B1, 0x7B8798))
+            pt.line(pt.p(0, 0, 5), pt.p(0, 0, 56), UIColor(hex: 0xE8ECF0), width: 2.6)
+            pt.ctx.setFillColor(UIColor(hex: 0xF2B84B).cgColor)
+            let top = pt.p(0, 0, 58)
+            pt.ctx.fillEllipse(in: CGRect(x: top.x - 3, y: top.y - 3, width: 6, height: 6))
+        })
+        // The cloth is its own sprite so it can wave.
+        let clothCanvas = Art.Canvas(size: CGSize(width: 30, height: 20), origin: CGPoint(x: 0, y: 1))
+        let cloth = Art.sprite("board.decor.flagcloth", clothCanvas) { pt in
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: 0, y: 1))
+            path.addLine(to: CGPoint(x: 27, y: 4))
+            path.addLine(to: CGPoint(x: 20, y: 9))
+            path.addLine(to: CGPoint(x: 27, y: 15))
+            path.addLine(to: CGPoint(x: 0, y: 17))
+            path.closeSubpath()
+            pt.fill(path, UIColor(hex: 0x2CAEC3))
+            pt.ctx.setFillColor(UIColor(hex: 0xFFE27A).cgColor)
+            pt.ctx.fillEllipse(in: CGRect(x: 5, y: 5, width: 8, height: 8))
+        }
+        cloth.position = CGPoint(x: 1, y: 55)
+        cloth.zPosition = 0.1
+        group.addChild(cloth)
+        if animated {
+            cloth.run(.repeatForever(.sequence([.scaleX(to: 0.86, duration: 0.7), .scaleX(to: 1, duration: 0.7)])))
+        }
+        return group
+    }
+
+    private static func lamp(animated: Bool) -> SKNode {
+        let group = SKNode()
+        group.addChild(Art.sprite("board.decor.lamp", decorCanvas) { pt in
+            pt.softShadow(cx: 0.08, cy: 0, r: 0.2)
+            pt.box(-0.12, -0.12, 0.12, 0.12, z1: 5, colors: .init(0xAEB7C3, 0x8792A1, 0x6C7787))
+            pt.line(pt.p(0, 0, 5), pt.p(0, 0, 40), UIColor(hex: 0x6E7A8B), width: 3)
+            let head = pt.p(0, 0, 46)
+            pt.ctx.setFillColor(UIColor(hex: 0x3A4658).cgColor)
+            pt.ctx.fillEllipse(in: CGRect(x: head.x - 9, y: head.y - 8, width: 18, height: 16))
+            pt.ctx.setFillColor(UIColor(hex: 0xFFE9A8).cgColor)
+            pt.ctx.fillEllipse(in: CGRect(x: head.x - 6, y: head.y - 5, width: 12, height: 10))
+        })
+        let glow = SKSpriteNode(texture: Art.glowDot(color: 0xFFE27A, diameter: 34))
+        glow.position = CGPoint(x: 0, y: 46)
+        glow.zPosition = 0.1
+        glow.blendMode = .add
+        glow.alpha = 0.7
+        group.addChild(glow)
+        if animated {
+            glow.run(.repeatForever(.sequence([.fadeAlpha(to: 0.45, duration: 1.3), .fadeAlpha(to: 0.8, duration: 1.3)])))
+        }
+        return group
+    }
+
+    private static func rockGarden(animated: Bool) -> SKNode {
+        let group = SKNode()
+        group.addChild(Art.sprite("board.decor.rocks", decorCanvas) { pt in
+            pt.softShadow(cx: 0.06, cy: 0.02, r: 0.4)
+            pt.box(-0.34, -0.14, -0.04, 0.2, z1: 11, colors: .init(0xB4BBC5, 0x8D95A1, 0x727A87))
+            pt.box(0.02, -0.3, 0.3, -0.04, z1: 7, colors: .init(0xA7AEB9, 0x838B97, 0x6A727F))
+            pt.box(-0.14, 0.22, 0.06, 0.38, z1: 5, colors: .init(0xBDC4CD, 0x959DA9, 0x78808D))
+            // A crystal standing between the rocks.
+            let base1 = pt.p(0.1, 0.12, 0)
+            let base2 = pt.p(0.3, 0.12, 0)
+            let base3 = pt.p(0.2, 0.26, 0)
+            let tip = pt.p(0.2, 0.17, 26)
+            pt.fill([base1, base3, tip], UIColor(hex: 0x8BE3EE))
+            pt.fill([base3, base2, tip], UIColor(hex: 0x4FB6C8))
+        })
+        let glow = SKSpriteNode(texture: Art.glowDot(color: 0x8BE3EE, diameter: 26))
+        glow.position = Iso.point(0.2, 0.17).offset(0, 14)
+        glow.zPosition = 0.1
+        glow.blendMode = .add
+        glow.alpha = 0.55
+        group.addChild(glow)
+        if animated {
+            glow.run(.repeatForever(.sequence([.fadeAlpha(to: 0.2, duration: 1.1), .fadeAlpha(to: 0.65, duration: 1.1)])))
+        }
+        return group
     }
 
     // MARK: Landing station

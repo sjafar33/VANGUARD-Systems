@@ -13,8 +13,20 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
     case dish
     /// An old landing pad that starts as a ruin. It is repaired, never bought, and it opens "Test My Base".
     case landingStation
+    /// Decorations: placed and moved like buildings, but looks only. They change no drill and no test.
+    case flag
+    case lamp
+    case rockGarden
 
     var id: String { rawValue }
+
+    /// True for things that are only there to make the base the player's own.
+    var isDecoration: Bool {
+        switch self {
+        case .flag, .lamp, .rockGarden: return true
+        default: return false
+        }
+    }
 
     var name: String {
         switch self {
@@ -25,6 +37,9 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .shelter: return "Storm shelter"
         case .dish: return "Radio dish"
         case .landingStation: return "Landing station"
+        case .flag: return "Base flag"
+        case .lamp: return "Lamp post"
+        case .rockGarden: return "Moon rock garden"
         }
     }
 
@@ -37,6 +52,9 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .shelter: return "shield.lefthalf.filled"
         case .dish: return "antenna.radiowaves.left.and.right"
         case .landingStation: return "arrow.down.circle.fill"
+        case .flag: return "flag.fill"
+        case .lamp: return "lightbulb.fill"
+        case .rockGarden: return "mountain.2.fill"
         }
     }
 
@@ -49,6 +67,9 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         case .shelter: return "A safe place to wait out a solar storm."
         case .dish: return "Talks to Mission Control on Earth."
         case .landingStation: return "An old landing pad from an earlier mission. Fix it up to test your real base."
+        case .flag: return "Fly your flag so everyone knows whose base this is."
+        case .lamp: return "A friendly light for the paths between your buildings."
+        case .rockGarden: return "Moon rocks and a glowing crystal the crew collected."
         }
     }
 
@@ -57,14 +78,14 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         switch self {
         case .habitat: return (3, 3)
         case .greenhouse, .shelter, .landingStation: return (2, 2)
-        case .solarArray, .battery, .dish: return (1, 1)
+        case .solarArray, .battery, .dish, .flag, .lamp, .rockGarden: return (1, 1)
         }
     }
 
     /// The drill this building helps unlock.
     var drill: MissionID? {
         switch self {
-        case .habitat, .landingStation: return nil
+        case .habitat, .landingStation, .flag, .lamp, .rockGarden: return nil
         case .solarArray, .battery: return .lightsOut
         case .greenhouse: return .livingBase
         case .shelter: return .stormDrill
@@ -208,6 +229,9 @@ struct BaseState: Codable, Equatable, Sendable {
         case .greenhouse: return 120
         case .shelter: return 150
         case .dish: return 150
+        case .lamp: return 25
+        case .flag: return 30
+        case .rockGarden: return 35
         }
     }
 
@@ -218,7 +242,7 @@ struct BaseState: Codable, Equatable, Sendable {
         case .habitat: return level == 1 ? 150 : 300
         case .solarArray, .battery: return level == 1 ? 60 : 100
         case .greenhouse, .shelter, .dish: return level == 1 ? 120 : 200
-        case .landingStation: return nil
+        case .landingStation, .flag, .lamp, .rockGarden: return nil
         }
     }
 
@@ -240,6 +264,9 @@ struct BaseState: Codable, Equatable, Sendable {
     func maxCount(_ kind: BuildingKind) -> Int {
         switch kind {
         case .solarArray, .battery: return habitatLevel + 1
+        case .lamp: return 4
+        case .rockGarden: return 3
+        case .flag: return 2
         default: return 1
         }
     }
@@ -248,7 +275,7 @@ struct BaseState: Codable, Equatable, Sendable {
         switch kind {
         case .habitat:
             return .locked("Your base already has its habitat.")
-        case .solarArray, .battery:
+        case .solarArray, .battery, .flag, .lamp, .rockGarden:
             return .available
         case .greenhouse:
             return lessons[LessonLibrary.plantsAndAirID]?.completed == true

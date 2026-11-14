@@ -489,7 +489,14 @@ final class AppModel {
     func startBuilding(_ kind: BuildingKind) {
         let base = progress.baseState
         if case .locked(let reason) = base.blueprint(kind, progress: progress) { return explain(.locked(reason)) }
-        guard base.count(kind) < base.maxCount(kind) else { return explain(.limitReached) }
+        guard base.count(kind) < base.maxCount(kind) else {
+            if kind.isDecoration {
+                baseMessage = "You've placed all of those. Tap one on your base to move it."
+                Haptics.warning()
+                return
+            }
+            return explain(.limitReached)
+        }
         let cost = BaseState.buildCost(kind)
         guard base.coins >= cost else { return explain(.notEnoughCoins(needed: cost - base.coins)) }
         guard let spot = base.firstFreeSpot(for: kind) else { return explain(.blocked) }
@@ -528,7 +535,10 @@ final class AppModel {
 
     func selectBuilding(_ id: String?) {
         guard placement == nil else { return }
-        if id != nil { Haptics.tap() }
+        if id != nil {
+            Haptics.tap()
+            SoundFX.shared.play(.tap)
+        }
         selectedBuildingID = id
         baseMessage = nil
         refreshBoard()

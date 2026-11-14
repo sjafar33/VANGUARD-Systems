@@ -14,7 +14,20 @@ struct BuildShopView: View {
                     Label("Tap a building on your base to upgrade or move it.", systemImage: "hand.tap.fill")
                         .font(.system(.subheadline, design: .rounded).weight(.heavy))
                         .foregroundStyle(.secondary)
-                    ForEach(BuildingKind.allCases.filter { $0 != .habitat && $0 != .landingStation }) { kind in
+                    ForEach(BuildingKind.allCases.filter { $0 != .habitat && $0 != .landingStation && !$0.isDecoration }) { kind in
+                        BuildCardRow(model: model, kind: kind) {
+                            model.startBuilding(kind)
+                            if model.placement != nil { close() }
+                        }
+                    }
+                    Text("Decorations")
+                        .font(.game(.title3))
+                        .foregroundStyle(.primary)
+                        .padding(.top, 8)
+                    Label("Looks only. Decorations never change a drill or a test.", systemImage: "paintbrush.fill")
+                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                        .foregroundStyle(.secondary)
+                    ForEach(BuildingKind.allCases.filter { $0.isDecoration }) { kind in
                         BuildCardRow(model: model, kind: kind) {
                             model.startBuilding(kind)
                             if model.placement != nil { close() }
@@ -67,7 +80,9 @@ private struct BuildCardRow: View {
                         .foregroundStyle(Theme.amberInk)
                 case .available:
                     Button(action: build) {
-                        if full {
+                        if full && kind.isDecoration {
+                            Label("You've placed them all", systemImage: "checkmark")
+                        } else if full {
                             Label("Upgrade the habitat to build more", systemImage: "house.fill")
                         } else {
                             CoinLabel(title: "Build for", amount: cost)
@@ -160,17 +175,23 @@ struct BuildingPanel: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(building.kind.name).font(.game(.title3)).foregroundStyle(Theme.ink)
-                    HStack(spacing: 4) {
-                        ForEach(0..<BuildingKind.maxLevel, id: \.self) { i in
-                            Image(systemName: i < building.level ? "star.fill" : "star")
-                                .foregroundStyle(i < building.level ? Color(hex: 0xF5B92E) : Theme.inkSecondary)
-                        }
-                        Text("Level \(building.level) of \(BuildingKind.maxLevel)")
+                    if building.kind.isDecoration {
+                        Label("Decoration: looks only", systemImage: "paintbrush.fill")
                             .font(.system(.subheadline, design: .rounded).weight(.heavy))
                             .foregroundStyle(Theme.inkSecondary)
+                    } else {
+                        HStack(spacing: 4) {
+                            ForEach(0..<BuildingKind.maxLevel, id: \.self) { i in
+                                Image(systemName: i < building.level ? "star.fill" : "star")
+                                    .foregroundStyle(i < building.level ? Color(hex: 0xF5B92E) : Theme.inkSecondary)
+                            }
+                            Text("Level \(building.level) of \(BuildingKind.maxLevel)")
+                                .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                                .foregroundStyle(Theme.inkSecondary)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Level \(building.level) of \(BuildingKind.maxLevel)")
                     }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Level \(building.level) of \(BuildingKind.maxLevel)")
                 }
                 Spacer()
                 RoundIconButton(symbol: "xmark", label: "Close", bevel: GamePalette.coral, size: 40) { model.selectBuilding(nil) }
@@ -204,7 +225,7 @@ struct BuildingPanel: View {
             }
             .buttonStyle(GameButtonStyle(bevel: coins >= cost ? GamePalette.gold : GamePalette.steel, height: 50, font: .game(.headline)))
             .accessibilityLabel("Upgrade for \(cost) Moon coins")
-        } else {
+        } else if !building.kind.isDecoration {
             Label("Top level!", systemImage: "crown.fill")
                 .font(.game(.headline))
                 .foregroundStyle(Theme.amberInk)
@@ -342,7 +363,7 @@ struct LearnListView: View {
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("More lessons are being made").font(.game(.headline)).foregroundStyle(Theme.ink)
-                        Text("Power and batteries, solar storms, and talking to Earth.")
+                        Text("Solar storms, and talking to Earth.")
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(Theme.inkSecondary)
                     }

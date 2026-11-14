@@ -141,6 +141,45 @@ final class BaseExperimentTests: MoonbaseTestCase {
         XCTAssertTrue(base(arrays: 1, batteries: 1).baseTestReady)
     }
 
+    func testDecorationsAreLooksOnly() throws {
+        var b = base(arrays: 1, batteries: 1)
+        b.coins = 1_000
+        let before = BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b))
+        XCTAssertFalse(GuideGoal.decorate.isDone(b, CampaignProgress()))
+        for kind in BuildingKind.allCases where kind.isDecoration {
+            let spot = try XCTUnwrap(b.firstFreeSpot(for: kind))
+            XCTAssertEqual(b.build(kind, x: spot.x, y: spot.y, progress: CampaignProgress()), .ok)
+            XCTAssertNil(BaseState.upgradeCost(kind, from: 1), "Decorations have no levels")
+            XCTAssertNil(kind.drill)
+        }
+        XCTAssertEqual(b.coins, 1_000 - BaseState.buildCost(.flag) - BaseState.buildCost(.lamp) - BaseState.buildCost(.rockGarden))
+        XCTAssertEqual(BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b)), before, "Decorations change no test")
+        XCTAssertTrue(GuideGoal.decorate.isDone(b, CampaignProgress()))
+        let tiles = b.buildings.flatMap(\.footprintTiles)
+        XCTAssertEqual(tiles.count, Set(tiles).count)
+    }
+
+    func testThePowerLessonReadsItsNumbersFromTheDrill() {
+        let lesson = LessonLibrary.powerAndBatteries()
+        XCTAssertEqual(lesson.questionCount, 4)
+        XCTAssertNil(lesson.unlocks)
+        for card in lesson.cards {
+            if case .question(let q) = card {
+                XCTAssertTrue(q.options.indices.contains(q.correctIndex))
+                XCTAssertEqual(Set(q.options).count, q.options.count, "Options must differ")
+            }
+        }
+        let d = MissionCatalog.lightsOut()
+        let needed = (d.assumptions.essentialLoadKW + d.assumptions.fullGeneratorKW) * (d.phases.last?.durationHours ?? 0)
+        let text = lesson.cards.map { card -> String in
+            switch card {
+            case .teach(let f): return f.text
+            case .question(let q): return q.prompt + q.options.joined()
+            }
+        }.joined()
+        XCTAssertTrue(text.contains(Words.kWh(needed)), "The shadow energy question uses the drill's own numbers")
+    }
+
     // MARK: What the engine says about real bases
 
     func testOneArrayOneBatteryRunsOutAtFullAir() throws {

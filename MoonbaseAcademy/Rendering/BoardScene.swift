@@ -487,6 +487,12 @@ final class BoardScene: SKScene {
             selectionRing.isHidden = false
             selectionRing.removeAllActions()
             selectionRing.alpha = 1
+            // The tapped building gives a little bounce, so a tap always feels answered.
+            if !reduceMotion, let node = buildingNodes[id] {
+                node.removeAction(forKey: "tap")
+                node.setScale(1)
+                node.run(.sequence([.scale(to: 1.1, duration: 0.09), .scale(to: 1, duration: 0.13)]), withKey: "tap")
+            }
             if !reduceMotion {
                 selectionRing.run(.repeatForever(.sequence([.fadeAlpha(to: 0.5, duration: 0.7), .fadeAlpha(to: 1, duration: 0.7)])))
             }

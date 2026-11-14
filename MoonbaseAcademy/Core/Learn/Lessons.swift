@@ -41,7 +41,57 @@ struct LessonQuestion: Equatable, Sendable {
 enum LessonLibrary {
     static let plantsAndAirID = "plantsAndAir"
 
-    static func all(science s: ScienceInputs) -> [Lesson] { [plantsAndAir(science: s)] }
+    static let powerAndBatteriesID = "powerAndBatteries"
+
+    static func all(science s: ScienceInputs) -> [Lesson] { [plantsAndAir(science: s), powerAndBatteries()] }
+
+    /// Power, energy and why a battery is only as useful as the sunshine that fills it. Every number is
+    /// read from the Lights Out drill's training assumptions, which are game rules, not NASA data.
+    static func powerAndBatteries() -> Lesson {
+        let d = MissionCatalog.lightsOut()
+        let arrayKW = d.phases.map(\.solarKWPerArray).max() ?? 0
+        let batteryKWh = d.item(.battery)?.batteryCapacityKWh ?? 0
+        let baseKW = d.assumptions.essentialLoadKW + d.assumptions.fullGeneratorKW
+        let shadow = d.phases.last?.durationHours ?? 0
+        let needed = baseKW * shadow
+        let spare = max(0, arrayKW - baseKW)
+        return Lesson(
+            id: powerAndBatteriesID,
+            title: "Power and Batteries",
+            topic: "Power budgeting",
+            symbol: "bolt.fill",
+            unlocks: nil,
+            cards: [
+                .teach(LessonFact(title: "Power and energy are different",
+                                  text: "Power is how fast energy is being used right now. We measure it in kilowatts (kW). Energy is how much gets used over time, in kilowatt-hours (kWh). Using 1 kW for 1 hour uses 1 kWh.",
+                                  symbol: "bolt.badge.clock.fill")),
+                .question(LessonQuestion(prompt: "A heater uses 1 kW of power for 3 hours. How much energy is that?",
+                                         options: ["1 kWh", "3 kWh", "30 kWh"],
+                                         correctIndex: 1,
+                                         explanation: "1 kW for 3 hours is 1 times 3, which is 3 kWh. Power times time gives energy.")),
+                .teach(LessonFact(title: "Solar arrays need the Sun",
+                                  text: "In our game, one solar array makes \(Format.kW(arrayKW)) of power in sunlight. In shadow it makes nothing at all.",
+                                  symbol: "sun.max.fill", isGameRule: true)),
+                .question(LessonQuestion(prompt: "The base is in shadow. How much power do its solar arrays make?",
+                                         options: ["The same as in sunlight", "None", "Twice as much"],
+                                         correctIndex: 1,
+                                         explanation: "No sunlight, no solar power. That is why a base needs a way to save energy for later.")),
+                .teach(LessonFact(title: "Batteries save energy for the dark",
+                                  text: "In our game, one battery holds up to \(Words.kWh(batteryKWh)). It starts empty, so the solar arrays have to fill it while the Sun is up.",
+                                  symbol: "battery.75percent", isGameRule: true)),
+                .question(LessonQuestion(prompt: "In the shadow, our base uses \(Format.kW(baseKW)) for \(Words.hours(shadow)). How much stored energy does it need?",
+                                         options: [Words.kWh(baseKW), Words.kWh(needed), Words.kWh(needed * 10)],
+                                         correctIndex: 1,
+                                         explanation: "\(Format.kW(baseKW)) for \(Words.hours(shadow)) is \(Words.kWh(needed)). If the batteries hold less than that, the lights go out.")),
+                .teach(LessonFact(title: "A battery is only as good as its sunshine",
+                                  text: "With one solar array, the base itself uses \(Format.kW(baseKW)) of the \(Format.kW(arrayKW)) it makes. Only \(Format.kW(spare)) is left over to charge the battery. A bigger battery does not help if there is nothing extra to put in it.",
+                                  symbol: "arrow.triangle.2.circlepath", isGameRule: true)),
+                .question(LessonQuestion(prompt: "Your battery is not even full when the shadow starts. You add a second battery, but no more solar arrays. What changes?",
+                                         options: ["Twice as much energy is stored", "Nothing: there is no extra energy to fill it", "The shadow gets shorter"],
+                                         correctIndex: 1,
+                                         explanation: "An empty battery adds no energy. More solar arrays would fill the batteries faster. You can check this yourself with Test My Base!"))
+            ])
+    }
 
     static func lesson(_ id: String, science s: ScienceInputs) -> Lesson? { all(science: s).first { $0.id == id } }
 

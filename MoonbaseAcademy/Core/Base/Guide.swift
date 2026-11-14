@@ -50,7 +50,7 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .learnPlants: return "Next, a quick lesson about plants and air. You'll earn Moon coins and unlock the greenhouse."
         case .buildGreenhouse: return "You unlocked the greenhouse! Tap Show me to build it."
         case .playLivingBase: return "Can you grow lettuce and keep the air flowing? Tap Show me to try."
-        case .decorate: return "Make the base yours! Pick a colour, a ground or a robot buddy in Style."
+        case .decorate: return "Make the base yours! Place a flag, a lamp or a rock garden from Build, or pick a new look in Style."
         case .buildShelter: return "A solar storm drill is next. Build a storm shelter first. Tap Show me."
         case .playStorm: return "Keep the crew safe through the storm drill. Tap Show me."
         case .buildDish: return "Time to talk to Earth! Build the radio dish. Tap Show me."
@@ -86,7 +86,8 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .learnPlants: return base.lessons[LessonLibrary.plantsAndAirID]?.completed == true
         case .buildGreenhouse: return base.count(.greenhouse) > 0
         case .playLivingBase: return progress.isCompleted(.livingBase)
-        case .decorate: return base.ownedCosmetics.count > CosmeticCatalog.defaults.count
+        case .decorate: return base.buildings.contains { $0.kind.isDecoration }
+            || base.ownedCosmetics.count > CosmeticCatalog.defaults.count
             || base.habitatColor != "habitat.white" || base.boardTheme != "board.dust" || base.robot != "robot.nova"
         case .buildShelter: return base.count(.shelter) > 0
         case .playStorm: return progress.isCompleted(.stormDrill)
