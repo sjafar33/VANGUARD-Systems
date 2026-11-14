@@ -72,11 +72,16 @@ struct MissionView: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.75), value: planPhase)
         }
         .onChange(of: session.currentStep?.phaseID) { _, newPhase in
-            guard session.stage == .playback, let newPhase, session.definition.missionID != .livingBase else { return }
+            guard session.stage == .playback, session.countdown == nil, let newPhase,
+                  session.definition.missionID != .livingBase else { return }
             showBanner(for: newPhase)
         }
-        .onChange(of: session.countdown) { _, value in
+        .onChange(of: session.countdown) { old, value in
             if value != nil { Haptics.thump() }
+            if old != nil, value == nil, session.stage == .playback, let phase = session.currentStep?.phaseID,
+               session.definition.missionID != .livingBase {
+                showBanner(for: phase)
+            }
         }
         .sheet(isPresented: $showSources) { SourcesView(package: package, focus: session.definition) }
     }
@@ -192,7 +197,9 @@ struct MissionTopHUD: View {
             } else {
                 let failure = session.currentStep?.failure?.constraint
                 ResourcePill(symbol: "bolt.fill", bevel: GamePalette.energy,
-                             value: "\(Format.number(state.batteryKWh))/\(Format.number(state.batteryCapacityKWh, digits: 0)) kWh",
+                             value: state.batteryCapacityKWh > 0
+                                ? "\(Format.number(state.batteryKWh))/\(Format.number(state.batteryCapacityKWh, digits: 0)) kWh"
+                                : "No battery",
                              label: "Battery",
                              fraction: state.batteryCapacityKWh > 0 ? state.batteryKWh / state.batteryCapacityKWh : 0,
                              warning: failure == .energyShortage)

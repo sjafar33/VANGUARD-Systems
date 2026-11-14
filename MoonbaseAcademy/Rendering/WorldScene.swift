@@ -21,7 +21,7 @@ final class WorldScene: SKScene {
     static let trackY: CGFloat = 4.2
     static let trackStartX: CGFloat = -3
     /// Part of the world that must stay visible, in world coordinates.
-    static let contentRect = CGRect(x: -312, y: -212, width: 624, height: 380)
+    static let contentRect = CGRect(x: -292, y: -206, width: 584, height: 372)
 
     private let world = SKNode()
     private let background = SKSpriteNode(texture: Art.starfield())
@@ -55,6 +55,7 @@ final class WorldScene: SKScene {
     private var markerNodes: [MissionID: SKNode] = [:]
     private var markerKey: [MapMarker] = []
     private var flagPoints: [(Double, CGPoint)] = []
+    private var touchStart: CGPoint?
 
     override init(size: CGSize) {
         super.init(size: size)
@@ -619,8 +620,20 @@ final class WorldScene: SKScene {
 
     // MARK: Touch
 
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touchStart = touches.first?.location(in: self)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touchStart = nil
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
+        // A drag or swipe is not a tap.
+        let end = touch.location(in: self)
+        defer { touchStart = nil }
+        if let start = touchStart, hypot(end.x - start.x, end.y - start.y) > 14 { return }
         let location = touch.location(in: world)
         let tolerance = 34 / max(0.3, world.xScale)
         if let onMarkerTapped {

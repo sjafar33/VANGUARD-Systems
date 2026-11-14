@@ -177,13 +177,14 @@ struct ResourcePill: View {
                                 .frame(width: proxy.size.width * max(0, min(1, fraction)))
                         }
                     }
-                    .frame(height: 6)
+                    .frame(width: 92, height: 6)
                 }
             }
             .padding(.leading, 22)
             .padding(.trailing, 12)
             .padding(.vertical, 6)
             .frame(minWidth: 86, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
             .background(Capsule().fill(GamePalette.hud).overlay(Capsule().strokeBorder(Color.white.opacity(0.16), lineWidth: 1.5)))
             .padding(.leading, -18)
         }

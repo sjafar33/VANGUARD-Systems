@@ -3,15 +3,18 @@ import SwiftUI
 
 @main
 struct MoonbaseAcademyApp: App {
+    /// Created once per process, so the save file and scenes are never rebuilt by view updates.
+    @State private var model = AppModel(store: LaunchOptions.makeStore())
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(model: model)
         }
     }
 }
 
 struct RootView: View {
-    @State private var model = AppModel(store: LaunchOptions.makeStore())
+    let model: AppModel
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
@@ -73,7 +76,8 @@ struct WorldView: View {
     let summary: String
 
     var body: some View {
-        SpriteView(scene: coordinator.scene, isPaused: !isActive, preferredFramesPerSecond: 30, options: [.ignoresSiblingOrder])
+        SpriteView(scene: coordinator.scene, preferredFramesPerSecond: 30, options: [.ignoresSiblingOrder])
+            .onChange(of: isActive, initial: true) { _, active in coordinator.scene.isPaused = !active }
             .accessibilityElement()
             .accessibilityLabel(summary)
             .accessibilityAddTraits(.isImage)

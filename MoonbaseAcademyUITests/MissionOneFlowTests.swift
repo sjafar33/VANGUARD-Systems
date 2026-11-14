@@ -28,11 +28,9 @@ final class MissionOneFlowTests: XCTestCase {
     private func tap(_ label: String, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
         let button = app.buttons[label].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(label)", file: file, line: line)
-        var attempts = 0
-        while !button.isHittable && attempts < 4 {
-            app.swipeUp()
-            attempts += 1
-        }
+        // Wait for overlays to finish animating away instead of swiping, which could touch the world.
+        let deadline = Date().addingTimeInterval(3)
+        while !button.isHittable && Date() < deadline { pause(0.2) }
         button.tap()
     }
 
@@ -79,6 +77,8 @@ final class MissionOneFlowTests: XCTestCase {
 
         // Improved plan: two arrays and two batteries, from the same starting supplies.
         tap("Try again")
+        XCTAssertTrue(app.buttons["Launch test"].waitForExistence(timeout: 5))
+        pause(0.8)
         tap("Add solar array")
         tap("Add battery")
         tap("Add battery")
