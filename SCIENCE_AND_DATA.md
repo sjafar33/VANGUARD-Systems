@@ -1,0 +1,52 @@
+# Science and data
+
+Moonbase Academy uses a small, bundled extract of NASA reference information. Nothing is fetched while the game runs, and no number is labeled live.
+
+The authoritative file is `MoonbaseAcademy/Resources/Science/science_package.json`. `validateContent(package:)` checks it at launch. If a required value is missing, has the wrong unit, is not a positive finite number, names an unknown source or has no verification record, the app shows a content error screen instead of playing with made-up numbers.
+
+## Evidence categories
+
+Every quantity is exactly one of:
+
+| Category | Meaning |
+|---|---|
+| NASA reference | A value or observation taken from an identified official NASA source |
+| Derived | Calculated from reference values with a documented formula |
+| Training assumption | A fictional capacity, rate or control choice made for this game |
+| Physical constant | The SI speed of light. Added as a fourth label so it is not mislabeled as a NASA value |
+
+## NASA references (verified 2026-11-14)
+
+| ID | Value used | Source and locator | How it changes outcomes |
+|---|---|---|---|
+| N1 | 0.895 kg O₂ per adult crew member per day; 0.800 kg dry food per crew member per day | Life Support Baseline Values and Assumptions Document, NASA/TP-2015-218570/REV2 (Feb 2022), NTRS 20210024855, Table 3-31 "Summary of Nominal Human Metabolic Interface Values" | Oxygen and food use scale with crew count and simulated time in every resource drill |
+| N2 | 33 days of VEG-01 lettuce growth; about 70 W operating power | NASA Veggie fact sheet: VEG-01 A (May 8 to June 10, 2014) and VEG-01 B (July 8 to Aug 10, 2015); "The System" section | Garden drill length and harvest threshold; garden lighting power |
+| N3 | 2017-09-10 16:45 UTC threshold crossing, 2017-09-11 11:45 UTC peak (1493.5 pfu), 2017-09-14 18:50 UTC end | NASA CCMC SEP Scoreboard archived events table, GOES-13, >10 MeV, 10 pfu threshold, 0.85×10 pfu end criterion | Storm drill phase durations: 19 h rising, 79 h 5 min fading, 98 h 5 min total |
+| N4 | 384,400 km average Earth–Moon distance | NASA Moon Facts, "Size and Distance" | Radio delay: 1.28222 s one way, 2.56444 s picture plus command |
+
+Verification method: each official page or PDF was retrieved by an automated fetch on 2026-11-14 and the values were read from the extracted text, then transcribed by hand into the JSON. No raw snapshots are bundled, so no digests are recorded. The BVAD text extraction placed Table 3-31 on report page 59, while the table of contents lists page 58; the values themselves matched the brief. The CCMC table links to a raw GOES-13 JSON file that was **not** downloaded or parsed.
+
+## Derived values
+
+- Storm phases: differences between the N3 UTC timestamps (`ScienceInputs.stormRisingHours`, `stormDecliningHours`). The table's 98.08 h is rounded; the game uses the exact 98 h 5 min.
+- Radio delay: `moonDistanceKm / lightSpeedKmPerSecond`. The rover's command loop is exactly two one-way trips: one picture to Earth, one command back.
+- Garden horizon: the N2 33-day reference split into three 11-day planning blocks.
+
+## Training assumptions
+
+Two adult crew; full air maker 2.0 kg O₂/day at 0.5 kW (linear at 0, ½, 1); 0.1 kW essential load; oxygen tank 7.16 kg starting at 3.58 kg; solar array 1 kW in sunlight; battery 4 kWh; garden 16 h light for full growth and 0.01 kW standby; 17 kWh/day for the garden drill; 0.8 kW for the storm drill; shelter assembly 3 kWh; rover 1 m/s with instant braking; 5–6 m target bay; all cargo point costs. These are game design choices, not spacecraft specifications.
+
+## Not modeled
+
+Radiation dose (the storm drill uses a simple shelter rule and never computes mSv), CO₂, water, thermal control, full nutrition, equipment failures, the real ~two-week lunar night, rover braking and terrain, link scheduling, and the changing Earth–Moon distance. Generation and demand are uniform within each drill step (a phase-averaged training model).
+
+## Sensitivity tests
+
+The test suite proves the data is functional, not decorative. Using test-only copies of the inputs:
+
+- Raising oxygen use to 1.2 kg/day makes the successful reserve-spending storm plan fail.
+- Raising the crop reference to 35 days removes the harvest from the 33-day full-light drill.
+- Doubling the Moon distance makes the marker-3 rover plan overshoot.
+- Moving the archived storm end by 10 hours changes the phase duration and food use.
+
+Production data is never modified by tests.

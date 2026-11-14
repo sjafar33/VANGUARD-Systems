@@ -11,7 +11,7 @@ struct MoonbaseAcademyApp: App {
 }
 
 struct RootView: View {
-    @State private var model = AppModel()
+    @State private var model = AppModel(store: LaunchOptions.makeStore())
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.scenePhase) private var scenePhase
 

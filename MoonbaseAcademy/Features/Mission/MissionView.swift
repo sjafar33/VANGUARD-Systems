@@ -40,7 +40,7 @@ struct MissionView: View {
                             .background(Circle().fill(Theme.space.opacity(0.75)))
                             .foregroundStyle(Theme.ceramic)
                     }
-                    .accessibilityLabel("Back to base")
+                    .accessibilityLabel("Leave drill")
                     VStack(alignment: .leading, spacing: 1) {
                         Text(session.definition.title).font(.rounded(.headline))
                         Text(session.definition.drillLabel).font(.footnote.weight(.semibold)).opacity(0.85)
