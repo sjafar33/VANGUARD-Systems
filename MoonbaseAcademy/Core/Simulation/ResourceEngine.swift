@@ -3,8 +3,38 @@ import Foundation
 /// Authoritative, deterministic resource model. Foundation only: no UI, timers, or animation callbacks
 /// may decide an outcome. Generation and demand are uniform within each reported step
 /// (a phase-averaged training model, not an electrical simulator).
+struct PhaseRates: Equatable {
+    let demand: DemandBreakdown
+    let generationKW: Double
+    let oxygenInPerHour: Double
+    let oxygenOutPerHour: Double
+    let foodOutPerHour: Double
+    var netKW: Double { generationKW - demand.totalKW }
+    var oxygenNetPerHour: Double { oxygenInPerHour - oxygenOutPerHour }
+}
+
 enum ResourceEngine {
     static let tolerance = 1e-9
+
+    /// The engine and planning explanations share exactly the same load and crew-demand calculation.
+    static func rates(definition d: MissionDefinition, configuration c: ResourceConfiguration,
+                      phaseIndex: Int, science s: ScienceInputs) -> PhaseRates {
+        let phase = d.phases[phaseIndex]
+        let plan = c.plans[phaseIndex]
+        let a = d.assumptions
+        let lightHours = plan.gardenFraction * a.gardenFullLightHours
+        let gardenKW = phase.allowedGardenFractions.isEmpty ? 0 :
+            (s.gardenOperatingPowerKW * lightHours + a.gardenStandbyKW * (24 - lightHours)) / 24
+        let demand = DemandBreakdown(essentialKW: a.essentialLoadKW,
+                                     airKW: a.fullGeneratorKW * plan.airFraction,
+                                     gardenKW: gardenKW,
+                                     researchKW: (phase.research?.powerKWPerLevel ?? 0) * plan.researchLevel)
+        return PhaseRates(demand: demand,
+                          generationKW: phase.baseSupplyKW + Double(c.count(.solarArray)) * phase.solarKWPerArray,
+                          oxygenInPerHour: a.fullGeneratorKgPerDay * plan.airFraction / 24,
+                          oxygenOutPerHour: Double(d.initial.crewCount) * s.oxygenKgPerPersonDay / 24,
+                          foodOutPerHour: Double(d.initial.crewCount) * s.foodDryKgPerPersonDay / 24)
+    }
 
     static func validateDefinition(_ d: MissionDefinition) -> [ConfigurationIssue] {
         var issues: [ConfigurationIssue] = []
@@ -91,7 +121,6 @@ enum ResourceEngine {
     static func simulate(definition d: MissionDefinition,
                          configuration c: ResourceConfiguration,
                          science s: ScienceInputs) -> ResourceMissionResult {
-        let a = d.assumptions
         var issues = validateDefinition(d)
         if !s.isPhysicallyValid { issues.append(.invalidScience) }
         if issues.isEmpty { issues += validateConfiguration(mission: d, configuration: c) }
@@ -127,9 +156,7 @@ enum ResourceEngine {
         var clock = 0.0
         var researchUnits = 0.0
         var observationBadge = false
-        let crew = Double(d.initial.crewCount)
         let hasShelter = c.count(.shelterKit) > 0
-        let arrays = Double(c.count(.solarArray))
         let noDemand = DemandBreakdown(essentialKW: 0, airKW: 0, gardenKW: 0, researchKW: 0)
 
         if assemblyKWh > 0 {
@@ -168,21 +195,15 @@ enum ResourceEngine {
             }
 
             let hasGarden = !phase.allowedGardenFractions.isEmpty
-            let lightHours = plan.gardenFraction * a.gardenFullLightHours
-            let gardenKW = hasGarden
-                ? (s.gardenOperatingPowerKW * lightHours + a.gardenStandbyKW * (24 - lightHours)) / 24
-                : 0
-            let researchKW = (phase.research?.powerKWPerLevel ?? 0) * plan.researchLevel
-            let demand = DemandBreakdown(essentialKW: a.essentialLoadKW,
-                                         airKW: a.fullGeneratorKW * plan.airFraction,
-                                         gardenKW: gardenKW,
-                                         researchKW: researchKW)
-            let generationKW = phase.baseSupplyKW + arrays * phase.solarKWPerArray
-            let netKW = generationKW - demand.totalKW
-            let oxygenInPerHour = a.fullGeneratorKgPerDay * plan.airFraction / 24
-            let oxygenOutPerHour = crew * s.oxygenKgPerPersonDay / 24
-            let oxygenNetPerHour = oxygenInPerHour - oxygenOutPerHour
-            let foodOutPerHour = crew * s.foodDryKgPerPersonDay / 24
+            let rates = rates(definition: d, configuration: c, phaseIndex: phaseIndex, science: s)
+            let demand = rates.demand
+            let researchKW = demand.researchKW
+            let generationKW = rates.generationKW
+            let netKW = rates.netKW
+            let oxygenInPerHour = rates.oxygenInPerHour
+            let oxygenOutPerHour = rates.oxygenOutPerHour
+            let oxygenNetPerHour = rates.oxygenNetPerHour
+            let foodOutPerHour = rates.foodOutPerHour
 
             let stepLength = phase.stepHours ?? phase.durationHours
             var remaining = phase.durationHours

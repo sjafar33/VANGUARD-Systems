@@ -419,12 +419,29 @@ struct BuildTray: View {
     let openPlan: (Int) -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
-            if session.isBaseTest { BaseGearCard(session: session) }
-            ViewThatFits(in: .horizontal) {
-                row
-                ScrollView(.horizontal, showsIndicators: false) { row }
-                    .accessibilityIdentifier("mission.planningTray")
+        VStack(spacing: 12) {
+            if session.isRover {
+                RoverTray(session: session)
+            } else {
+                PlanningGuide(session: session)
+                if session.isBaseTest {
+                    BaseGearCard(session: session)
+                } else if !session.definition.catalog.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: true) {
+                        HStack(alignment: .top, spacing: 12) {
+                            ForEach(session.definition.catalog) { item in
+                                BuildCard(session: session, item: item,
+                                          highlighted: session.tutorial == .placeFirstArray && item.kind == .solarArray,
+                                          dimmed: session.tutorial == .placeFirstArray && item.kind != .solarArray)
+                            }
+                        }.padding(8)
+                    }
+                    .accessibilityIdentifier("mission.cargoTray")
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 12) { phaseCards(fullWidth: false) }
+                    VStack(spacing: 12) { phaseCards(fullWidth: true) }
+                }
             }
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -432,34 +449,18 @@ struct BuildTray: View {
         .animation(.default, value: session.shakeToken)
     }
 
-    private var row: some View {
-            HStack(alignment: .top, spacing: 12) {
-                if session.isRover {
-                    RoverTray(session: session)
+    @ViewBuilder private func phaseCards(fullWidth: Bool) -> some View {
+        ForEach(planIndices, id: \.self) { index in
+            Group {
+                if session.definition.missionID == .livingBase {
+                    PlanCard(session: session, index: index) { openPlan(index) }
                 } else {
-                    if !session.isBaseTest {
-                        ForEach(session.definition.catalog) { item in
-                            BuildCard(session: session, item: item,
-                                      highlighted: session.tutorial == .placeFirstArray && item.kind == .solarArray,
-                                      dimmed: session.tutorial == .placeFirstArray && item.kind != .solarArray)
-                        }
-                    }
-                    ForEach(planIndices, id: \.self) { index in
-                        Group {
-                            if session.definition.missionID == .livingBase {
-                                PlanCard(session: session, index: index) { openPlan(index) }
-                            } else {
-                                // Two-part drills: the switches sit right on the card. No popup needed.
-                                QuickPlanCard(session: session, index: index) { openPlan(index) }
-                            }
-                        }
-                        .disabled(session.tutorial == .placeFirstArray)
-                        .opacity(session.tutorial == .placeFirstArray ? 0.5 : 1)
-                    }
+                    QuickPlanCard(session: session, index: index, openDetails: { openPlan(index) }, fullWidth: fullWidth)
                 }
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 2)
+            .disabled(session.tutorial == .placeFirstArray)
+            .opacity(session.tutorial == .placeFirstArray ? 0.5 : 1)
+        }
     }
 
     private var planIndices: [Int] {
@@ -837,18 +838,17 @@ struct QuickPlanCard: View {
     let session: MissionSession
     let index: Int
     let openDetails: () -> Void
-    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 236
+    var fullWidth = false
+    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 270
 
     var body: some View {
         let phase = session.definition.phases[index]
         let plan = session.plan(index)
         let a = session.definition.assumptions
-        let demand = a.essentialLoadKW + a.fullGeneratorKW * plan.airFraction + (phase.research?.powerKWPerLevel ?? 0) * plan.researchLevel
-        let supply = phase.baseSupplyKW + Double(session.count(.solarArray)) * phase.solarKWPerArray
-        let oxygen = a.fullGeneratorKgPerDay * plan.airFraction
-        let breathe = Double(session.definition.initial.crewCount) * session.science.oxygenKgPerPersonDay
-        let draining = demand > supply + 1e-9
-        let fromTank = oxygen + 1e-9 < breathe
+        let rates = ResourceEngine.rates(definition: session.definition, configuration: session.configuration,
+                                         phaseIndex: index, science: session.science)
+        let draining = rates.netKW < -1e-9
+        let fromTank = rates.oxygenNetPerHour < -1e-9
         let title = PlanCard.title(session, index)
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
@@ -858,7 +858,7 @@ struct QuickPlanCard: View {
                     .frame(width: 34, height: 34)
                     .background(Circle().fill(PlanCard.bevel(phase.mood).bottom))
                     .accessibilityHidden(true)
-                Text(title)
+                Text("\(index + 1). \(title)")
                     .font(.game(.subheadline))
                     .foregroundStyle(Theme.ink)
                     .lineLimit(2)
@@ -873,6 +873,9 @@ struct QuickPlanCard: View {
                 .accessibilityLabel("\(title) plan")
                 .accessibilityHint("Shows the numbers for this part")
             }
+            Text("\(Format.hours(phase.durationHours)) • \(phase.mood == .shadow ? "No solar electricity" : phase.mood == .sunlit ? "Solar arrays can charge batteries" : "Follow this part of your plan")")
+                .font(.caption).foregroundStyle(Theme.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             Label("Air maker", systemImage: "wind")
                 .font(.system(.caption, design: .rounded).weight(.heavy))
                 .foregroundStyle(Theme.inkSecondary)
@@ -884,31 +887,43 @@ struct QuickPlanCard: View {
                     }
                 }
             }
+            Text(plan.airFraction == 0 ? "Off: the crew breathes from the oxygen tank."
+                 : plan.airFraction < 1 ? "Half: saves power; the tank supplies the missing oxygen."
+                 : "Full: makes more oxygen and uses more power.")
+                .font(.caption).foregroundStyle(Theme.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             if let research = phase.research {
-                let on = plan.researchLevel > 0
-                chip(on ? "Science: On" : "Science: Off", selected: on,
-                     label: "\(title), science: \(on ? "on" : "off")") {
-                    session.setResearch(index, on ? 0 : (research.levels.max() ?? 1))
+                Text(session.baseTest?.kind == .storm ? "Science task • required, uses extra power" : "Extra science • optional, uses extra power")
+                    .font(.caption.weight(.semibold)).foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 6) {
+                    ForEach([false, true], id: \.self) { on in
+                        chip(on ? "Science On" : "Science Off", selected: (plan.researchLevel > 0) == on,
+                             label: "\(title), science: \(on ? "on" : "off")") {
+                            session.setResearch(index, on ? (research.levels.max() ?? 1) : 0)
+                        }
+                    }
                 }
             }
-            Label(draining ? "Drains the battery: \(Format.kW(demand - supply))" : "Spare power: \(Format.kW(supply - demand))",
+            Label(draining ? "Battery energy is being used" : rates.netKW > 1e-9 ? "Spare power can charge batteries" : "Power in matches power used",
                   systemImage: draining ? "battery.25percent" : "bolt.fill")
                 .font(.system(.caption, design: .rounded).weight(.heavy))
                 .foregroundStyle(draining ? Theme.warningInk : Theme.plantInk)
                 .fixedSize(horizontal: false, vertical: true)
-            Label(fromTank ? "Tank cost: \(Format.kg((breathe - oxygen) * phase.durationHours / 24))" : "Air maker keeps up",
+            Label(fromTank ? "The crew uses some tank oxygen" : "The air maker covers the crew's needs",
                   systemImage: fromTank ? "lungs.fill" : "checkmark.circle.fill")
                 .font(.system(.caption, design: .rounded).weight(.heavy))
                 .foregroundStyle(fromTank ? Theme.warningInk : Theme.plantInk)
                 .fixedSize(horizontal: false, vertical: true)
             if plan.airFraction < 1 {
-                Text("Saves \(Format.kWh(a.fullGeneratorKW * (1 - plan.airFraction) * phase.durationHours)) vs Full over \(Format.hours(phase.durationHours)).")
+                Text("Over this part: save \(Format.kWh(a.fullGeneratorKW * (1 - plan.airFraction) * phase.durationHours)); withdraw \(Format.kg(max(0, -rates.oxygenNetPerHour) * phase.durationHours)) of oxygen if it runs for the full time.")
                     .font(.caption).foregroundStyle(Theme.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(10)
-        .frame(width: cardWidth, alignment: .leading)
+        .frame(width: fullWidth ? nil : cardWidth, alignment: .leading)
+        .frame(maxWidth: fullWidth ? .infinity : nil, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
         .background(GameCardBackground())
         .accessibilityElement(children: .contain)

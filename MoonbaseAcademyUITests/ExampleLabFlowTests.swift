@@ -70,7 +70,7 @@ final class ExampleLabFlowTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Crew safe, science task unfinished"].waitForExistence(timeout: 5))
         tap("Try again")
         tap("Storm rising, air maker: Half")
-        tap("Storm rising, science: off")
+        tap("Storm rising, science: on")
         shot("04-storm-reserve-plan")
         runExperiment()
         XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 5))
