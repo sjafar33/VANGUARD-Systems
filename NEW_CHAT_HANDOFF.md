@@ -1,229 +1,189 @@
 # Moonbase Academy — Handoff for a New Chat
 
-_Written 2026-11-14, about 14:45 Toronto time. Paste or attach this file at the start of a new chat. It replaces the need to read the previous conversation._
+_Written 2026-11-14, about 21:05 Toronto time (America/Toronto). Attach this file at the start of a new chat. It replaces the older `NEW_CHAT_HANDOFF.md` and the previous conversation._
 
 ---
 
-> **Update, 2026-11-14 evening.** Sections 5-7 below are older than the code. Read the "Base-builder brief" part of `PHASES.md` first: it has the Phase 0 audit, the Phases 1-2 checkpoint (landing station, Test My Base) and "Play-test round 1". Corrections to this file: the app target DOES compile (build logs, commits `12dd3c9` and `38e91c6`); commit `f12c3d8` and later are not yet compiled; no unit or UI test has run since before V2. Claude can read build logs but cannot build: Xcode only accepts plain clicks from it.
+## 0. Read this first
 
-## 1. What this is
+- **Goal:** win the NASA Space Apps Challenge 2026, challenge "Junior Astronaut Mission Trainer". Team **VANGUARD Systems**. Owner: Sadegh (sadeghj388@gmail.com, attribution only). Hackathon is Nov 14–15, 2026; `SUBMISSION.md` records the deadline as **Nov 15, 11:59 PM EST — unconfirmed, the owner must check the official site**.
+- **App:** Moonbase Academy, native iPhone + iPad game (SwiftUI + SpriteKit, iOS 17+, Xcode 27).
+- **Where we are:** branch `base-builder`, HEAD `b2a94c8`. The app builds and runs on the owner's iPad up to `496ba10` (owner screenshots + build log at 20:56). **`b2a94c8` has not been built. No unit or UI test has run since before the V2 work.**
+- **Immediate next actions:**
+  1. Owner: `git push -u origin base-builder` from Terminal (Claude cannot push), ⌘R to check `b2a94c8`, ⌘U to run tests, screenshots of level 2/3 buildings.
+  2. Claude: fix whatever the build/test log shows, then build the **Storm Test on the player's own base** (section 7, item 3).
+  3. Then presentation: project page text, 30-second demo, dataset explanation.
 
-- **App:** Moonbase Academy, a native **iPhone + iPad** game (SwiftUI + SpriteKit, iOS 17+). It's built for the **NASA Space Apps Challenge 2026** by team **VANGUARD Systems**. The owner (Sadegh) has teammates.
-- **Challenge brief (keep this central):**
-  - Kids aged 7–12 manage a lunar or Martian outpost.
-  - They make real decisions about life support, radiation shielding, power budgeting, food production and communication delay, and see the consequences.
-  - **No choice is free:** every decision is a real trade-off.
-  - Ground it in **real NASA data** (DONKI, OSDR, Artemis and so on), attributed in the app. Don't present static data as live.
-  - Keep it simple: 2–3 core resources. Plain language, with science terms explained in context.
-  - Stand-out factors: links to real data, replayability, and learning from failure without punishment.
-  - Ship a short explanation of the datasets used.
-- **Owner's current vision (most important):** a **Clash-of-Clans-style base builder for kids**.
-  - A board where you place, build, move, upgrade and customize (skins, colours, robots).
-  - **Coins come from learning** (interactive lessons and quizzes) and from the real trade-off drills.
-  - It should be fun enough that kids want to come back, without being hard. There must be **zero friction** for a child, with constant guidance ("what do I do next?").
-  - It must look and feel like a **professional, animated game**, not a prototype.
+## 1. The challenge (the owner's attached brief)
+
+- Build an interactive game/app where kids **7–12 manage a lunar or Martian outpost**, making real decisions about **life support, radiation shielding, power budgeting, food production, communication delay**, and seeing consequences over a simulated mission.
+- **No choice is free.** Example trade-offs from the brief: oxygen reserves for extra research; shielding against a radiation event at the cost of tonight's power.
+- Ground it in **real NASA open data** (the brief names DONKI, OSDR, Artemis/Mars data), attributed in the tool. A curated embedded dataset is fine; **never present static data as live**.
+- Pitfalls named in the brief: a "safe" choice with no cost; **visual polish substituting for mechanical accuracy**; too many simultaneous systems (2–3 core resources is better).
+- Stand-out factors: linking a shielding decision to real space weather; **replayability** and learning from failure without punishment; a short explanation of which NASA datasets were used and why.
+- Low barrier to entry matters (browser is easier for judges; ours is a native app, so the **demo video is the product** to judges).
+
+### Judging (from web search; the official 2026 guides could not be opened)
+- Five criteria: **Impact, Creativity, Validity, Relevance, Presentation**. NASA's guide says to give Presentation equal attention.
+- Relevant global awards: Best Use of Science, Best Use of Data.
+- Demo: **video up to 30 seconds OR up to 7 slides**; going over makes a project ineligible for Global Judging. Public links, English (or English subtitles). These limits come from the 2025 guide — **owner must confirm the 2026 rules**.
+- The challenge page and its Resources tab block automated fetching (robots). Do not claim to have read them.
 
 ## 2. Where things are
 
-- **Repo on the owner's Mac:** `/Users/sjafari/Downloads/NASA/MoonbaseAcademy`
-  - In the Claude device shell it's mounted at `$HOME/mnt/NASA/MoonbaseAcademy`.
-- **Xcode project:** `MoonbaseAcademy.xcodeproj`
-  - Xcode 27 / iOS 27 SDK, Swift 5 language mode.
-  - Uses file-system-synchronized groups (objectVersion 77), so **new .swift files are picked up automatically**.
-  - Has a shared scheme.
-- **Targets:** `MoonbaseAcademy`, `MoonbaseAcademyTests` (unit), `MoonbaseAcademyUITests`.
-- **DerivedData lives inside the project folder:** `DerivedData/MoonbaseAcademy/Logs/Build/*.xcactivitylog` (gzip).
-  - To find compile errors, run: `gunzip -c <log> | tr '\r' '\n' | grep -a "error:"`
-- **Git branches** (all local; **nothing has been pushed, there is no remote**):
-  - `main` @ `107b088`: original V1 plus the music work.
-  - `v2` @ `40317c9`: phased V2 work (Phases 0–3).
-  - **`base-builder` @ `b635419`: CURRENT working branch.** It branched from `v2`.
-- **Docs in the repo:** `HANDOFF.md` (long running log: V2 baseline findings F1–F11, phase checkpoints, base-builder rounds), `PHASES.md` (phase tracker), `README.md`, `SCIENCE_AND_DATA.md`, `AI_USE.md`, `THIRD_PARTY_NOTICES.md`, `SUBMISSION.md`, `LICENSE` (MIT), `Design/AppIcon.svg` (app icon source).
-- **Original phased brief:** `Moonbase_Academy_V2_Phased_Coding_Prompt.md`, uploaded by the owner and not in the repo. It defines Phases 0–7 and the checkpoint report format. The owner has since moved to the base-builder direction; the phase rules still apply as good practice.
+- **Repo on the owner's Mac:** `/Users/sjafari/Downloads/NASA/MoonbaseAcademy` (in Claude's device shell: `$HOME/mnt/NASA/MoonbaseAcademy`).
+- **GitHub:** `https://github.com/sadeghj388-star/MoonBase-Academy.git`, added as `origin`. **Nothing pushed yet.**
+- **Branches:** `main` @ `107b088` (V1), `v2` @ `40317c9`, **`base-builder` @ `b2a94c8` (current)**.
+- **Xcode project:** `MoonbaseAcademy.xcodeproj`, file-system-synchronized groups (new `.swift` files are picked up automatically), shared scheme, targets `MoonbaseAcademy`, `MoonbaseAcademyTests`, `MoonbaseAcademyUITests`.
+- **Build logs:** `DerivedData/MoonbaseAcademy/Logs/Build/*.xcactivitylog` (gzip). To read:
+  `gunzip -c <log> | tr '\r' '\n' | grep -a -o -E "Build succeeded|Build failed|[A-Za-z]+\.swift:[0-9]+:[0-9]+: error: [^\"]{0,240}"`
+- **Test results:** `TestResults/last-run.txt` (written by `TestSupport`), `DerivedData/.../Logs/Test/` (currently empty).
+- **Docs in the repo:** `PHASES.md` (running checkpoints for every round — the most detailed record), `SCIENCE_AND_DATA.md`, `SUBMISSION.md` (draft), `README.md`, `AI_USE.md`, `HANDOFF.md` (older log), `NEW_CHAT_HANDOFF.md` (older; superseded by this file).
 
-## 3. How we work (important constraints)
+## 3. How we work (constraints that shaped everything)
 
-- **Claude usually cannot build or run.** Code is edited through the device shell (a Linux VM that can't run `xcodebuild`).
-  - Computer-use access to Xcode exists only at the "click" tier: no keyboard, so no ⌘B or ⌘U.
-  - Xcode is usually on another macOS Space or full-screen, so clicks don't land.
-- **So the owner builds and tests:**
-  - Claude writes code very carefully, runs a bracket-balance Python check on changed files, commits, and asks the owner to press ⌘B / ⌘U on the iPad Air 11-inch (M4) simulator, the iPhone simulator, or the physical "SJ iPad".
-  - The owner sends screenshots of errors. Claude reads the error from the DerivedData build log (above) and fixes it.
-- **Never claim** something was compiled, tested, or verified on a device or with accessibility tools unless it actually was.
-- **Git:**
-  - Commit in sensible chunks on the current branch.
-  - Never push or merge without asking.
-  - End commit messages with:
-    `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` and `Claude-Session: https://claude.ai/code/session_014fjBMgV32XVUin9g3D96wW` (the new chat may give a new session line).
-- **Science integrity rules (non-negotiable):**
-  - Drill physics and NASA source values are never changed to make something look better or to pass a test.
-  - Game rules (coins, costs, upgrades, cosmetics) never change the numbers inside a drill.
-  - Label game assumptions as "Game rule", not NASA data.
-  - All copy must use the actual drill and variant numbers (no hard-coded "6 hours / 17 kWh / 33 days").
-- **Other rules:**
-  - No accounts, ads, analytics, tracking, backend or remote AI.
-  - No manipulative retention: no timers, streak loss, loot boxes or waiting.
-  - Don't describe accessibility options as ADHD treatment.
-  - Preserve user saves: new persisted fields are **optional** for backward compatibility. Tests use isolated saves.
-- **Owner's style:** direct and fast. Wants real, polished game feel and kid-first UX. Responds well to concise summaries plus a clear "what I need from you".
+- **Claude cannot build, run or push.**
+  - The device shell is a Linux VM: no `xcodebuild`, no Swift.
+  - Xcode via computer use is "click" tier only: menu commands and keys are refused; plain clicks on the off-Space Xcode window did not start a run.
+  - `git push` is blocked from the shell ("only clone/fetch"). Commits work (delete permission was granted for the NASA folder this session; a new session must request it again with `device_request_delete_permission`, or git leaves `.lock` files).
+  - Outbound network from the shell is blocked for NASA sites; `WebFetch` works for some (ccmc.gsfc.nasa.gov) and is refused for others (spaceappschallenge.org, kauai.ccmc DONKI web service).
+- **So:** Claude writes code carefully, runs a bracket-balance script, commits, and the owner presses ⌘R / ⌘U. Claude then reads the build log itself (no screenshots needed for errors). Screenshots are needed for anything visual.
+- **Every piece of art since `12dd3c9` was drawn without being seen.** Treat art as unverified until the owner sends a screenshot.
+- **So far every commit that was built compiled first time**, but that is luck plus care, not proof. Never say "tested" or "verified" for anything that was not.
+- **Patch method that worked:** a small Python helper doing exact-string replacement that fails unless the old text matches exactly once, then a brace/paren balance check on changed Swift files. Avoid retyping files from tool output.
+- **Git:** commit in sensible chunks on `base-builder`; never push or merge without the owner (and pushing is impossible from Claude anyway). End commit messages with the attribution lines the session provides (`Co-Authored-By: Claude …` and `Claude-Session: …`).
+- **Owner's style:** direct, fast, wants a "professional Clash of Clans feel", sends iPad screenshots with red circles. Prefers concise summaries plus a clear "what I need from you". He has pushed back when plans were vague: be specific and act as a senior partner.
 
-## 4. Architecture overview
+## 4. Non-negotiable rules
+
+- **Science integrity:** drill physics and NASA values never change to look better or pass a test. NASA references, derived values, constants and invented game rules stay distinct; game rules are labelled "Game rule". Archived data is labelled archived, never live. No radiation dose is calculated and the app says so.
+- **Reference drills stay stable.** New scenarios (Test My Base, storm replays) are separate, labelled definitions that reuse the same engines.
+- **No** accounts, ads, analytics, tracking, backend, remote AI, timers, streak loss, loot boxes.
+- **Saves:** new persisted fields are optional; old saves must load. Tests use isolated saves.
+- Do not describe accessibility options as treatment for anything.
+
+## 5. Architecture
 
 ```
 MoonbaseAcademy/
-  App/            AppModel.swift (central @Observable model: progress, routing, base board, coins, guide, drafts, settings)
-                  MoonbaseAcademyApp.swift (RootView: environments appReduceMotion/focusView/novaColors, scenePhase handling)
-                  LaunchOptions.swift (-uiTesting / -resetProgress isolated save), KeyboardDismissal.swift
+  App/            AppModel.swift (central @Observable: progress, routing, board, coins, guide, base test, dev mode)
   Core/
-    Science/      SciencePackage.swift + Resources/Science/science_package.json (bundled NASA values, sources N1–N4, S1, validation)
-    Simulation/   ResourceEngine.swift (deterministic resource sim), RoverEngine (signal-lag sim)
-    Missions/     MissionModels.swift, MissionCatalog.swift (4 drills + harder variants),
-                  MissionContent.swift (MissionCopy.of(def,science), ExplanationWriter, Words, UnitHelp, CargoCopy),
-                  GameCopy.swift (Nova intro lines per drill, rank, commentary)
-    Progress/     Progress.swift (CampaignProgress, AttemptRecord, Achievement, MissionDraft, SaveStore/SaveEnvelope schema 1)
-    Base/         BaseBuilder.swift (BaseState: board rules, buildings, costs, upgrades, cosmetics, coins, starting base/migration)
-                  Guide.swift (GuideGoal 12-step guide, EarnAdvisor "how to earn coins")
-    Learn/        Lessons.swift (Lesson model + LessonLibrary.plantsAndAir)
+    Science/      SciencePackage.swift + Resources/Science/science_package.json (sources N1–N4, S1; 8 storm events)
+    Simulation/   ResourceEngine.swift (deterministic), RoverEngine
+    Missions/     MissionModels, MissionCatalog (4 drills + variants), MissionContent (copy, ExplanationWriter), GameCopy
+    Progress/     Progress.swift (CampaignProgress, SaveStore schema 1)
+    Base/         BaseBuilder.swift (BaseState: board, buildings, coins, station, base-test records)
+                  BaseExperiment.swift (Test My Base bridge: inputs, definition, level rule)
+                  Guide.swift (14 GuideGoals, EarnAdvisor)
+    Learn/        Lessons.swift (LearnLevel, LessonTopic pools, 2 lessons, 54 questions)
   Features/
-    Base/         BaseView.swift (home: board + HUD + goal card + sheets), BaseBuilderViews.swift (Build shop, PlacementBar,
-                  BuildingPanel, Learn list, Drills list, Style shop w/ preview, GoalCard, GoalToast, EarnCoinsView, GuidePulse)
-    Mission/      MissionSession.swift (drill state machine), MissionView.swift (drill UI), PlaybackScript.swift (checkpoints)
-    Learn/        LessonView.swift (full-screen lesson)
-    Science/      SourcesView.swift (sources, assumptions, limits + SettingsView incl. Focus & Accessibility)
-  DesignSystem/   GameKit.swift (buttons, pills, Nova avatar + NovaColors, stars, confetti, Haptics), Theme.swift, Coin.swift,
-                  Accessibility.swift (appReduceMotion/focusView env keys, Narrator read-aloud, ReadAloudButton),
-                  SoundFX.swift + LofiComposer.swift (original synthesized music/SFX)
-  Rendering/      WorldScene.swift + WorldSnapshot.swift (drill isometric world, snapshot-driven; briefing SceneBeats),
-                  BoardScene.swift + BoardArt.swift (base board scene: zoom/pan, buildings, ghost, idle life),
-                  ComponentArt.swift (procedural CoreGraphics art: habitat, arrays, batteries, greenhouse, shelter, rover, terrain…),
-                  IsoArt.swift (Iso projection, ZLayer, IsoPainter, ArtCache)
+    Base/         BaseView.swift, BaseBuilderViews.swift (Build shop, PlacementBar, BuildingPanel, StationPanel, Learn, Drills, Style, GoalCard, EarnCoins)
+    Mission/      MissionSession.swift (state machine; baseTest context; playbackSpeed), MissionView.swift (QuickPlanCard, BetOverlay, BaseGearCard, BaseTestCard, PlaybackPanel), PlaybackScript.swift
+    Learn/        LessonView.swift
+    Science/      SourcesView.swift (sources + SettingsView incl. developer section)
+  DesignSystem/   GameKit, Theme (Format), Coin, Accessibility, SoundFX (+ .upgrade, .thud), LofiComposer
+  Rendering/      WorldScene/WorldSnapshot (drill world), BoardScene/BoardArt (base board), UpgradeArt.swift (level 2/3 buildings),
+                  ComponentArt (level 1 art), IsoArt (Iso projection, IsoPainter, ArtCache)
 ```
 
-**Key patterns:**
-- Scenes are driven by immutable snapshots (`WorldSnapshot`, `BoardSnapshot`). Scenes never change game state; they send intents through callbacks.
-- `SKNode`, `Art` and `BoardArt` are `@MainActor`.
-- Isometric projection: `Iso.point(gx,gy) = ((gx-gy)*32, -(gx+gy)*16)`; depth = `200 + (gx+gy)*10`.
-- Procedural art is cached in `ArtCache`. There are no external image assets apart from the app icon PNG.
-- Every animation honours `reduceMotion`: the single policy is the system setting OR the in-app switch, via the `appReduceMotion` environment value and `AppModel.reduceMotion`.
+Key patterns: scenes are driven by immutable snapshots and send intents back through callbacks; `Iso.point(gx,gy) = ((gx-gy)*32, -(gx+gy)*16)`; procedural art cached by key in `ArtCache`; every animation honours the single reduced-motion policy; `IsoPainter` draws into a y-down context with `pt.p(x,y,z)`, `box`, `cylinder`, `domePath`, `gradient`, `line`, `fill`, `stroke`.
 
-## 5. The game today (on `base-builder`)
+## 6. What the game is now
 
-### 5.1 Base builder (home screen)
-- **Board:** 12×12 tiles (coords −6…5) on a raised Moon platform.
-- **Footprints:** habitat 3×3 (pre-placed, id `"habitat"` at −2,−2), greenhouse and shelter 2×2, solar array, battery and dish 1×1.
-- **Controls:** pinch to zoom 1–2.8×, one-finger pan, plus zoom +/− and "show whole base" buttons. Tap a building to open its panel (upgrade, move, play its drill). Placement shows a green ✓ / red ✕ preview; you can tap or drag it, or use the nudge arrows.
-- **Idle life (all off with reduced motion):**
-  - Twinkling stars and shooting stars.
-  - A rover patrols the platform edge, and the robot buddy hops between free tiles.
-  - Solar glints, battery charge bars cycling, habitat beacon and windows, greenhouse glow with swaying plants, shelter glow, dish wobble with signal rings.
-  - Gold sparkles at level 3.
-  - New buildings drop in like a crate with dust and sparkles; upgrades pop with sparkles.
-- **Costs (game rules):**
-  - Array or battery 40, greenhouse 120, shelter 150, dish 150.
-  - Upgrades go to level 3: habitat 150 then 300; array and battery 60 then 100; others 120 then 200.
-- **Upgrade effects:**
-  - Habitat level raises the array and battery limit to 2, then 3, then 4.
-  - Any drill building at level 2 opens that drill's harder version.
-  - Level 3 is cosmetic.
-- **Drill gates:**
-  - Lights Out needs an array and a battery; The Living Base needs the greenhouse; Storm Drill the shelter; Signal Lag the dish.
-  - Drills also unlock in order.
-- **Blueprint gates:** the greenhouse needs the lesson "Plants and Air"; the shelter needs The Living Base finished; the dish needs Storm Drill finished.
-- **Coins ("Moon coins", gold `CoinIcon`):**
-  - Start: 150.
-  - Lessons: 15 per first-try correct answer plus 40 on the first finish; replays pay 5 per first-try answer.
-  - Drills: 80 for the first completion, 25 per new star, 15 for a later win, 0 for a failure (and nothing is lost).
-  - Goal bonus: +25 each.
-- **Guide (`GuideGoal`, 12 steps):** build array → build battery → play Lights Out → learn Plants and Air → build greenhouse → play Living Base → decorate → build shelter → play Storm → build dish → play Signal Lag → upgrade habitat.
-  - The home screen shows one **GoalCard** with a **"Show me"** button that performs the step.
-  - Each goal pays +25 once, with a "Goal complete!" toast.
-  - Saves from before the base existed get completed goals marked as claimed, with no back pay.
-- **Earn coins:** any unaffordable action opens `EarnCoinsView` (from `AppModel.coinHelpNeeded`). It lists ranked options with Go buttons. It is never empty, because a lesson is always available.
-- **Style shop:**
-  - 5 habitat colours, 4 ground themes, 4 robot buddies (these recolour Nova everywhere through `novaColors`).
-  - "Try it" previews live on the board (`AppModel.previewCosmetic`). The board reframes into the top half while the sheet is open.
-  - Buy or Use from the preview; "Get N more" opens Earn coins. Previews never spend or save.
-- **Lesson** (`LessonView`, one so far): "Plants and Air", 5 teach cards and 5 questions.
-  - Facts: oxygen 0.895 kg per person per day (source N1, NASA BVAD); Veggie lettuce in about 33 days at 70 W (N2).
-  - The 16-hour light rule is tagged "Game rule".
-  - A wrong answer means "try again", with no lives and no timer. Read aloud and VoiceOver are supported.
-- **Migration:** saves without `base` get a seeded base from completed drills, plus 20 coins per star already earned.
+### Home base (Clash-style board)
+- 12×12 board, pinch/pan/zoom, tap a building for its panel (it bounces and clicks), place/move with tap, drag or nudge arrows.
+- **Buildings:** habitat (3×3, pre-placed), solar array, battery, dish (1×1), greenhouse, shelter (2×2), **landing station** (2×2, starts as a ruin), **decorations**: base flag 30, lamp post 25, Moon rock garden 35 (looks only, no levels, max 2/4/3).
+- **Costs (game rules):** array/battery 40, greenhouse 120, shelter 150, dish 150. Upgrades to level 3: habitat 150/300, array & battery 60/100, others 120/200. Station repair 60.
+- **Levels change the building's whole look** (`UpgradeArt.swift`): habitat → two-storey → three-storey tower; battery → twin cells → reactor core; solar array → tracking panel → solar tree; dish → tower → taller gold-rimmed tower with rings; greenhouse → glass garden hall → bio-dome tower; shelter → two-storey bunker → shielded fortress. Plus a cyan (L2) or gold (L3) deck, hologram ring at L3, upgrade celebration (light column, shock ring, sparkles, "LEVEL N!" tag) and a new upgrade sound.
+- **Coins:** start 150; lessons 15 per first-try answer + 40 first finish (5 per answer on replays); drills 80 first completion, 25 per new star, 15 later win, 0 on failure; goal bonus +25; first passed base test +40.
+- **Guide:** 14 goals with one "Show me" each: build array → battery → Lights Out → **fix the landing station → test your real base** → Plants and Air → greenhouse → Living Base → decorate → shelter → Storm → dish → Signal Lag → upgrade habitat. Goal toast now always fades.
+- **Lessons:** "Plants and Air" (unlocks greenhouse) and "Power and Batteries". Three levels chosen in Learn and saved: Explorer (2 choices), Builder (3 choices), Mission Engineer (sums and reasons). Each fact has 6 questions (2 per level); one is picked per play, answers shuffled.
+- **Developer mode (demo only):** Settings → About → tap the "Moonbase Academy by VANGUARD Systems…" line 7 times. Add/zero coins, set any/all building levels, unlock every drill/lesson/blueprint and repair the station. Session only; game rules only. Do not show it in the demo.
 
-### 5.2 The four drills (the real science core; unchanged engines)
-1. **Lights Out:** solar arrays and batteries through a 6-hour shadow (9 hours in the harder version). Power vs energy.
-2. **The Living Base:** a 33-day greenhouse with 17 kWh/day (16 in the harder version); lights, air maker and research trade-offs.
-3. **Storm Drill:** shelter through a real archived SEP event (2017-09-10, GOES-13, CCMC scoreboard, source N3). No radiation dose is calculated (an explicit limitation).
-4. **Signal Lag:** drive a rover from Earth with a light-time delay (384,400 km, speed of light).
+### Test My Base (the core new mechanic)
+- Opens from the repaired landing station, the Drills sheet, or its goal.
+- Counts the player's **working** solar arrays and batteries (max 4 each) and runs the six-hour Lights Out shadow through the unchanged `ResourceEngine` as a separate definition (`lightsOut.myBase`).
+- **Game rule:** level 1 = Lights Out equipment (1 kW per array in sunlight, 4 kWh per battery); **level 2 counts 1.5×, level 3 counts 2×**. Entered into the engine as N items of average strength (totals exact). Other buildings' levels, colours, decorations and positions change nothing.
+- The child sets the air maker (Off/Half/Full) for sunlight and shadow and the science observation directly on the plan cards, which show live "drains the battery / spare power" and "air maker keeps up / crew breathes from the tank".
+- Result says, from the trace, whether more storage or more generation was needed; shows the base's gear, the last saved test and what changed.
+- Records are stored apart from drills (`BaseState.baseTests`, last 4): no completion, stars, attempts or drafts. A failed test costs nothing.
+- Hand-checked outcomes pinned in tests: 1 array + 1 battery at full air fails; half air in shadow passes but spends oxygen; a second battery alone still fails; a second array (or a level 2 array) passes.
 
-**Drill flow:** briefing (Nova lines, each with its own animated **SceneBeat**) → planning (build tray, plan cards) → prediction (Yes / No / Not sure, plus a watch-mode choice) → playback (checkpoints; "Plays by itself" or "Step by step"; pause / next / replay; pauses when the app is in the background) → results (three separate stars, explanation, numbers, kW/kWh help, coins earned).
+### The four reference drills (unchanged engines)
+1. **Lights Out** — arrays vs batteries through a 6 h shadow (9 h harder version). Power, life support.
+2. **The Living Base** — 33-day greenhouse on a daily energy budget. Food, life support.
+3. **Storm Drill** — shelter through a real archived particle event. Radiation shielding. **Replays now pick one of 8 real storms** (27 h to 138 h) and name the date; first play is always 2017-09-10.
+4. **Signal Lag** — drive a rover with Earth–Moon light delay. Communication delay.
 
-**Briefing beats:**
-- Lights Out: dark base, then sunset, then construction.
-- The Living Base: plants growing, then energy flowing to the greenhouse, then air bubbles.
-- Storm Drill: storm flashes, then the crew walking to the shelter, then cargo crates landing.
-- Signal Lag: rover driving, then a signal to Earth and back, then the glowing bay.
+Drill flow: briefing → plan → **"What will happen?"** (two outcome buttons per drill; VoiceOver labels remain Yes / No / Not sure) → playback (Plays by itself / Step by step, pause, replay, **1× / 2× / 5× speed**, skip) → result.
 
-### 5.3 Done in the V2 phases (on `v2`, carried into `base-builder`)
-- **Phase 1:** player-paced playback, checkpoints built from the trace, reading time not shortened by reduced motion, a garden failure lead based on the daily deficit, VoiceOver announcements.
-- **Phase 2:**
-  - Separate achievements (completed / predicted / bonus). A correct prediction counts even on a failure; "Not sure" earns nothing and is never shamed.
-  - Exact migration from legacy star counts.
-  - Narration that follows the trace (no false "tank stayed full").
-  - All copy reads the drill's own numbers; science limits are stated explicitly.
-- **Phase 3:**
-  - Focus & Accessibility settings: Focus view, test pace, Read aloud (AVSpeech, silent while VoiceOver is on), Reduce motion, Haptics, and a Focus suggestions preset.
-  - A Build → Predict → Test → Understand step bar.
-  - Modal dialogs with VoiceOver focus handling, Dynamic Type layouts, measured contrast fixes.
-  - An interrupted plan is restored via `MissionDraft`.
-- **Other:** original synthesized music (lofi and space-ambient, `MusicStyle`) and the app icon (Nova on the Moon with Earth; `Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`, source in `Design/AppIcon.svg`).
+### Science sources in the package
+- N1 NASA BVAD (oxygen 0.895 kg/person/day, dry food 0.8) · N2 NASA Veggie fact sheet (33 days, 70 W) · N3 **CCMC SEP Scoreboard** archive (8 GOES-13 events) · N4 NASA Moon Facts (384,400 km) · S1 BIPM SI (c).
+- **Not used: DONKI, OSDR, Artemis data.** DONKI could not be reached; the docs make no DONKI claim.
+- **Open check:** seven storm rows were entered by an AI from an automated fetch. They cross-check (2017-09-10 matched the hand-transcribed row; 5 of 7 derived durations equal the table's own column, the other two within 0.3 h), but **a team member must re-read them against https://ccmc.gsfc.nasa.gov/challenges/sep/events/ before submission**.
 
-## 6. Current status and open issues
+## 7. The plan we agreed (to win)
 
-- **Last action:** fixed a compile error (a missing `)` in `WorldScene.beatCargo`), commit `b635419`.
-  - **We are waiting for the owner's ⌘B / ⌘U result.**
-  - Everything from commit `0a9877b` onward (base builder rounds 1 and 2) **has never been compiled** apart from that one failed build. **More compile errors are likely**; fix them one by one from the build log.
-- **Compile-risk areas to check first if errors appear:**
-  - `BoardScene.swift` (touch handling, `zoomLevel` vs `zoom(by:)`).
-  - `BoardArt.swift` (`.run {}` closures, robot texture).
-  - `WorldScene.swift` beat functions.
-  - `BaseView.swift` (sheet enum, `onChange` handlers).
-  - `BaseBuilderViews.swift` (StyleCard, EarnCoinsView, GoalCard).
-  - `AppModel.swift` (`previewCosmetic` `didSet` inside `@Observable`; `updateBase` generic; init migration block).
-  - `GameKit.swift` (`NovaColors` environment; `GameTextModifier` with `@ViewBuilder`).
-  - `Accessibility.swift` (Narrator, `SpeechDelegate`).
-- **UI test (`MissionOneFlowTests`):** it now follows the guide: "Show me" → "Place here" ×2 → "Show me" → "Start Lights Out" → … → "Drills" → tile "The Living Base, 0 of 3 stars".
-  - An older run failed at "The improved plan should succeed" (the step-by-step second attempt); not investigated yet.
-  - Waits were raised (60 s for automatic playback).
-- **Unit tests:** `BaseBuilderTests` (board, coins, guide, earn advisor, goal bonus once, preview never spends), `FocusAccessibilityTests`, `RewardAndNarrationTests`, `PlaybackTests`, plus the original science and sim tests (about 56).
-  - Results file: `TestResults/last-run.txt`, written by `TestSupport`. The last confirmed full pass was 56/56 at 14:47 UTC, before the V2 work.
+Assessment against the criteria:
 
-## 7. Next steps (suggested order)
+| Criterion | Now | Gap |
+|---|---|---|
+| Relevance | Strong: five topics, ages 7–12, trade-offs | Radiation and "simulated mission" are thin |
+| Validity | Strong engine and sourcing, unverified | No tests run; (fixed) upgrades used to do nothing |
+| Creativity | Build a base, then test the base you built | Only one base-test type |
+| Impact | Unproven | No child has played it |
+| Presentation | Nothing exists | No demo, no pushed repo, no project page text |
 
-1. **Get a green build and tests** on `base-builder` (owner runs, Claude fixes). Then play from a fresh start: Settings → Reset All Progress, then follow the "Show me" goals.
-2. **Polish based on the owner's play-test.** Their recurring asks: more animation and "professional game" feel, zero friction for kids, clear rewards.
-3. **More lessons and blueprint gates:**
-   - Power and batteries (kW vs kWh).
-   - Solar storms and shielding (SEP event; no dose claims).
-   - Talking to Earth (light delay).
-   - Each lesson should pay coins and could gate shelter or dish blueprints.
-4. **Real NASA data hook (challenge stand-out):** an "archived space weather" card linking the storm drill to real DONKI/CCMC events. It must be curated and bundled and labelled archived, never "live".
-5. **Board art upgrades per level, and more decorations.** Possibly a short first-launch tutorial with a pointing hand on the board.
-6. **Later V2 phases if wanted:** Phase 4 (learning evidence and provenance in play), Phase 5 (world presentation), Phase 6 (release verification and small owner-run usability check), Phase 7 (submission materials: `SUBMISSION.md`, dataset explanation).
+Build order:
+1. ✅ **Upgrades matter in Test My Base** (done, `b2a94c8`, unbuilt).
+2. ✅ **Real archived storms, different each replay** (done, `b2a94c8`, unbuilt; CCMC archive, not DONKI).
+3. ⏭ **Storm Test on the player's own base** — NEXT. A second test at the landing station: a real archived storm hits *your* base; your shelter and batteries decide whether the crew stays sheltered with enough air. This makes radiation shielding a first-class mechanic and matches the brief's "shielding at the cost of tonight's power".
+   - Suggested design: mirror `BaseExperiment.shadowTest`. Start from `MissionCatalog.stormDrill(science:)` with a storm picked from `package.usableStorms`; variant id e.g. `"myBaseStorm"`; shelter present only if the base has a working shelter (else actionable message "Build a storm shelter"); starting battery capacity from the base's batteries with the level rule; keep the 0.8 kW supply and 3 kWh shelter-activation cost as labelled game rules; store results in `baseTests` (the record needs a `kind` field, optional for old records). Reuse `MissionSession(baseTest:)`; note `isBaseTest` currently assumes Lights Out copy (`GameCopy.baseTest`, `MissionCopy` branch, `BetOverlay` outcomes, `BaseGearCard`), so each needs a storm branch. Add tests like the shadow ones.
+4. ⏭ **Presentation:** project page text for `SUBMISSION.md`, dataset explanation (mostly in `SCIENCE_AND_DATA.md`), 30-second shot list: title over the base → place array and battery, repair the station → Test My Base fails → upgrade or add an array → passes → sources screen → closing line. Owner records and submits.
 
-## 8. Quick facts for prompts
+Deliberately left out (and why):
+- **Multi-day mission mode** — biggest remaining gap against "simulated mission", too large to build and verify blind.
+- **OSDR health data / radiation dose** — no dose model; inventing one would hurt Validity.
+- **More building art** — Presentation points only; enough spent.
+- **V2 Phases 4–7** and base tests for food and comms.
 
-- Owner email (for attribution only): sadeghj388@gmail.com. Location: London, Ontario (Toronto time zone).
-- Science sources in the package:
-  - N1: NASA BVAD (NASA/TP-2015-218570/REV2)
-  - N2: NASA Veggie fact sheet
-  - N3: CCMC SEP Scoreboard
-  - N4: NASA Moon Facts
-  - S1: BIPM SI (speed of light)
-- Key values: oxygen 0.895 kg per person per day; dry food 0.8 kg per person per day; Veggie lettuce 33 days and 70 W; Moon distance 384,400 km; c = 299,792.458 km/s.
-- Training assumptions (game rules):
-  - Air maker: 2.0 kg/day at 0.5 kW. Essential load 0.1 kW.
-  - Oxygen tank 7.16 kg, starting at 3.58 kg. Crew of 2.
-  - Array 1 kW in sun; battery 4 kWh.
-  - Garden: 16 h of light; standby 0.01 kW.
-  - Storm: 0.8 kW supply; shelter 3 kWh to build.
-  - Rover 1 m/s (0.75 in the harder version); bay at 5–6 m.
+## 8. Commit log on `base-builder` since the previous handoff
+
+| Commit | What | Built? |
+|---|---|---|
+| `12dd3c9` | Landing station (ruin → repair) + Test My Base | Yes (log 15:39) |
+| `38e91c6` | Decorations, Power lesson, tap feedback | Yes (logs 16:05–16:11) |
+| `f12c3d8` | Play-test round 1: black band fix, toast fix, inline plan switches, outcome prediction, lesson levels | Yes (owner screenshots 20:22) |
+| `21eba85` | README + handoff docs | n/a |
+| `97abdef` | Upgrade add-ons, celebration + sound, shadow briefing, playback speed | Yes (owner used it) |
+| `496ba10` | **Full building redesign**, developer mode | Yes (log 20:56) — art not yet seen by Claude |
+| `b2a94c8` | Upgrades count in tests; 8 real storms | **No** |
+
+## 9. Verification status (be honest about this)
+
+- **Compiles:** through `496ba10`. `b2a94c8` unknown.
+- **Unit tests:** 137 test methods in source; the last recorded run is 56/56 from before V2. `BaseExperimentTests.swift` (23 tests: station, migration fixture, bridge, engine outcomes, rewards, full loop, decorations, lessons, upgrade rule, storms) has **never been compiled**. Expect failures and fix from the log.
+- **UI test** (`MissionOneFlowTests`): follows the guide through Lights Out. An old failure at "The improved plan should succeed" was never investigated. The prediction dialog was rearranged; its accessibility labels (Yes, No, Not sure, "One step at a time") were kept on purpose.
+- **Seen on the owner's iPad:** board, landing station repaired, Test My Base planning/prediction, round 1 fixes. **Not seen:** decorations, level 2/3 redesigned buildings, upgrade celebration, speed buttons, storm replays, developer panel, anything on iPhone.
+- **Not done at all:** VoiceOver pass, largest text, child play-test, team re-read of the seven storm rows.
+
+## 10. Known risks and likely first failures
+
+- `Lessons.swift` has long array literals of questions; if the compiler reports "unable to type-check in reasonable time", split each topic into its own `let`.
+- `UpgradeArt.swift` geometry may sit off-tile or clip; canvases were sized by hand.
+- `BaseExperimentTests` uses `@MainActor` tests creating `AppModel`; the full-loop test drives `MissionSession` through `beginPlanning → goToPrediction → run → skipPlayback`.
+- `EventRow` in `SourcesView` now derives duration from the event itself.
+- Storm replays change `drillLabel` and pass a modified `ScienceInputs`; drafts always restore with the standard storm.
+- The Xcode test navigator showed only 57 tests earlier (stale index).
+
+## 11. Quick reference values
+
+- Training assumptions (game rules): air maker 2.0 kg/day at 0.5 kW; essential load 0.1 kW; oxygen tank 7.16 kg starting at 3.58 kg; crew 2; array 1 kW in sun; battery 4 kWh; garden 16 h light, 0.01 kW standby; storm 0.8 kW supply, shelter 3 kWh; rover 1 m/s, bay 5–6 m.
+- Test My Base at level 1: sunlight 6 h, shadow 6 h; base uses 0.6 kW at full air (0.35 at half); shadow needs 3.6 kWh; one array stores 2.4 kWh in the sunlit phase.
+- Storms bundled (start UTC → end UTC): 2012-03-07 05:10 → 03-12 22:55 · 2012-05-17 02:10 → 05-18 17:45 · 2012-07-12 18:35 → 07-14 23:00 · 2013-04-11 10:55 → 04-13 00:50 · 2014-01-06 09:15 → 01-07 19:30 · 2014-01-07 19:30 → 01-11 20:35 · 2017-07-14 09:00 → 07-15 12:15 · 2017-09-10 16:45 → 09-14 18:50.
+
+## 12. How to start the new chat
+
+1. Attach this file and select the folder `/Users/sjafari/Downloads/NASA`.
+2. Tell Claude what happened since: did `b2a94c8` build, did ⌘U run, was the push done.
+3. Claude should: request delete permission for the folder (for git), read the newest build/test logs, fix failures, then continue at section 7 item 3.
