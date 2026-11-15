@@ -1,5 +1,7 @@
 import Foundation
 
+enum BaseTestKind: String, Codable { case shadow, storm }
+
 /// The equipment a base test starts with, counted from the player's real, working buildings.
 /// The bridge contains the counted arrays and batteries plus their levels; no other board state feeds the test.
 struct BaseTestInputs: Codable, Equatable, Sendable {
@@ -9,6 +11,7 @@ struct BaseTestInputs: Codable, Equatable, Sendable {
     /// counted still load; missing means every one is level 1.
     var arrayLevels: [Int]?
     var batteryLevels: [Int]?
+    var shelter: Bool? = nil
 
     var summary: String {
         "\(arrays) solar array\(arrays == 1 ? "" : "s"), \(batteries) batter\(batteries == 1 ? "y" : "ies")"
@@ -42,6 +45,10 @@ struct BaseTestRecord: Codable, Equatable, Sendable {
     var plannedHours: Double? = nil
     var oxygenSpentKg: Double? = nil
     var energySavedKWh: Double? = nil
+    var kind: BaseTestKind? = nil
+    var eventID: String? = nil
+    var scienceEnergyKWh: Double? = nil
+    var scienceDeclining: Bool? = nil
 
     var timeSummary: String {
         guard let elapsedHours, let plannedHours else { return "Time not recorded in this older test" }
@@ -78,12 +85,13 @@ enum ExampleBase: String, CaseIterable {
 /// - The snapshot is taken when the test opens; changing the base later never changes a running test.
 enum BaseExperiment {
     static let variantID = "myBase"
+    static let stormVariantID = "myBaseStorm"
     /// Coins for the first passed base test. A game rule. Later passes pay nothing, so it cannot be farmed.
     static let firstPassCoins = 40
     /// The drill world has four array pads and four battery pads, which is also the most a base can hold.
     static let maxPerKind = 4
 
-    static func isBaseTest(_ d: MissionDefinition) -> Bool { d.variant == variantID }
+    static func isBaseTest(_ d: MissionDefinition) -> Bool { d.variant == variantID || d.variant == stormVariantID }
 
     /// Game rule: how much stronger an upgraded solar array or battery is than a level 1 one.
     /// Level 1 is exactly the Lights Out equipment; level 2 is 1.5 times; level 3 is 2 times.
@@ -104,7 +112,8 @@ enum BaseExperiment {
         let batteries = levels(.battery)
         return BaseTestInputs(arrays: arrays.count, batteries: batteries.count,
                               arrayLevels: arrays.allSatisfy { $0 <= 1 } ? nil : arrays,
-                              batteryLevels: batteries.allSatisfy { $0 <= 1 } ? nil : batteries)
+                              batteryLevels: batteries.allSatisfy { $0 <= 1 } ? nil : batteries,
+                              shelter: base.workingCount(.shelter) > 0 ? true : nil)
     }
 
     /// The scenario for these inputs. The reference drill's own definition is never modified:
@@ -137,15 +146,36 @@ enum BaseExperiment {
     }
 
     /// The starting plan: the base's own equipment, with the default air and observation settings.
+    static func stormTest(inputs: BaseTestInputs, science: ScienceInputs) -> MissionDefinition {
+        var d = MissionCatalog.stormDrill(science: science)
+        d.variant = stormVariantID
+        d.title = "Storm test"
+        d.drillLabel = "Archived storm • \(Words.date(science.stormThresholdCrossing))"
+        d.cargoBudget = 0
+        d.catalog = [CargoItem(kind: .shelterKit, cost: 0, maxCount: inputs.shelter == true ? 1 : 0, assemblyEnergyKWh: 3),
+                     CargoItem(kind: .scienceKit, cost: 0, maxCount: 1)]
+        let capacity = Double(inputs.batteries) * inputs.batteryFactor * 4
+        d.initial.batteryKWh = capacity
+        d.initial.baseBatteryCapacityKWh = capacity
+        d.success.minimumResearchUnits = 0.5
+        d.setupLabel = "Preparing the shelter"
+        return d
+    }
+
     static func configuration(for d: MissionDefinition, inputs: BaseTestInputs) -> ResourceConfiguration {
         var c = MissionCatalog.defaultConfiguration(for: d)
-        c.setCount(.solarArray, max(0, inputs.arrays))
-        c.setCount(.battery, max(0, inputs.batteries))
+        if d.missionID == .stormDrill {
+            c.setCount(.shelterKit, inputs.shelter == true ? 1 : 0)
+            c.setCount(.scienceKit, 1)
+        } else {
+            c.setCount(.solarArray, max(0, inputs.arrays))
+            c.setCount(.battery, max(0, inputs.batteries))
+        }
         return c
     }
 
     static func record(inputs: BaseTestInputs, result: ResourceMissionResult,
-                       definition: MissionDefinition, headline: String, date: Date = Date()) -> BaseTestRecord {
+                       definition: MissionDefinition, headline: String, date: Date = Date(), eventID: String? = nil) -> BaseTestRecord {
         let plans = result.configuration.plans
         var record = BaseTestRecord(inputs: inputs, airSunlight: plans.first?.airFraction ?? 1,
                                     airShadow: plans.last?.airFraction ?? 1,
@@ -153,6 +183,10 @@ enum BaseExperiment {
                                     success: result.success, headline: headline,
                                     finalBatteryKWh: result.finalState.batteryKWh,
                                     finalAirHours: result.finalAirHours, date: date)
+        record.kind = definition.missionID == .stormDrill ? .storm : .shadow
+        record.eventID = eventID
+        record.scienceEnergyKWh = result.trace.reduce(0) { $0 + $1.researchKWh }
+        record.scienceDeclining = (plans.last?.researchLevel ?? 0) > 0
         record.elapsedHours = result.trace.last?.endHour ?? 0
         record.plannedHours = definition.totalHours
         record.oxygenSpentKg = result.trace.reduce(0) { $0 + max(0, $1.oxygenConsumedKg - $1.oxygenGeneratedKg) }

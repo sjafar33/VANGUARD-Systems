@@ -323,6 +323,9 @@ struct StationPanel: View {
             .buttonStyle(GameButtonStyle(bevel: ready ? GamePalette.go : GamePalette.steel, height: 50, font: .game(.headline)))
             .guidePulse(ready)
             .accessibilityLabel("Test my base")
+            Button("Storm test") { model.openBaseTest(kind: .storm) }
+                .buttonStyle(GameButtonStyle(bevel: GamePalette.energy, height: 50, font: .game(.headline)))
+                .accessibilityHint("Uses your shelter and charged batteries in an archived storm")
         } else {
             Button {
                 model.repairBuilding(building.id)
@@ -472,6 +475,11 @@ struct DrillsListView: View {
                         .font(.headline)
                     Text("An example base, ready now. No coins or unlocks needed. Your own base stays unchanged.")
                         .font(.subheadline)
+                    Button("Start storm example") {
+                        close()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openExampleMission(kind: .storm) }
+                    }
+                    .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 50, font: .game(.headline)))
                     Button("Start example lab") {
                         close()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openExampleMission() }

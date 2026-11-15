@@ -86,7 +86,7 @@ enum PlaybackScript {
         }
         if step.phaseID == "assembly" {
             return PlaybackCheckpoint(traceIndex: step.index, title: "Before the storm",
-                                      text: "Building the shelter used \(Format.number(step.before.batteryKWh - step.after.batteryKWh)) kWh. \(battery)",
+                                      text: "\(d.setupLabel) used \(Format.number(step.before.batteryKWh - step.after.batteryKWh)) kWh. \(battery)",
                                       focus: .shelter)
         }
         let made = step.generationKW * step.elapsedHours

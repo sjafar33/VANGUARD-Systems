@@ -83,6 +83,13 @@ struct MissionCopy {
                 badge: badge(id))
         case .stormDrill:
             let shelter = Words.kWh(d.item(.shelterKit)?.assemblyEnergyKWh ?? 0)
+            if BaseExperiment.isBaseTest(d) {
+                return MissionCopy(topic: topic(id), symbol: symbol(id),
+                    story: "Rehearse the archived \(Words.date(s.stormThresholdCrossing)) event for \(Format.hours(s.stormActiveHours)). Your working shelter and charged batteries must protect the crew while a science task runs.",
+                    objectives: ["Stay sheltered with at least \(minAir) of air left.", "Supply \(Format.kWh(d.success.minimumResearchUnits)) to the science task."],
+                    bonus: nil, question: "Will the crew and the science task both make it?",
+                    hint: "Preparing the shelter spends \(shelter). Try Half air while science runs, then Full air with science Off. Check what that costs from the oxygen tank.", badge: nil)
+            }
             return MissionCopy(
                 topic: topic(id), symbol: symbol(id),
                 story: "A solar storm drill. Its timing replays a real particle event recorded near Earth starting \(Words.date(s.stormThresholdCrossing)). The crew must stay inside a shelter for the whole storm.",
@@ -203,7 +210,7 @@ struct Explanation: Equatable {
 /// Turns an engine result into a cause-and-effect explanation. Every number shown comes from the result.
 enum ExplanationWriter {
     static func phaseLabel(_ d: MissionDefinition, _ id: String) -> String {
-        if id == "assembly" { return "shelter building" }
+        if id == "assembly" { return d.setupLabel.lowercased() }
         return d.phases.first { $0.id == id }?.label.lowercased() ?? id
     }
 
@@ -321,7 +328,7 @@ enum ExplanationWriter {
                 case .livingBase:
                     paragraphs.append("Every kWh of research is used again every day. Small daily extras add up over \(Words.number(d.totalHours / 24)) days.")
                 case .stormDrill:
-                    paragraphs.append(stormShortageReason(r))
+                    paragraphs.append(stormShortageReason(r).replacingOccurrences(of: "Building the shelter", with: d.setupLabel))
                 case .signalLag:
                     break
                 }
@@ -342,6 +349,9 @@ enum ExplanationWriter {
         } else if r.failedConstraints.contains(.airReserveBelowMinimum) {
             headline = "Not enough air left"
             paragraphs.append("Nothing ran out, but only \(Format.wholeHours(r.finalAirHours)) of air was left at the end. The drill needs at least \(Format.wholeHours(d.success.minimumAirHours)) in the tank, in case something goes wrong.")
+        } else if r.failedConstraints.contains(.researchGoalNotReached) {
+            headline = "Crew safe, science task unfinished"
+            paragraphs.append("The crew stayed supplied, but the science task received only \(Format.kWh(r.researchUnits)) of its \(Format.kWh(d.success.minimumResearchUnits)) goal. Running it uses power that the air maker also needs.")
         } else if r.failedConstraints.contains(.harvestNotReached) {
             headline = "No harvest yet"
             paragraphs.append("The base kept running, but the lettuce only grew \(Format.number(r.finalState.cropGrowthDays)) of the \(Format.number(s.cropReferenceDays, digits: 0)) days it needs. With less light, plants grow more slowly.")

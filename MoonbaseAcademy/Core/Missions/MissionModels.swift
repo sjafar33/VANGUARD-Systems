@@ -86,6 +86,7 @@ struct InitialResources: Equatable, Sendable {
 struct SuccessRule: Equatable, Sendable {
     var minimumAirHours: Double
     var requiresHarvest: Bool
+    var minimumResearchUnits: Double = 0
 }
 
 /// Authored constants shared by the resource drills. None of these is a NASA value or a real hardware specification.
@@ -123,6 +124,7 @@ struct MissionDefinition: Equatable, Sendable, Identifiable {
     var assumptions: TrainingAssumptions
     var rover: RoverDefinition?
     var sourceIDs: [String]
+    var setupLabel: String = "Building the shelter"
 
     var id: String { variant.map { "\(missionID.rawValue).\($0)" } ?? missionID.rawValue }
 
@@ -207,6 +209,7 @@ enum FailedConstraint: String, Codable, Sendable {
     case shelterMissing
     case airReserveBelowMinimum
     case harvestNotReached
+    case researchGoalNotReached
 }
 
 struct ResourceState: Equatable, Codable, Sendable {

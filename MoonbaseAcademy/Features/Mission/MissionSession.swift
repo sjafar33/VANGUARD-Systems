@@ -63,6 +63,8 @@ struct BaseTestContext: Equatable {
     var inputs: BaseTestInputs
     var previous: BaseTestRecord?
     var isExample = false
+    var kind: BaseTestKind = .shadow
+    var eventID: String? = nil
 }
 
 struct AttemptSummary: Equatable {
@@ -228,7 +230,7 @@ final class MissionSession {
             switch definition.missionID {
             case .lightsOut: truth = r.failure?.constraint != .energyShortage
             case .livingBase: truth = r.harvestAchieved
-            case .stormDrill: truth = r.failure == nil && r.finalAirHours >= definition.success.minimumAirHours - 1e-9
+            case .stormDrill: truth = r.success
             case .signalLag: truth = r.success
             }
         } else {
@@ -658,7 +660,7 @@ final class MissionSession {
         if let context = baseTest, let result = resourceResult {
             previousBaseRecord = currentBaseRecord ?? context.previous
             currentBaseRecord = BaseExperiment.record(inputs: context.inputs, result: result,
-                                                      definition: definition, headline: explanation?.headline ?? "")
+                                                      definition: definition, headline: explanation?.headline ?? "", eventID: context.eventID)
         }
         let summary = AttemptSummary(success: success, headline: explanation?.headline ?? "",
                                      setup: setupDescription, numbers: explanation?.numbers ?? [])

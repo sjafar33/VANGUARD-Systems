@@ -28,6 +28,9 @@ enum ResourceEngine {
             issues.append(.invalidDefinition("initial resources"))
         }
         if d.cargoBudget < 0 { issues.append(.invalidDefinition("budget")) }
+        if !d.success.minimumResearchUnits.isFinite || d.success.minimumResearchUnits < 0 {
+            issues.append(.invalidDefinition("research goal"))
+        }
         return issues
     }
 
@@ -139,7 +142,7 @@ enum ResourceEngine {
                 state.batteryKWh = max(0, state.batteryKWh - assemblyKWh)
             }
             trace.append(ResourceSnapshot(index: trace.count, phaseID: "assembly", phaseIndex: -1,
-                                          label: "Building the shelter", mood: .steady, startHour: 0,
+                                          label: d.setupLabel, mood: .steady, startHour: 0,
                                           plannedHours: 0, elapsedHours: 0, before: before, after: state,
                                           generationKW: 0, demand: noDemand, curtailedKWh: 0,
                                           oxygenGeneratedKg: 0, oxygenConsumedKg: 0, researchKWh: 0,
@@ -299,6 +302,7 @@ enum ResourceEngine {
         if failure == nil {
             if finalAirHours < d.success.minimumAirHours - tolerance { failed.append(.airReserveBelowMinimum) }
             if d.success.requiresHarvest && !harvest { failed.append(.harvestNotReached) }
+            if researchUnits < d.success.minimumResearchUnits - tolerance { failed.append(.researchGoalNotReached) }
         }
         return ResourceMissionResult(definitionID: d.id, configuration: c, issues: [],
                                      initialState: initialState, finalState: state, trace: trace,

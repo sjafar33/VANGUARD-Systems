@@ -222,21 +222,24 @@ final class AppModel {
 
     private var exampleRecord: BaseTestRecord?
     private var exampleBaseline: BaseTestRecord?
+    private var exampleKind: BaseTestKind = .shadow
 
     /// A temporary equipment snapshot. Never writes campaign progress, rewards, or a draft.
-    func openExampleMission(_ preset: ExampleBase = .starter, resetHistory: Bool = true) {
+    func openExampleMission(_ preset: ExampleBase = .starter, resetHistory: Bool = true, kind: BaseTestKind = .shadow) {
         guard let science else { return }
-        if resetHistory { exampleRecord = nil; exampleBaseline = nil }
+        if resetHistory || kind != exampleKind { exampleRecord = nil; exampleBaseline = nil }
+        exampleKind = kind
         session?.leave()
-        let inputs = preset.inputs
-        var definition = BaseExperiment.shadowTest(inputs: inputs)
-        definition.title = "Example lab"
-        definition.drillLabel = "Example base • your save stays unchanged"
+        var inputs = preset.inputs
+        if kind == .storm { inputs.shelter = true }
+        var definition = kind == .storm ? BaseExperiment.stormTest(inputs: inputs, science: science) : BaseExperiment.shadowTest(inputs: inputs)
+        definition.title = kind == .storm ? "Storm example" : "Example lab"
+        if kind == .shadow { definition.drillLabel = "Example base • your save stays unchanged" }
         lastDrillCoins = 0
         session = MissionSession(definition: definition, science: science, world: missionWorld,
                                  decor: BaseDecor(progress: CampaignProgress()), reduceMotion: reduceMotion,
                                  firstVisit: false, playbackMode: .stepByStep,
-                                 baseTest: BaseTestContext(inputs: inputs, previous: exampleBaseline ?? exampleRecord, isExample: true)) { [weak self] _, _, _ in
+                                 baseTest: BaseTestContext(inputs: inputs, previous: exampleBaseline ?? exampleRecord, isExample: true, kind: kind, eventID: kind == .storm ? ScienceKeys.stormEvent : nil)) { [weak self] _, _, _ in
             guard let self, let record = self.session?.currentBaseRecord else { return false }
             self.exampleRecord = record
             if preset == .starter, record.airSunlight == 1, record.airShadow == 1, !record.observation {
@@ -252,18 +255,24 @@ final class AppModel {
 
     /// Opens the shadow test for the player's real base. The equipment is snapshotted here, so nothing
     /// done to the base afterwards can change this test. Reference drills are not touched.
-    func openBaseTest() {
+    func openBaseTest(kind: BaseTestKind = .shadow) {
         guard let science else { return }
         let base = progress.baseState
-        if let needs = base.baseTestNeeds {
+        let needs = kind == .shadow ? base.baseTestNeeds :
+            (!base.stationRestored ? "Repair the landing station first." :
+             (base.workingCount(.shelter) == 0 ? "Build a working storm shelter first." :
+              (base.workingCount(.battery) == 0 ? "Build a working battery first." : nil)))
+        if let needs {
             baseMessage = needs
             Haptics.warning()
             return
         }
         session?.leave()
         let inputs = BaseExperiment.inputs(from: base)
-        let definition = BaseExperiment.shadowTest(inputs: inputs)
-        let context = BaseTestContext(inputs: inputs, previous: base.baseTests?.last)
+        let definition = kind == .storm ? BaseExperiment.stormTest(inputs: inputs, science: science) : BaseExperiment.shadowTest(inputs: inputs)
+        let eventID = kind == .storm ? ScienceKeys.stormEvent : nil
+        let previous = base.baseTests?.last { ($0.kind ?? .shadow) == kind && $0.eventID == eventID }
+        let context = BaseTestContext(inputs: inputs, previous: previous, kind: kind, eventID: eventID)
         session = MissionSession(definition: definition, science: science, world: missionWorld,
                                  decor: BaseDecor(progress: progress), reduceMotion: reduceMotion,
                                  firstVisit: false,

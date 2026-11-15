@@ -44,7 +44,15 @@ struct GameCopy {
 
     /// The full briefing for one drill, with numbers read from that drill (standard or harder variant).
     static func of(_ d: MissionDefinition, science s: ScienceInputs) -> GameCopy {
-        if BaseExperiment.isBaseTest(d) { return baseTest(d) }
+        if BaseExperiment.isBaseTest(d), d.missionID == .lightsOut { return baseTest(d) }
+        if BaseExperiment.isBaseTest(d), d.missionID == .stormDrill {
+            return GameCopy(title: d.title,
+                intro: ["Rehearse an archived storm with this base's shelter and batteries.",
+                        "A training backup supplies \(Format.kW(d.phases.first?.baseSupplyKW ?? 0)). Preparing the shelter spends \(Format.kWh(d.item(.shelterKit)?.assemblyEnergyKWh ?? 0)); radiation protection itself is not powered.",
+                        "Protect the crew and finish a \(Format.kWh(d.success.minimumResearchUnits)) science task."],
+                planTip: "Keep the crew sheltered, leave \(Format.wholeHours(d.success.minimumAirHours)) of air, and finish the science task. Half air saves power but spends oxygen.",
+                bonusStar: "Finish the science task", unlock: "Storm rehearsal passed!")
+        }
         var copy = of(d.missionID)
         switch d.missionID {
         case .lightsOut:
@@ -103,7 +111,7 @@ struct GameCopy {
         if codes.contains(.foodRanOut) { return "The food supply ran out!" }
         if codes.contains(.noShelter) { return "No shelter! The crew has nowhere safe to go." }
         if codes.contains(.assembledShelter) {
-            return "Building the shelter. That uses \(Words.kWh(max(0, step.before.batteryKWh - step.after.batteryKWh))) of battery."
+            return "\(step.label). That uses \(Words.kWh(max(0, step.before.batteryKWh - step.after.batteryKWh))) of battery."
         }
         if mission == .livingBase {
             if codes.contains(.cropGrowing) { return "\(step.label): the lettuce is growing!" }

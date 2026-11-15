@@ -154,7 +154,7 @@ struct MissionView: View {
         switch phaseID {
         case "sunlit": text = "SUNLIGHT"
         case "shadow": text = "SHADOW DRILL"
-        case "assembly": text = "BUILD SHELTER"
+        case "assembly": text = session.baseTest?.kind == .storm ? "PREPARE SHELTER" : "BUILD SHELTER"
         case "rising": text = "STORM RISING"
         case "declining": text = "STORM FADING"
         default: return
@@ -201,7 +201,7 @@ struct MissionView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if session.baseTest?.isExample == true { ExampleLabControls(model: model) }
+                if session.baseTest?.isExample == true { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
                 BuildTray(session: session) { planPhase = $0 }
                 Button {
                     session.goToPrediction()
@@ -447,9 +447,17 @@ struct BaseGearCard: View {
             Label(session.baseTest?.isExample == true ? "Example base" : "Your base", systemImage: "house.fill")
                 .font(.game(.subheadline))
                 .foregroundStyle(Theme.ink)
-            Label("\(gear.arrays) solar array\(gear.arrays == 1 ? "" : "s")", systemImage: "sun.max.fill")
+            if session.baseTest?.kind == .storm {
+                Label(gear.shelter == true ? "Working shelter" : "No shelter", systemImage: "shield.fill")
+                Text("\(Format.hours(session.definition.totalHours)) archived storm. Finish the \(Format.kWh(session.definition.success.minimumResearchUnits)) science task.")
+                    .font(.caption).fixedSize(horizontal: false, vertical: true)
+            } else {
+                Label("\(gear.arrays) solar array\(gear.arrays == 1 ? "" : "s")", systemImage: "sun.max.fill")
+            }
             Label("\(gear.batteries) batter\(gear.batteries == 1 ? "y" : "ies")", systemImage: "battery.75percent")
-            Text("Upgrades count: level 2 and 3 make and store more. Build or upgrade at your base.")
+            Text(session.baseTest?.kind == .storm
+                 ? "Batteries start charged. Training backup: 0.8 kW. Shelter preparation: 3 kWh. Arrays do not supply this rehearsal."
+                 : "Upgrades count: level 2 and 3 make and store more. Build or upgrade at your base.")
                 .font(.system(.caption, design: .rounded).weight(.semibold))
                 .foregroundStyle(Theme.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -468,10 +476,11 @@ struct BaseGearCard: View {
 /// rules that turned buildings into numbers.
 struct ExampleLabControls: View {
     let model: AppModel
+    let kind: BaseTestKind
 
     private var choices: some View {
-        ForEach(ExampleBase.allCases, id: \.self) { preset in
-            Button(preset.title) { model.openExampleMission(preset, resetHistory: false) }
+        ForEach(kind == .storm ? [.starter, .moreStorage] : ExampleBase.allCases, id: \.self) { preset in
+            Button(preset.title) { model.openExampleMission(preset, resetHistory: false, kind: kind) }
                 .font(.system(.caption, design: .rounded).weight(.bold))
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.energyInk)
@@ -505,7 +514,10 @@ struct BaseTestCard: View {
             Text("\(title): \(record.success ? "passed" : "stopped") • \(record.timeSummary)")
                 .fontWeight(.bold)
             Text(record.inputs.summary)
-            Text("Air maker: \(MissionSession.airLabel(record.airSunlight)) in sunlight, \(MissionSession.airLabel(record.airShadow)) in shadow. Science: \(record.observation ? "On" : "Off").")
+            Text("Air maker: \(MissionSession.airLabel(record.airSunlight)) then \(MissionSession.airLabel(record.airShadow)). Science: \(record.observation ? "On" : "Off") then \(record.scienceDeclining == true ? "On" : "Off").")
+            if record.kind == .storm {
+                Text("Archive: \(record.eventID ?? "unknown"). Science supplied: \(Format.kWh(record.scienceEnergyKWh ?? 0)).")
+            }
             Text("At that stopping time: \(Format.kWh(record.finalBatteryKWh)) energy; \(Format.wholeHours(record.finalAirHours)) of stored oxygen.")
         }
         .font(.system(.caption, design: .rounded))
@@ -528,12 +540,19 @@ struct BaseTestCard: View {
                         resultLine("Last", previous)
                         Text(BaseExperiment.change(from: previous.inputs, to: current.inputs))
                             .font(.subheadline).fontWeight(.bold)
-                        Text("Every shadow test restarts with the same air supply and empty batteries. Compare the stopping times before comparing reserves.")
+                        Text(context.kind == .storm
+                             ? "Same archived event and starting air; batteries start charged each test. Compare stopping times before reserves."
+                             : "Every shadow test restarts with the same air supply and empty batteries. Compare the stopping times before comparing reserves.")
                             .font(.caption)
                     }
                 }
+                if context.kind == .storm {
+                    Text("Game rules: \(Format.kWh(session.definition.initial.batteryKWh)) charged storage; 3 kWh shelter preparation; 0.8 kW backup supply independent of arrays. The training station supplies the science instrument. No radiation dose is calculated.")
+                        .font(.caption)
+                } else {
                 Text("Game rules: \(Format.kW((session.definition.phases.map(\.solarKWPerArray).max() ?? 0) * Double(context.inputs.arrays))) of sunlight power; \(Format.kWh((session.definition.item(.battery)?.batteryCapacityKWh ?? 0) * Double(context.inputs.batteries))) of storage. Levels 1 / 2 / 3 count 1× / 1.5× / 2×. Positions and decoration change nothing.")
-                    .font(.caption)
+                        .font(.caption)
+                }
             }
             .foregroundStyle(Theme.ink)
             .fixedSize(horizontal: false, vertical: true)
@@ -1121,6 +1140,10 @@ struct BetOverlay: View {
             return [BetChoice(text: "Lettuce is ready", symbol: "leaf.fill"),
                     BetChoice(text: "Not ready yet", symbol: "hourglass")]
         case .stormDrill:
+            if session.isBaseTest {
+                return [BetChoice(text: "Crew and task succeed", symbol: "checkmark.shield.fill"),
+                        BetChoice(text: "Plan needs a change", symbol: "arrow.counterclockwise")]
+            }
             return [BetChoice(text: "Enough air left", symbol: "wind"),
                     BetChoice(text: "Air runs low", symbol: "exclamationmark.triangle.fill")]
         case .signalLag:
@@ -1266,7 +1289,7 @@ struct ResultOverlay: View {
                     }
                     whySection
                     if session.isBaseTest { BaseTestCard(session: session) }
-                    if session.baseTest?.isExample == true { ExampleLabControls(model: model) }
+                    if session.baseTest?.isExample == true { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
                     if !session.isBaseTest, let previous = session.previousAttempt, let current = session.currentAttempt {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Last try vs this try").font(.system(.subheadline, design: .rounded).weight(.black)).foregroundStyle(Theme.ink)

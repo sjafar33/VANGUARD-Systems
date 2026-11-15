@@ -46,4 +46,22 @@ final class ExampleLabFlowTests: XCTestCase {
         tap("Continue")
         XCTAssertTrue(app.buttons["Show me"].waitForExistence(timeout: 5), "The original starting-base guide is preserved")
     }
+    func testStormExampleRequiresScienceAndCanSpendReservesToSucceed() {
+        app.launchArguments = ["-uiTesting", "-resetProgress"]
+        app.launch()
+        tap("Drills")
+        tap("Start storm example")
+        runExperiment()
+        XCTAssertTrue(app.staticTexts["Crew safe, science task unfinished"].waitForExistence(timeout: 5))
+        tap("Try again")
+        tap("Storm rising, air maker: Half")
+        tap("Storm rising, science: off")
+        shot("04-storm-reserve-plan")
+        runExperiment()
+        XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 5))
+        shot("05-storm-task-complete")
+        tap("Continue")
+        XCTAssertTrue(app.buttons["Show me"].waitForExistence(timeout: 5))
+    }
+
 }
