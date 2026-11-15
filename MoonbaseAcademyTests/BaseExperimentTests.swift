@@ -103,17 +103,87 @@ final class BaseExperimentTests: MoonbaseTestCase {
         XCTAssertEqual(BaseExperiment.inputs(from: b).arrays, 1, "A damaged building supplies nothing")
     }
 
-    func testCosmeticsLevelsAndPositionsNeverChangeTheTest() {
+    func testCosmeticsPositionsAndOtherBuildingsNeverChangeTheTest() {
         var b = base(arrays: 1, batteries: 1)
         b.coins = 10_000
         let before = BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b))
         XCTAssertEqual(b.buyCosmetic("board.night"), .ok)
         XCTAssertTrue(b.equip("board.night"))
-        XCTAssertEqual(b.upgrade("array0"), .ok)
-        XCTAssertEqual(b.upgrade("battery0"), .ok)
         XCTAssertEqual(b.upgrade("habitat"), .ok)
         XCTAssertEqual(b.move("array0", x: 5, y: -6), .ok)
         XCTAssertEqual(BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b)), before)
+    }
+
+    func testUpgradedArraysAndBatteriesCountByTheStatedGameRule() throws {
+        var b = base(arrays: 1, batteries: 1)
+        b.coins = 10_000
+        let reference = MissionCatalog.lightsOut()
+        let level1 = BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b))
+        XCTAssertEqual(level1.phases, reference.phases, "Level 1 equipment is exactly the Lights Out equipment")
+
+        // A bigger battery alone does not help: one array still stores only 2.4 kWh before the shadow.
+        XCTAssertEqual(b.upgrade("battery0"), .ok)
+        var inputs = BaseExperiment.inputs(from: b)
+        var d = BaseExperiment.shadowTest(inputs: inputs)
+        XCTAssertEqual(d.item(.battery)?.batteryCapacityKWh ?? 0, 6, accuracy: 1e-9)
+        var config = BaseExperiment.configuration(for: d, inputs: inputs)
+        var r = simulateResourceMission(definition: d, configuration: config, science: try science())
+        XCTAssertFalse(r.success)
+        XCTAssertEqual(r.trace[0].after.batteryKWh, 2.4, accuracy: 1e-9)
+
+        // A stronger array does: 1.5 kW fills the battery, and the base gets through at full air.
+        XCTAssertEqual(b.upgrade("array0"), .ok)
+        inputs = BaseExperiment.inputs(from: b)
+        d = BaseExperiment.shadowTest(inputs: inputs)
+        XCTAssertEqual(d.phases[0].solarKWPerArray, 1.5, accuracy: 1e-9)
+        XCTAssertEqual(d.phases[1].solarKWPerArray, 0, accuracy: 1e-9, "Still nothing in shadow")
+        config = BaseExperiment.configuration(for: d, inputs: inputs)
+        r = simulateResourceMission(definition: d, configuration: config, science: try science())
+        XCTAssertTrue(r.success)
+
+        // Mixed levels add up exactly: levels 3 and 1 make 2 + 1 = 3 kW.
+        let mixed = BaseTestInputs(arrays: 2, batteries: 2, arrayLevels: [3, 1], batteryLevels: [2, 2])
+        let m = BaseExperiment.shadowTest(inputs: mixed)
+        XCTAssertEqual(m.phases[0].solarKWPerArray * 2, 3, accuracy: 1e-9)
+        XCTAssertEqual((m.item(.battery)?.batteryCapacityKWh ?? 0) * 2, 12, accuracy: 1e-9)
+        // A result saved before upgrades counted still loads, as level 1.
+        let old = try JSONDecoder().decode(BaseTestInputs.self, from: Data(#"{"arrays":2,"batteries":1}"#.utf8))
+        XCTAssertEqual(old.arrayFactor, 1)
+    }
+
+    // MARK: Real archived storms
+
+    func testEveryArchivedStormIsUsableAndCanBeSurvived() throws {
+        let package = try bundledPackage()
+        let s = try science()
+        XCTAssertGreaterThanOrEqual(package.usableStorms.count, 8)
+        XCTAssertEqual(package.usableStorms.count, package.events.count, "Every bundled storm record is well formed")
+        XCTAssertEqual(package.events.first?.id, ScienceKeys.stormEvent)
+        XCTAssertEqual(s.with(storm: try XCTUnwrap(package.events.first)), s, "The first storm is the standard drill's storm")
+        for storm in package.usableStorms {
+            let inputs = try XCTUnwrap(s.with(storm: storm))
+            XCTAssertTrue(inputs.isPhysicallyValid, storm.id)
+            let d = MissionCatalog.stormDrill(science: inputs)
+            XCTAssertEqual(d.totalHours, try XCTUnwrap(storm.activeHours), accuracy: 1e-6)
+            let config = ResourceConfiguration(cargo: [.shelterKit: 1], plans: [plan(1), plan(1)])
+            let r = simulateResourceMission(definition: d, configuration: config, science: inputs)
+            XCTAssertTrue(r.success, "The shelter with the air maker on Full gets through \(storm.id)")
+        }
+    }
+
+    func testAShortStormAndALongStormNeedDifferentPlans() throws {
+        let package = try bundledPackage()
+        let s = try science()
+        func halfAir(_ id: String) throws -> ResourceMissionResult {
+            let storm = try XCTUnwrap(package.events.first { $0.id == id })
+            let inputs = try XCTUnwrap(s.with(storm: storm))
+            let config = ResourceConfiguration(cargo: [.shelterKit: 1], plans: [plan(0.5), plan(0.5)])
+            return simulateResourceMission(definition: MissionCatalog.stormDrill(science: inputs), configuration: config, science: inputs)
+        }
+        XCTAssertTrue(try halfAir("sep.2017-07-14").success, "A one-day storm can be ridden out on half air")
+        let long = try halfAir("sep.2012-03-07")
+        XCTAssertFalse(long.success, "Nearly six days on half air empties the oxygen tank")
+        XCTAssertEqual(long.failure?.constraint, .oxygenExhausted)
     }
 
     func testTheReferenceDrillIsLeftAlone() {

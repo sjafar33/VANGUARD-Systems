@@ -101,3 +101,13 @@ Added in this round (NOT yet compiled; all art drawn without being seen):
 - **Upgrade moment:** light column, shock ring, two sparkle bursts, a rising "LEVEL N!" tag, the new building popping in, and a new rising-run sound (`SoundFX.Kind.upgrade`, also used for the station repair).
 - **Test My Base briefing:** on the "shadow is coming" line the base goes dark with the habitat lights on, then the Sun returns on the next line.
 - **Playback speed:** 1x / 2x / 5x buttons in the playback panel. Speeds up reading waits, the fast-forward between checkpoints and the scene's animations; results are unchanged.
+
+## Round 3 (2026-11-14, about 21:30 Toronto) — toward the judging criteria
+
+Verified from build logs: the app target built at 20:56 Toronto including `UpgradeArt.swift` (full redesign commit `496ba10`). Tests still not run. Pushing is not possible from Claude's shell (uploads to GitHub are blocked there): the owner pushes from Terminal.
+
+Added (NOT yet compiled):
+- **Upgrades count in Test My Base:** level 2 arrays/batteries are 1.5x, level 3 are 2x (game rule, stated in the UI). `BaseTestInputs` gained optional `arrayLevels`/`batteryLevels`.
+- **Eight real archived storms:** `science_package.json` now holds eight CCMC SEP Scoreboard events; Storm Drill replays pick one at random and show its date. First play unchanged. Sources screen lists all of them with their own durations.
+- Tests: upgrade rule, every storm usable and survivable, short vs long storm needing different plans.
+- Still open from the plan: a Storm Test on the player's own base; project page text; demo.

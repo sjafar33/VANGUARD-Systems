@@ -5,9 +5,24 @@ import Foundation
 struct BaseTestInputs: Codable, Equatable, Sendable {
     var arrays: Int
     var batteries: Int
+    /// The level of each counted solar array and battery. Optional so results saved before upgrades
+    /// counted still load; missing means every one is level 1.
+    var arrayLevels: [Int]?
+    var batteryLevels: [Int]?
 
     var summary: String {
         "\(arrays) solar array\(arrays == 1 ? "" : "s"), \(batteries) batter\(batteries == 1 ? "y" : "ies")"
+    }
+
+    /// Average strength of the solar arrays compared with a level 1 array (1 when all are level 1).
+    var arrayFactor: Double { Self.average(arrayLevels, count: arrays) }
+    /// Average size of the batteries compared with a level 1 battery.
+    var batteryFactor: Double { Self.average(batteryLevels, count: batteries) }
+
+    private static func average(_ levels: [Int]?, count: Int) -> Double {
+        guard let levels, !levels.isEmpty, count > 0 else { return 1 }
+        let used = levels.prefix(count)
+        return used.reduce(0) { $0 + BaseExperiment.levelFactor($1) } / Double(used.count)
     }
 }
 
@@ -43,9 +58,26 @@ enum BaseExperiment {
 
     static func isBaseTest(_ d: MissionDefinition) -> Bool { d.variant == variantID }
 
+    /// Game rule: how much stronger an upgraded solar array or battery is than a level 1 one.
+    /// Level 1 is exactly the Lights Out equipment; level 2 is 1.5 times; level 3 is 2 times.
+    /// Other buildings' levels, and every colour and decoration, change nothing.
+    static func levelFactor(_ level: Int) -> Double {
+        switch level {
+        case ...1: return 1
+        case 2: return 1.5
+        default: return 2
+        }
+    }
+
     static func inputs(from base: BaseState) -> BaseTestInputs {
-        BaseTestInputs(arrays: min(maxPerKind, base.workingCount(.solarArray)),
-                       batteries: min(maxPerKind, base.workingCount(.battery)))
+        func levels(_ kind: BuildingKind) -> [Int] {
+            Array(base.buildings.filter { $0.kind == kind && $0.isWorking }.map(\.level).sorted(by: >).prefix(maxPerKind))
+        }
+        let arrays = levels(.solarArray)
+        let batteries = levels(.battery)
+        return BaseTestInputs(arrays: arrays.count, batteries: batteries.count,
+                              arrayLevels: arrays.allSatisfy { $0 <= 1 } ? nil : arrays,
+                              batteryLevels: batteries.allSatisfy { $0 <= 1 } ? nil : batteries)
     }
 
     /// The scenario for these inputs. The reference drill's own definition is never modified:
@@ -63,7 +95,16 @@ enum BaseExperiment {
             case .battery: fixed.maxCount = max(0, inputs.batteries)
             default: fixed.maxCount = 0
             }
+            // Upgraded batteries hold more. The engine counts identical items, so the base's batteries are
+            // entered as that many batteries of their average size: the total is exactly the same.
+            if item.kind == .battery { fixed.batteryCapacityKWh = item.batteryCapacityKWh * inputs.batteryFactor }
             return fixed
+        }
+        // Upgraded solar arrays make more power, entered the same way as an average per array.
+        d.phases = d.phases.map { phase in
+            var changed = phase
+            changed.solarKWPerArray = phase.solarKWPerArray * inputs.arrayFactor
+            return changed
         }
         return d
     }

@@ -121,13 +121,121 @@
       "endUTC": "2017-09-14T18:50:00Z",
       "maxFluxPfu": 1493.5,
       "notes": "End time uses the table's 0.85 x 10 pfu criterion. The table lists the duration as 98.08 hours (rounded); the game derives durations from the timestamps."
+    },
+    {
+      "id": "sep.2012-03-07",
+      "label": "Solar particle event of March 7, 2012",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date March 7, 2012, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2012-03-07T05:10:00Z",
+      "peakUTC": "2012-03-08T11:15:00Z",
+      "endUTC": "2012-03-12T22:55:00Z",
+      "maxFluxPfu": 6529.8,
+      "notes": "The table lists the duration as 137.9 hours (rounded); the game derives durations from the timestamps. Used when the Storm Drill is replayed, so each replay can face a different real storm."
+    },
+    {
+      "id": "sep.2012-05-17",
+      "label": "Solar particle event of May 17, 2012",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date May 17, 2012, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2012-05-17T02:10:00Z",
+      "peakUTC": "2012-05-17T04:30:00Z",
+      "endUTC": "2012-05-18T17:45:00Z",
+      "maxFluxPfu": 255.44,
+      "notes": "The table lists the duration as 39.58 hours (rounded); the game derives durations from the timestamps. Used when the Storm Drill is replayed, so each replay can face a different real storm."
+    },
+    {
+      "id": "sep.2012-07-12",
+      "label": "Solar particle event of July 12, 2012",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date July 12, 2012, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2012-07-12T18:35:00Z",
+      "peakUTC": "2012-07-12T22:25:00Z",
+      "endUTC": "2012-07-14T23:00:00Z",
+      "maxFluxPfu": 96.08,
+      "notes": "The table lists the duration as 52.2 hours (rounded); the game derives durations from the timestamps. Used when the Storm Drill is replayed, so each replay can face a different real storm."
+    },
+    {
+      "id": "sep.2013-04-11",
+      "label": "Solar particle event of April 11, 2013",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date April 11, 2013, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2013-04-11T10:55:00Z",
+      "peakUTC": "2013-04-11T16:45:00Z",
+      "endUTC": "2013-04-13T00:50:00Z",
+      "maxFluxPfu": 113.55,
+      "notes": "The table lists the duration as 37.92 hours (rounded); the game derives durations from the timestamps. Used when the Storm Drill is replayed, so each replay can face a different real storm."
+    },
+    {
+      "id": "sep.2014-01-06",
+      "label": "Solar particle event of January 6, 2014",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date January 6, 2014, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2014-01-06T09:15:00Z",
+      "peakUTC": "2014-01-06T16:00:00Z",
+      "endUTC": "2014-01-07T19:30:00Z",
+      "maxFluxPfu": 42.17,
+      "notes": "The table lists the duration as 34.25 hours (rounded); the game derives durations from the timestamps. Used when the Storm Drill is replayed, so each replay can face a different real storm."
+    },
+    {
+      "id": "sep.2014-01-07",
+      "label": "Solar particle event of January 7, 2014",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date January 7, 2014, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2014-01-07T19:30:00Z",
+      "peakUTC": "2014-01-09T03:40:00Z",
+      "endUTC": "2014-01-11T20:35:00Z",
+      "maxFluxPfu": 1026.1,
+      "notes": "The table lists the duration as 97.08 hours (rounded); the game derives durations from the timestamps. Used when the Storm Drill is replayed, so each replay can face a different real storm."
+    },
+    {
+      "id": "sep.2017-07-14",
+      "label": "Solar particle event of July 14, 2017",
+      "sourceID": "N3",
+      "locator": "Table row SEP Event Date July 14, 2017, Operational Satellite GOES-13, columns >10 MeV 10 pfu exceeded / Max Flux Time / Max Flux / 0.85*10 pfu End",
+      "thresholdCrossingUTC": "2017-07-14T09:00:00Z",
+      "peakUTC": "2017-07-14T23:20:00Z",
+      "endUTC": "2017-07-15T12:15:00Z",
+      "maxFluxPfu": 22.374,
+      "notes": "The table lists the duration as 27.25 hours (rounded); the game derives durations from the timestamps. Used when the Storm Drill is replayed, so each replay can face a different real storm."
     }
   ],
   "verification": [
-    { "sourceID": "N1", "date": "2026-11-14", "method": "Official NTRS PDF text retrieved by automated fetch; Table 3-31 values read from the extracted text (oxygen 0.895, food solids 0.800 kg/CM-d). The extraction placed the table on report page 59; the table of contents lists page 58.", "status": "valuesConfirmed" },
-    { "sourceID": "N2", "date": "2026-11-14", "method": "Official NASA PDF text retrieved by automated fetch; about 70 W and both 33-day VEG-01 date ranges read from the extracted text.", "status": "valuesConfirmed" },
-    { "sourceID": "N3", "date": "2026-11-14", "method": "Official CCMC archive table retrieved by automated fetch; the GOES-13 row for 2017-09-10 transcribed by hand into this file. The linked raw JSON was not downloaded or parsed.", "status": "valuesConfirmed" },
-    { "sourceID": "N4", "date": "2026-11-14", "method": "Official NASA page retrieved by automated fetch; 384,400 km read from the Size and Distance section.", "status": "valuesConfirmed" },
-    { "sourceID": "S1", "date": "2026-11-14", "method": "Defined constant; not fetched.", "status": "definedConstant" }
+    {
+      "sourceID": "N1",
+      "date": "2026-11-14",
+      "method": "Official NTRS PDF text retrieved by automated fetch; Table 3-31 values read from the extracted text (oxygen 0.895, food solids 0.800 kg/CM-d). The extraction placed the table on report page 59; the table of contents lists page 58.",
+      "status": "valuesConfirmed"
+    },
+    {
+      "sourceID": "N2",
+      "date": "2026-11-14",
+      "method": "Official NASA PDF text retrieved by automated fetch; about 70 W and both 33-day VEG-01 date ranges read from the extracted text.",
+      "status": "valuesConfirmed"
+    },
+    {
+      "sourceID": "N3",
+      "date": "2026-11-14",
+      "method": "Official CCMC archive table retrieved by automated fetch; the GOES-13 row for 2017-09-10 transcribed by hand into this file. The linked raw JSON was not downloaded or parsed.",
+      "status": "valuesConfirmed"
+    },
+    {
+      "sourceID": "N4",
+      "date": "2026-11-14",
+      "method": "Official NASA page retrieved by automated fetch; 384,400 km read from the Size and Distance section.",
+      "status": "valuesConfirmed"
+    },
+    {
+      "sourceID": "S1",
+      "date": "2026-11-14",
+      "method": "Defined constant; not fetched.",
+      "status": "definedConstant"
+    },
+    {
+      "sourceID": "N3",
+      "date": "2026-11-14",
+      "method": "Seven further GOES-13 rows (2012-03-07, 2012-05-17, 2012-07-12, 2013-04-11, 2014-01-06, 2014-01-07, 2017-07-14) were read from the official CCMC archive table by an automated fetch and entered by an AI assistant. Checks made: the same fetch returned the 2017-09-10 row identical to the hand-transcribed record, and for five of the seven rows the duration derived from the timestamps equals the table's own duration column (the other two differ by under 0.3 hours). Not yet re-read by a team member.",
+      "status": "valuesExtractedAutomatically"
+    }
   ]
 }

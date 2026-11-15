@@ -448,7 +448,7 @@ struct BaseGearCard: View {
                 .foregroundStyle(Theme.ink)
             Label("\(gear.arrays) solar array\(gear.arrays == 1 ? "" : "s")", systemImage: "sun.max.fill")
             Label("\(gear.batteries) batter\(gear.batteries == 1 ? "y" : "ies")", systemImage: "battery.75percent")
-            Text("To change these, build at your base.")
+            Text("Upgrades count: level 2 and 3 make and store more. Build or upgrade at your base.")
                 .font(.system(.caption, design: .rounded).weight(.semibold))
                 .foregroundStyle(Theme.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -485,7 +485,7 @@ struct BaseTestCard: View {
                         .font(.system(.subheadline, design: .rounded).weight(.heavy))
                         .foregroundStyle(Theme.energyInk)
                 }
-                Text("Game rules for this test: each working solar array makes \(Format.kW(arrayKW)) in sunlight and each battery stores \(Words.kWh(batteryKWh)), the same training numbers as Lights Out. Building levels and colours don't change them.")
+                Text("Game rules for this test: your solar arrays make \(Format.kW(arrayKW * Double(context.inputs.arrays))) in sunlight and your batteries store \(Words.kWh(batteryKWh * Double(context.inputs.batteries))). A level 1 array or battery is the same as in Lights Out; level 2 counts 1.5 times and level 3 counts 2 times. Colours, decorations and other buildings' levels change nothing.")
                     .font(.caption)
                     .foregroundStyle(Theme.inkSecondary)
             }

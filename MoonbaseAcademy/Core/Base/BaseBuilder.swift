@@ -251,6 +251,10 @@ struct BaseState: Codable, Equatable, Sendable {
         switch (kind, level) {
         case (.habitat, 2): return "Build up to 3 solar arrays and 3 batteries. Adds light pylons and a new module."
         case (.habitat, 3): return "Build up to 4 solar arrays and 4 batteries. Adds a spire, a second module and a hologram ring."
+        case (.solarArray, 2): return "Makes 1.5 times the power in Test My Base (game rule). Opens the harder Lights Out drill."
+        case (.solarArray, 3): return "Makes 2 times the power in Test My Base (game rule). Becomes a solar tree."
+        case (.battery, 2): return "Stores 1.5 times the energy in Test My Base (game rule). Opens the harder Lights Out drill."
+        case (.battery, 3): return "Stores 2 times the energy in Test My Base (game rule). Becomes a power core."
         case (_, 2): return kind.drill.map { _ in "Unlocks the harder version of its drill, and adds a tech deck and new equipment." } ?? "A bigger, brighter building."
         case (_, 3): return "The futuristic look: gold deck, glowing core and a hologram ring. Looks only."
         default: return ""

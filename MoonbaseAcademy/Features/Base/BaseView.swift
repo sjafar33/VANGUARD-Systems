@@ -478,6 +478,13 @@ struct MissionBriefCard: View {
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+                if done && mission == .stormDrill {
+                    Label("Each replay is a different real storm from NASA's archive. Short storm or long storm: your plan has to change.",
+                          systemImage: "sun.max.trianglebadge.exclamationmark.fill")
+                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                        .foregroundStyle(Theme.energyInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if done {
                     HStack {
                         Text("Your best").font(.system(.subheadline, design: .rounded).weight(.heavy)).foregroundStyle(Theme.ink)

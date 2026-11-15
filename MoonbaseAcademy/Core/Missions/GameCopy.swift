@@ -74,10 +74,12 @@ struct GameCopy {
         let gear = BaseTestInputs(arrays: d.item(.solarArray)?.maxCount ?? 0,
                                   batteries: d.item(.battery)?.maxCount ?? 0)
         let shadow = d.phases.last?.durationHours ?? 0
+        let power = Double(gear.arrays) * (d.phases.map(\.solarKWPerArray).max() ?? 0)
+        let storage = Double(gear.batteries) * (d.item(.battery)?.batteryCapacityKWh ?? 0)
         return GameCopy(
             title: "Test My Base",
             intro: ["This test is about YOUR base. No lander and no spare crates: only what you really built.",
-                    "You have \(gear.summary). A \(Words.hourAdjective(shadow)) shadow is coming, with no sun at all.",
+                    "You have \(gear.summary): up to \(Format.kW(power)) in sunlight and \(Words.kWh(storage)) of storage. A \(Words.hourAdjective(shadow)) shadow is coming, with no sun at all.",
                     "Set the air maker for sunlight and for the shadow, then test it!"],
             planTip: "Tap Off, Half or Full to set the air maker. Less air saves power, but the crew breathes from the tank.",
             bonusStar: "Power the observation",

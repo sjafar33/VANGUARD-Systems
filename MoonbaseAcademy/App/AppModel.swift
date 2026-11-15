@@ -145,9 +145,21 @@ final class AppModel {
     func openMission(_ id: MissionID, variant: Bool = false, restoring draft: MissionDraft? = nil) {
         guard let science, progress.isUnlocked(id) else { return }
         session?.leave()
-        let definition = variant ? MissionCatalog.variant(id, science: science) : MissionCatalog.definition(id, science: science)
+        // Once the Storm Drill has been finished, each replay faces a different real archived storm.
+        // The first play always uses the same one, so everyone starts from the same drill.
+        var drillScience = science
+        var replayStorm: ScienceEventRecord?
+        if id == .stormDrill, draft == nil, progress.isCompleted(.stormDrill), case .ready(let package, _) = content,
+           let pick = package.usableStorms.randomElement(), let changed = science.with(storm: pick) {
+            drillScience = changed
+            replayStorm = pick
+        }
+        var definition = variant ? MissionCatalog.variant(id, science: drillScience) : MissionCatalog.definition(id, science: drillScience)
+        if replayStorm != nil {
+            definition.drillLabel = "Real storm of \(Words.date(drillScience.stormThresholdCrossing))\(variant ? ", smaller lander" : "")"
+        }
         let firstVisit = !progress.isCompleted(id) && progress.recentAttempts(id).isEmpty
-        session = MissionSession(definition: definition, science: science, world: missionWorld,
+        session = MissionSession(definition: definition, science: drillScience, world: missionWorld,
                                  decor: BaseDecor(progress: progress), reduceMotion: reduceMotion,
                                  firstVisit: firstVisit,
                                  playbackMode: progress.playbackMode ?? .automatic,

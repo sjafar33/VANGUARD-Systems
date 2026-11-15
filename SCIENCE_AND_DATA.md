@@ -62,3 +62,15 @@ Game rules (not NASA data), shown to the player on the result card:
 - Coins (repair price, the one-time reward for a first pass) never enter the simulation.
 
 Limits: this is still a phase-averaged training model, not an electrical simulator. Board distance and layout are not modelled, so no cables or adjacency are implied. The reference drills, their harder versions and their test fixtures are unchanged.
+
+## Upgrades in Test My Base (added 2026-11-14, evening)
+
+Game rule, shown on the building panel and on the test result: a level 1 solar array or battery is exactly the Lights Out equipment (1 kW in sunlight, 4 kWh). Level 2 counts 1.5 times and level 3 counts 2 times. The engine receives the base's arrays and batteries as that many items of their average strength, so the totals are exact. Levels of other buildings, colours and decorations change nothing. These multipliers are invented for play; they are not NASA hardware figures.
+
+## Eight real archived storms (added 2026-11-14, evening)
+
+The Storm Drill's timing comes from NASA's CCMC SEP Scoreboard archive (source N3): GOES-13, protons above 10 MeV, the 10 pfu threshold crossing, the peak, and the archive's 0.85 x 10 pfu end. The first play always uses the event of 2017-09-10. Once the drill is finished, each replay picks one of eight archived events at random (2012-03-07, 2012-05-17, 2012-07-12, 2013-04-11, 2014-01-06, 2014-01-07, 2017-07-14, 2017-09-10), named on screen with its real date. They last from about 27 hours to about 138 hours, so a plan that works for a short storm (air maker on Half) fails for a long one. All are replayed archive data and are never presented as live.
+
+How the seven added rows were entered: read from the official archive page by an automated fetch and entered by an AI assistant on 2026-11-14. Two checks were made: the same fetch returned the 2017-09-10 row identical to the record transcribed by hand earlier, and for five of the seven rows the duration derived from the timestamps equals the table's own duration column (the other two differ by less than 0.3 hours). **A team member should still re-read the seven rows against the source page before submission.**
+
+Limits that still apply: these are particle measurements by a satellite near Earth. They are not a radiation dose on the Moon, and the game does not calculate a dose. The shelter rule is a simple training rule. DONKI itself is not used: it could not be reached from the build environment, so the game makes no DONKI claim.

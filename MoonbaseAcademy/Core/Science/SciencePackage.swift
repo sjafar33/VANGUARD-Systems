@@ -52,6 +52,20 @@ struct ScienceEventRecord: Codable, Equatable, Identifiable, Sendable {
     let notes: String
 }
 
+extension ScienceEventRecord {
+    /// The three archive times, only when all are readable and in order.
+    var times: (start: Date, peak: Date, end: Date)? {
+        guard let start = parseUTC(thresholdCrossingUTC), let peak = parseUTC(peakUTC), let end = parseUTC(endUTC),
+              start < peak, peak < end else { return nil }
+        return (start, peak, end)
+    }
+
+    /// Hours from the threshold crossing to the archive's defined end, derived from the timestamps.
+    var activeHours: Double? {
+        times.map { $0.end.timeIntervalSince($0.start) / 3600 }
+    }
+}
+
 struct VerificationRecord: Codable, Equatable, Sendable {
     let sourceID: String
     let date: String
@@ -102,6 +116,25 @@ struct SciencePackage: Codable, Equatable, Sendable {
 
     func value(_ id: String) -> ScienceValueRecord? {
         values.first { $0.id == id }
+    }
+
+    /// Every archived storm that is well formed and has a known source. A malformed extra record is
+    /// simply not offered; it can never reach the simulation.
+    var usableStorms: [ScienceEventRecord] {
+        let known = Set(sources.map(\.id))
+        return events.filter { $0.times != nil && $0.maxFluxPfu.isFinite && $0.maxFluxPfu > 0 && known.contains($0.sourceID) }
+    }
+}
+
+extension ScienceInputs {
+    /// The same reference inputs with a different archived storm's timing. Nil if the record is unusable.
+    func with(storm: ScienceEventRecord) -> ScienceInputs? {
+        guard let times = storm.times else { return nil }
+        var copy = self
+        copy.stormThresholdCrossing = times.start
+        copy.stormPeak = times.peak
+        copy.stormEnd = times.end
+        return copy
     }
 }
 

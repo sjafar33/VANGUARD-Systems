@@ -23,8 +23,13 @@ struct SourcesView: View {
                         ForEach(package.values.filter { focus.sourceIDs.contains($0.sourceID ?? "") }) { value in
                             ValueRow(value: value, source: package.source(value.sourceID), verification: verification(value.sourceID))
                         }
-                        if focus.missionID == .stormDrill, let event = package.events.first {
-                            EventRow(event: event, source: package.source(event.sourceID), inputs: inputs)
+                        if focus.missionID == .stormDrill {
+                            Text("Archived storms recorded near Earth by the GOES-13 satellite. They are replayed, never live. The first play uses September 10, 2017; replays pick one of these at random.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                            ForEach(package.usableStorms) { event in
+                                EventRow(event: event, source: package.source(event.sourceID), inputs: inputs)
+                            }
                         }
                     }
                 }
@@ -176,8 +181,8 @@ struct EventRow: View {
             Text(event.label).font(.headline)
             Text("Crossed 10 pfu: \(event.thresholdCrossingUTC)\nPeak (\(Format.number(event.maxFluxPfu)) pfu): \(event.peakUTC)\nEnded: \(event.endUTC)")
                 .font(.subheadline.monospacedDigit())
-            if let inputs {
-                Text("Active for \(Format.hours(inputs.stormActiveHours)), worked out from these times.")
+            if let hours = event.activeHours {
+                Text("Active for \(Format.hours(hours)), worked out from these times.")
                     .font(.subheadline.weight(.semibold))
             }
             CategoryChip(category: .nasaReference)
