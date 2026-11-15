@@ -81,7 +81,7 @@ Results record elapsed and planned hours separately. A failed run stops at its a
 
 Reserve expenditure sums net oxygen withdrawn during each simulated step. Energy saved compares the air maker with Full over the same elapsed time, using the authored generator-power assumption. For one array and one battery, Full air fails at hour 10; Half air in the six-hour shadow completes hour 12, saving 1.5 kWh and spending 0.1975 kg from the oxygen tank during the shadow. These are outputs of NASA crew demand plus the training assumptions, not hardware specifications.
 
-The Example lab provides fixed equipment snapshots (1 array/1 battery, 1 array/2 batteries, 2 arrays/1 battery). Selecting equipment restores the default Full-air plan and the same initial resources. Example results remain in memory only; they do not award coins, unlock missions, replace the base, clear an existing draft, or save playback preferences.
+The Example lab provides fixed equipment snapshots (1 array/1 battery, 1 array/2 batteries, 2 arrays/1 battery). Selecting equipment preserves the current air and science settings. Reset lab explicitly restores starter equipment and the Full-air plan. Each trial starts from its scenario resources; adding charged storm batteries increases starting energy. The comparison uses the latest actual attempt and identifies all changed equipment/settings. Example results remain in memory only; they do not award coins, unlock missions, replace the base, clear an existing draft, or save playback preferences.
 
 ## Own-base storm rehearsal (November 15)
 
@@ -92,3 +92,9 @@ Authored game rules: batteries start fully charged, level multipliers remain 1 /
 The crew-safe/science-off plan does not complete the task. With one level-1 battery, Full air plus science during the rising phase runs out of power at hour 10. Half air plus science during rising, followed by Full air and science Off during fading, succeeds while spending oxygen reserves. A second battery permits the early science task at Full air. Engine checks cover both strategies, missing shelter, boundary continuity without resource refills, deterministic retry, all eight archived timings, and saved-record isolation. The quick Storm example uses the same rules without modifying the player's base or save.
 
 No dose, shielding attenuation, individual health risk, or lunar radiation measurement is calculated. The near-Earth event timestamps supply a replay clock, not a prediction of dose on the Moon. The original Storm Drill retains its original optional-science objective.
+
+## Hypotheses and controlled revisions (November 15, play-test repair)
+
+The forecast and chosen reason are learning inputs, never physics inputs. The same configuration and science inputs produce the same trace for every prediction/reason. Questions now assess the displayed mission objectives, including oxygen rather than battery failure alone. Reason feedback addresses generation versus storage, shelter versus crew consumption, growth time, and signal travel time.
+
+Planning and simulation share ResourceEngine.rates for electricity demand, supply and crew consumption. Result costs continue to use actual elapsed trace intervals. The original forecast, reason and plan are retained for review; optional saved fields preserve compatibility with older records. A revision highlights a relevant control without changing it automatically. If several variables changed, the result reports that instead of claiming a controlled one-variable experiment.

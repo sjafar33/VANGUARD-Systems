@@ -4,13 +4,13 @@
 
 Native iPhone/iPad prototype for ages 7–12. Build and run in Xcode using the instructions in the [project README](../README.md). No account, backend or downloads are needed by the running app. Browser and App Store versions are not available.
 
-## A two-minute investigation
+## A quick investigation
 
-1. Open **Drills → Start example lab**. Leave the air maker at Full, launch, predict, and skip to the result. The test fails at hour 10: sunlight stored 2.4 kWh, but shadow needs 3.6 kWh.
-2. Choose **Extra battery**. Launch again. The extra empty storage still fails because it does not generate energy.
-3. Choose **Extra array**. The same starting supplies now last all 12 hours. The result compares this run with the starter base.
-4. Choose **Starter base**, then set shadow air to **Half**. This also passes, saving 1.5 kWh against Full over 12 hours but withdrawing 0.1975 kg from the oxygen tank.
-5. Open **Drills → Start storm example**. Full air with science Off keeps the crew safe but leaves the task unfinished. Retry with **Storm rising: air Half, science On**; leave the fading phase at **air Full, science Off**. The crew survives the pinned 98-hour-5-minute event and completes the science task. Compare oxygen withdrawn and energy saved.
+1. Open **Drills → Start example lab**. Read the sunlight/shadow sequence and leave the air maker at Full. Launch, choose a forecast and a reason, then tap **Start test**. Use Step by step to watch each checkpoint or skip to the result. The starter test fails at hour 10: sunlight stored 2.4 kWh; shadow needs 3.6 kWh.
+2. Read **You expected / We observed** and check the explanation of your reason. Tap **Try one change**. The shadow controls are highlighted. Set shadow air to **Half**, make a fresh prediction, and test. It reaches 12 hours, saving 1.5 kWh against Full and withdrawing 0.1975 kg of oxygen. The comparison identifies exactly one change.
+3. To compare equipment at Full air, use **Reset lab to starter plan**, run the starter test, then choose **Extra battery**. It still fails: empty capacity does not generate energy. For a one-variable solar comparison, choose Starter base and run it again before choosing Extra array; it completes 12 hours. Equipment buttons show their counts and preserve air/science settings. The result reports every change if you switch several variables.
+4. Open **Drills → Start storm example**. Full air with science Off keeps the crew safe but leaves the task unfinished. Retry with **Storm rising: air Half, science On**; leave fading at **air Full, science Off**. The crew completes the pinned 98-hour-5-minute event and science task. Inspect the oxygen and energy trade-off.
+5. A correct forecast of failure receives recognition while the engineering objective remains unfinished. An incorrect mechanism receives corrective feedback even when the forecast was right. **I'm not sure yet** allows observation, and **Change my plan** returns without consuming a trial or changing its settings.
 
 Example labs use the same resource engine as the player's base tests. They never write campaign progress, rewards, drafts or playback preferences. Equipment capacities, science objectives and the backup supply are labeled game rules.
 
@@ -24,6 +24,8 @@ The 29.000-second, 1080 × 1920 H.264 video contains edited actual iPad Simulato
 
 | Screenshot | What to inspect |
 |---|---|
+| [Planning](media/planning.png) | Numbered stages, beginner help and adaptive controls |
+| [Prediction and reason](media/prediction-with-reason.png) | Selected hypothesis and separate Start test action |
 | [Power failure](media/power-failure.png) | Stored energy, required energy, actual stopping time |
 | [Reserve trade-off](media/oxygen-tradeoff.png) | Energy saved and oxygen withdrawn at the same elapsed time |
 | [Storm success](media/storm-success.png) | Crew protection and a completed science task |

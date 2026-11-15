@@ -1,0 +1,109 @@
+{
+  "date": "2026-11-15",
+  "device": "iPhone 17 Simulator",
+  "osVersion": "27.0",
+  "configuration": "Debug",
+  "distinctFlows": 7,
+  "passedExecutions": 9,
+  "failed": 0,
+  "skipped": 0,
+  "note": "The two accessibility flows were repeated after the final scrolling/header/action layout correction.",
+  "runs": [
+    {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 191239,
+        "counts": {
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "testCases": [
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testExampleCanFailChangeEquipmentAndPassWithoutUnlocks",
+          "status": "passed",
+          "durationMs": 78819
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testNoForecastCanMatchAFailedMissionAndLeadToRevision",
+          "status": "passed",
+          "durationMs": 25755
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testStormExampleRequiresScienceAndCanSpendReservesToSucceed",
+          "status": "passed",
+          "durationMs": 42598
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testUnsureAndBackAllowACompleteUnskippedInvestigation",
+          "status": "passed",
+          "durationMs": 36191
+        }
+      ]
+    },
+    {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 143204,
+        "counts": {
+          "passed": 3,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "testCases": [
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testLargeTextExampleStillReachesResult",
+          "status": "passed",
+          "durationMs": 56911
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testPredictionWaitsForReasonAndExplainsMisconception",
+          "status": "passed",
+          "durationMs": 20049
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testStormEquipmentSummaryAndRulesRemainReachable",
+          "status": "passed",
+          "durationMs": 60918
+        }
+      ]
+    },
+    {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 127423,
+        "counts": {
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "testCases": [
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testLargeTextExampleStillReachesResult",
+          "status": "passed",
+          "durationMs": 58074
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testStormEquipmentSummaryAndRulesRemainReachable",
+          "status": "passed",
+          "durationMs": 58292
+        }
+      ]
+    }
+  ]
+}

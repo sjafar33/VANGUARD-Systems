@@ -2,9 +2,9 @@
 
 ## Final regression
 
-**144 passed, 0 failed, 0 skipped**: 140 unit tests and 4 UI tests. Xcode 27.0, iOS Simulator 27.0, iPad Air 11-inch (M4), arm64, Debug, MoonbaseAcademy scheme. [Machine-readable xcresult summary](Submission/final-test-summary.json).
+**155 passed, 0 failed, 0 skipped**: 147 unit tests and 8 UI tests. Xcode 27.0, iOS Simulator 27.0, iPad Air 11-inch (M4), arm64, Debug, MoonbaseAcademy scheme. [Machine-readable xcresult summary](Submission/final-test-summary.json).
 
-The final run covers the source used in the demonstration and submission. Later changes are submission media, documentation and verification records.
+The final run covers the final game implementation. The demonstration uses actual normal-text iPad capture of the same experiment flow; the subsequent accessibility layout correction affects large-text planning. No game code changed after this regression.
 
 | Check | Verified behavior |
 |---|---|
@@ -13,13 +13,16 @@ The final run covers the source used in the demonstration and submission. Later 
 | Save isolation | Example labs leave progress, coins, unlocked content, drafts, preferences and the on-disk save unchanged; legacy records decode with missing timing marked unavailable |
 | Bounded own-base storm | Working shelter/battery requirements; explicit setup cost; science task required; continuous reserves across phases; repeatable pinned event; reserve-spending and extra-storage strategies |
 | Science sensitivity | Changed crew demand, crop reference, Moon distance and archived timestamps change the engine's outcomes |
-| UI flows | Original mission, shadow example, storm example, and an Accessibility XXXL text run reach their expected results |
+| Hypothesis and revision | Forecasts and reasons cannot change physics; a correct failure forecast is distinct from mission success; misconception feedback and the original prediction survive revision; changed controls and reserve costs are reported |
+| UI flows | Original mission/relaunch, shadow and storm examples, Accessibility XXXL text, correct failure prediction, misconception feedback, and an unskipped Unsure/Back investigation reach their expected results |
 
 Reproduce in Xcode: open `MoonbaseAcademy.xcodeproj`, choose **MoonbaseAcademy** and the iPad simulator, then **Product → Test** (⌘U). Automated UI tests use their own isolated save. See [reviewer examples](Submission/README.md) for manual steps.
 
 ## Device usability
 
-The two example flows passed on iPhone 17 Simulator at normal text. The largest accessibility text flow also passed after compacting the mission header so the plan and result remain reachable. The same flows passed on iPad. Simulator screenshots were inspected for result explanations, controls, reserve costs and source labels. The demonstration uses actual iPad capture.
+Seven focused example UI flows passed on iPhone 17 Simulator, with nine successful executions including repeats of the two accessibility flows after the final layout correction. [Phone verification](Submission/phone-test-summary.json). The checks cover shadow/storm outcomes, correct failure forecasts, misconception feedback, Unsure/Back, unskipped playback, and Accessibility XXXL text.
+
+Screenshot review exposed a problem that successful taps alone missed: at the largest phone text size the fixed header and oversized action left too little reading space, while equipment headings competed for width. The final layout lets the planning header scroll away, stacks the equipment heading/help, and keeps a shorter fixed Launch action. It preserves the chosen text size. Both affected phone flows passed again, including an assertion that the action leaves reading space. Screenshots were inspected for panel containment, result explanations, controls, reserve costs and source labels. The demonstration uses actual iPad capture.
 
 These checks do not establish learning effectiveness. No child participant study, physical-device battery/performance study, complete landscape-device matrix, full VoiceOver/Switch Control pass, or App Store/TestFlight distribution is claimed.
 

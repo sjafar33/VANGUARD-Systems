@@ -20,12 +20,12 @@ struct Scene {
     let evidence: String
 }
 let scenes = [
-    Scene(start:0,end:3.5,source:60.6,heading:"YOUR BASE. YOUR DECISIONS.",caption:"A mission trainer for ages 7–12.",evidence:"Build a Junior Astronaut Mission Trainer • Space Apps 2026"),
-    Scene(start:3.5,end:8,source:30.2,heading:"EMPTY STORAGE ISN’T ENOUGH.",caption:"Stored: 2.4 kWh. Needed: 3.6 kWh.\nEmpty storage cannot create energy.",evidence:"Same engine, same starting supplies, explainable consequences"),
-    Scene(start:8,end:13,source:56.7,heading:"GENERATE. THEN STORE.",caption:"One extra solar array changes the result.\nThe base completes its 12-hour test.",evidence:"Change one variable. Predict. Test. Understand."),
-    Scene(start:13,end:18.5,source:41.4,heading:"SAVE POWER. SPEND OXYGEN.",caption:"Half air during shadow saves 1.5 kWh\nand spends 0.20 kg from the oxygen tank.",evidence:"NASA crew demand + clearly labeled training equipment rules"),
-    Scene(start:18.5,end:24,source:130.5,heading:"SHELTER. SCIENCE. SURVIVAL.",caption:"Rehearse a 98-hour archived storm.\nProtect the crew and finish a science task.",evidence:"CCMC archive: September 10–14, 2017 • no dose calculation"),
-    Scene(start:24,end:29,source:63.4,heading:"BUILD. PREDICT. TEST. IMPROVE.",caption:"NASA references drive the calculation.\nOffline on iPhone and iPad.",evidence:"BVAD oxygen reference: 0.895 kg per adult crew member per day")
+    Scene(start:0,end:4,source:37.879,heading:"PLAN BEFORE YOU LAUNCH.",caption:"A mission trainer for ages 7–12.\nLearn how power, storage and oxygen connect.",evidence:"Numbered sunlight / shadow stages • replayable beginner help"),
+    Scene(start:4,end:9,source:43.536,heading:"PREDICT. THEN EXPLAIN WHY.",caption:"Choose an outcome and a reason.\nYour equipment and settings decide what happens.",evidence:"Hypotheses change feedback; they never change the physics"),
+    Scene(start:9,end:14,source:48.76,heading:"COMPARE WITH THE EVIDENCE.",caption:"Stored: 2.4 kWh. Needed: 3.6 kWh.\nThe starter plan stops at hour 10.",evidence:"An empty battery stores energy; it cannot generate electricity"),
+    Scene(start:14,end:19.5,source:64.468,heading:"ONE CHANGE. A NEW RESULT.",caption:"Half air in shadow reaches all 12 hours.\nSave 1.5 kWh; spend 0.20 kg of tank oxygen.",evidence:"The original prediction and exact change stay visible"),
+    Scene(start:19.5,end:24,source:253.133,heading:"SHELTER. SCIENCE. SURVIVAL.",caption:"Protect the crew and complete a science task\nduring a 98-hour archived storm.",evidence:"CCMC timestamps • explicit training rules • no radiation dose"),
+    Scene(start:24,end:29,source:94.301,heading:"TRACEABLE SCIENCE. OFFLINE PLAY.",caption:"NASA references drive the calculation.\nBuild. Predict. Observe. Revise.",evidence:"BVAD reference: 0.895 kg oxygen per adult crew member per day")
 ]
 let width = 1080, height = 1920, fps: Int32 = 30
 let writer = try AVAssetWriter(outputURL: output, fileType: .mp4)
@@ -61,7 +61,7 @@ for index in 0..<(29*Int(fps)) {
         let scene = scenes.first { time >= $0.start && time < $0.end }!
         // Slow a short, verified source window for readable captions; never fabricate app states.
         let sourceTime = scene.source + min(0.65, (time-scene.start)*0.12)
-        let sampledTime = (sourceTime*10).rounded(.down)/10
+        let sampledTime = (sourceTime*15).rounded(.down)/15
         if sampledTime != cachedTime {
             cachedFrame = try generator.copyCGImage(at:CMTime(seconds:sampledTime,preferredTimescale:600),actualTime:nil)
             cachedTime = sampledTime

@@ -41,7 +41,12 @@ final class ExampleLabFlowTests: XCTestCase {
         tap("Drills")
         tap("Start example lab")
         shot("01-starter")
-        runExperiment()
+        tap("Launch test")
+        tap("prediction.yes")
+        tap("reason.resourceBudget")
+        shot("forecast-before-first-test")
+        tap("Start test")
+        tap("Skip to the result")
         XCTAssertTrue(app.staticTexts["The power ran out"].waitForExistence(timeout: 5))
         shot("02-generation-shortage")
         tap("Try again")
@@ -83,6 +88,50 @@ final class ExampleLabFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["Show me"].waitForExistence(timeout: 5))
     }
 
+    func testNoForecastCanMatchAFailedMissionAndLeadToRevision() {
+        app.launchArguments = ["-uiTesting", "-resetProgress"]
+        app.launch()
+        tap("Drills")
+        tap("Start example lab")
+        tap("Launch test")
+        tap("prediction.no")
+        tap("reason.resourceBudget")
+        tap("Start test")
+        tap("Skip to the result")
+        XCTAssertTrue(app.staticTexts["Your forecast matched. The mission still needs a working plan."].waitForExistence(timeout: 5))
+        shot("correct-forecast-failed-mission")
+        tap("Try one change")
+        let suggestion = app.staticTexts["Suggested part for your next test"].firstMatch
+        for _ in 0..<6 where !suggestion.isHittable { app.swipeUp() }
+        XCTAssertTrue(suggestion.exists)
+        XCTAssertTrue(app.buttons["Launch test"].isHittable, "Launch stays outside the scrolling plan")
+    }
+
+    func testUnsureAndBackAllowACompleteUnskippedInvestigation() {
+        app.launchArguments = ["-uiTesting", "-resetProgress"]
+        app.launch()
+        tap("Drills")
+        tap("Start example lab")
+        tap("Shadow drill, air maker: Half")
+        tap("Launch test")
+        tap("prediction.no")
+        tap("Change my plan")
+        let half = app.buttons["Shadow drill, air maker: Half"]
+        for _ in 0..<6 where !half.isHittable { app.swipeUp() }
+        XCTAssertTrue(half.isSelected)
+        tap("Launch test")
+        tap("prediction.unsure")
+        tap("Start test")
+        for _ in 0..<10 {
+            if app.buttons["See result"].exists { tap("See result"); break }
+            if app.buttons["Next step"].waitForExistence(timeout: 8) { tap("Next step") }
+            else { XCTFail("The unskipped playback must offer its next checkpoint"); break }
+        }
+        XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["You were unsure. Now you have evidence for your next idea."].exists)
+        shot("unskipped-investigation")
+    }
+
     func testPredictionWaitsForReasonAndExplainsMisconception() {
         app.launchArguments = ["-uiTesting", "-resetProgress"]
         app.launch()
@@ -115,6 +164,10 @@ final class ExampleLabFlowTests: XCTestCase {
             let launch = app.buttons["Launch test"]
             for _ in 0..<8 where !launch.isHittable { app.swipeUp() }
             XCTAssertTrue(launch.isHittable, "Launch stays reachable after reading the equipment rules")
+            if size == "UICTContentSizeCategoryAccessibilityXXXL" {
+                XCTAssertLessThan(launch.frame.height, app.frame.height * 0.15,
+                                  "The fixed action must leave room to read the large-text plan")
+            }
             shot("storm-layout-\(size)")
             app.terminate()
         }

@@ -14,6 +14,7 @@ struct MissionView: View {
     @State private var showSettings = false
     @Environment(\.appReduceMotion) private var reduceMotion
     @Environment(\.focusView) private var focusView
+    @Environment(\.dynamicTypeSize) private var textSize
     @AccessibilityFocusState private var launchFocused: Bool
 
     /// True while a dialog covers the drill; the controls underneath are hidden from VoiceOver.
@@ -44,21 +45,33 @@ struct MissionView: View {
                     .ignoresSafeArea()
                     .accessibilityHidden(overlayShown)
                 VStack(spacing: 0) {
-                    MissionTopHUD(session: session, readAloud: model.readAloud, narration: narrationText,
-                                  onBack: { model.leaveMission() }, onSources: { showSources = true },
-                                  onSettings: { showSettings = true })
-                        .readHeight { height in
-                            topHeight = height + proxy.safeAreaInsets.top
-                            updateInsets()
-                        }
+                    if !(textSize.isAccessibilitySize && session.stage == .planning) {
+                        missionHUD
+                            .readHeight { height in
+                                topHeight = height + proxy.safeAreaInsets.top
+                                updateInsets()
+                            }
+                    }
                     Spacer(minLength: 0)
                     Group {
                         if session.stage == .planning {
                             VStack(spacing: 10) {
-                                ViewThatFits(in: .vertical) {
-                                    bottomArea
-                                    ScrollView { bottomArea.padding(.bottom, 6) }
-                                        .frame(maxHeight: max(140, proxy.size.height * 0.52))
+                                if textSize.isAccessibilitySize {
+                                    // Let the title and resource summary scroll away so the plan
+                                    // retains its reading space at the largest text sizes.
+                                    ScrollView {
+                                        VStack(spacing: 16) {
+                                            missionHUD
+                                            bottomArea.padding(.bottom, 6)
+                                        }
+                                    }
+                                    .onAppear { topHeight = 0; updateInsets() }
+                                } else {
+                                    ViewThatFits(in: .vertical) {
+                                        bottomArea
+                                        ScrollView { bottomArea.padding(.bottom, 6) }
+                                            .frame(maxHeight: max(140, proxy.size.height * 0.52))
+                                    }
                                 }
                                 launchControl
                             }
@@ -154,6 +167,12 @@ struct MissionView: View {
         .sheet(isPresented: $showSources) { SourcesView(package: package, focus: session.definition) }
     }
 
+    private var missionHUD: some View {
+        MissionTopHUD(session: session, readAloud: model.readAloud, narration: narrationText,
+                      onBack: { model.leaveMission() }, onSources: { showSources = true },
+                      onSettings: { showSettings = true })
+    }
+
     private func updateInsets() {
         // While a dialog covers the screen there are no bottom controls to measure. Keep the world framed
         // as it was, so it does not shrink or jump behind the dialog.
@@ -227,9 +246,14 @@ struct MissionView: View {
         Button {
             session.goToPrediction()
         } label: {
-            Label("Launch test", systemImage: "flame.fill")
+            if textSize.isAccessibilitySize {
+                Text("Launch test")
+            } else {
+                Label("Launch test", systemImage: "flame.fill")
+            }
         }
-        .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 62, font: .game(.title2)))
+        .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 62,
+                                     font: .game(textSize.isAccessibilitySize ? .headline : .title2)))
         .disabled(!session.canLaunch)
         .accessibilityFocused($launchFocused)
         .accessibilityHint(session.canLaunch ? "Then you predict what will happen" : "Finish the plan first")
@@ -494,16 +518,20 @@ struct BuildTray: View {
 struct BaseGearCard: View {
     let session: MissionSession
     @State private var showRules = false
+    @Environment(\.dynamicTypeSize) private var textSize
 
     var body: some View {
         let gear = session.baseTest?.inputs ?? BaseTestInputs(arrays: 0, batteries: 0)
         let storm = session.baseTest?.kind == .storm
         let batteries = "\(gear.batteries) \(gear.batteries == 1 ? "battery" : "batteries")"
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
+            let headingLayout = textSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                : AnyLayout(HStackLayout(alignment: .top))
+            headingLayout {
                 Label(session.baseTest?.isExample == true ? "Example equipment" : "Your equipment", systemImage: "house.fill")
                     .font(.headline)
-                Spacer(minLength: 4)
+                if !textSize.isAccessibilitySize { Spacer(minLength: 4) }
                 Button("How this test works", systemImage: "info.circle") { showRules = true }
                     .font(.subheadline.weight(.semibold))
                     .frame(minHeight: 44)

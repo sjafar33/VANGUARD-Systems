@@ -8,7 +8,7 @@ Moonbase Academy
 
 **High-level summary**
 
-Moonbase Academy is an offline iPhone and iPad game for children aged 7–12 who become the engineers of a lunar outpost. Players build equipment, predict an outcome, test it, and learn why it worked or failed. An extra empty battery cannot solve insufficient generation; reducing air-maker power can save the mission while spending oxygen reserves. A separate storm rehearsal uses the player's shelter and batteries to protect the crew and finish a science task during an archived NASA space-weather event. Four reference drills cover power, life support, food, shielding, and communication delay. NASA crew-demand references, Veggie experiment information, CCMC event timestamps, and the Earth–Moon distance drive the calculations. Results expose stopping times, reserve costs, and source labels. Quick example labs let reviewers investigate immediately without changing a player's save. The goal is to make real engineering trade-offs understandable through experimentation.
+Moonbase Academy is an offline iPhone and iPad game for ages 7–12 where a lunar base becomes a science experiment. Children build a plan, predict an outcome, choose a reason, observe the simulation, and revise one choice using evidence. Beginner controls explain sunlight, battery storage and oxygen reserves. An extra empty battery cannot create energy; reducing air-maker power saves electricity while spending stored oxygen. Results retain the original hypothesis, identify what changed, and suggest another experiment. A storm rehearsal uses the player's shelter and batteries to protect the crew and complete a science task during an archived NASA event. Four reference drills cover power, life support, food, shielding and communication delay. NASA crew-demand references, Veggie information, CCMC timestamps and the Earth–Moon distance drive calculations. Quick example labs need no unlocks and preserve the player's save. The goal is to teach engineering trade-offs through understandable, repeatable investigations.
 
 **Project demonstration**
 
@@ -22,7 +22,7 @@ https://github.com/sjafar33/VANGUARD-Systems
 
 A base builder that becomes an engineering experiment
 
-Moonbase Academy turns the question “Would your base keep working?” into a repeatable experiment for children aged 7–12. The player places and upgrades buildings, sets an operating plan, predicts what will happen, watches a deterministic simulation, and revises the plan using an explanation of the actual result.
+Moonbase Academy turns the question “Would your base keep working?” into a repeatable experiment for children aged 7–12. The player places and upgrades buildings, sets an operating plan, predicts what will happen, chooses a reason, watches a deterministic simulation, and revises one choice using evidence from the actual result.
 
 One concrete lesson
 
@@ -34,7 +34,9 @@ The own-base Storm test uses working shelter and battery buildings and a pinned 
 
 Built for exploration and review
 
-Drills → Start example lab and Start storm example provide ready-to-use equipment snapshots without grinding coins or unlocking buildings. Examples use the same engine and never write campaign progress, rewards, drafts, or playback preferences. Results compare equipment, plan, actual stopping time, energy and oxygen. They do not treat an early failure's reserves as if the full mission had elapsed. Four separate reference drills cover power/life support, a 33-day crop-lighting budget, sheltering during archived storms, and a rover's Earth–Moon picture-and-command delay. Lessons offer three question levels. Optional read-aloud, reduced motion, and large-text layouts support different ways of playing.
+Numbered planning cards explain sunlight and shadow, Off/Half/Full air-maker settings, and the purpose and power cost of science. Replayable help introduces generation, storage and oxygen reserves. Predictions include a reason and a separate Start test action. Results distinguish forecast accuracy, the proposed mechanism, and mission success; a correct forecast of failure does not complete the mission. The next experiment highlights a relevant control.
+
+Drills → Start example lab and Start storm example provide ready-to-use equipment snapshots without grinding coins or unlocking buildings. Equipment choices preserve air/science settings; resetting the lab is explicit. Comparisons identify one or multiple changes and preserve the original forecast and reason. Examples use the same engine and never write campaign progress, rewards, drafts, or playback preferences. Results compare equipment, plan, actual stopping time, energy and oxygen. They do not treat an early failure's reserves as if the full mission had elapsed. Four separate reference drills cover power/life support, a 33-day crop-lighting budget, sheltering during archived storms, and a rover's Earth–Moon picture-and-command delay. Lessons offer three question levels. Optional read-aloud, reduced motion, and large-text layouts support different ways of playing.
 
 Traceable science and honest scope
 

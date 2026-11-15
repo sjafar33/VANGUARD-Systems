@@ -1,29 +1,29 @@
 1
-00:00:00,000 --> 00:00:03,500
-Moonbase Academy: your base, your decisions.
-A mission trainer for ages 7–12.
+00:00:00,000 --> 00:00:04,000
+Plan before you launch. A mission trainer for ages 7–12.
+Learn how power, storage and oxygen connect.
 
 2
-00:00:03,500 --> 00:00:08,000
-Stored: 2.4 kWh. Needed: 3.6 kWh.
-Empty storage cannot create energy.
+00:00:04,000 --> 00:00:09,000
+Predict, then explain why.
+Your equipment and settings decide what happens.
 
 3
-00:00:08,000 --> 00:00:13,000
-One extra solar array changes the result.
-The base completes its 12-hour test.
+00:00:09,000 --> 00:00:14,000
+Stored: 2.4 kWh. Needed: 3.6 kWh.
+The starter plan stops at hour 10.
 
 4
-00:00:13,000 --> 00:00:18,500
-Half air during shadow saves 1.5 kWh
-and spends 0.20 kg from the oxygen tank.
+00:00:14,000 --> 00:00:19,500
+Half air in shadow reaches all 12 hours.
+Save 1.5 kWh; spend 0.20 kg of tank oxygen.
 
 5
-00:00:18,500 --> 00:00:24,000
-Rehearse a 98-hour archived storm.
-Protect the crew and finish a science task.
+00:00:19,500 --> 00:00:24,000
+Protect the crew and complete a science task
+during a 98-hour archived storm.
 
 6
 00:00:24,000 --> 00:00:29,000
 NASA references drive the calculation.
-Build. Predict. Test. Improve. Offline on iPhone and iPad.
+Build. Predict. Observe. Revise. Offline on iPhone and iPad.
