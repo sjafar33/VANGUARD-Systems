@@ -1,49 +1,800 @@
 {
-  "devicesAndConfigurations" : [
+  "schema": "moonbase.latest-test-results.v1",
+  "date": "2026-11-15",
+  "device": "iPad Air 11-inch (M4) Simulator",
+  "osVersion": "27.0",
+  "result": "Passed after focused rerun",
+  "totalTestCount": 156,
+  "passedTests": 156,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "unitTests": 147,
+  "uiTests": 9,
+  "method": "Latest result per test across the full regression and focused rerun. The initial original-mission UI test expected cargo to be visible while Operating plan was selected. Its navigation was updated to select Equipment; the complete original mission and final workspace were then rerun successfully. The rerun also includes all unit tests and final visual polish.",
+  "runs": [
+    "refinement-ipad-initial-summary.json",
+    "refinement-ipad-rerun-summary.json"
+  ],
+  "testCases": [
     {
-      "device" : {
-        "architecture" : "arm64",
-        "deviceId" : "CD8C05CF-FD1B-4A36-9E1A-2EAE2A9A607F",
-        "deviceName" : "iPad Air 11-inch (M4)",
-        "modelName" : "iPad Air 11-inch (M4)",
-        "osBuildNumber" : "24A434",
-        "osVersion" : "27.0",
-        "platform" : "iOS Simulator"
-      },
-      "expectedFailures" : 0,
-      "failedTests" : 0,
-      "passedTests" : 155,
-      "skippedTests" : 0,
-      "testPlanConfiguration" : {
-        "configurationId" : "1",
-        "configurationName" : "Test Scheme Action"
-      }
-    }
-  ],
-  "environmentDescription" : "MoonbaseAcademy · Built with macOS 27.0.1",
-  "expectedFailures" : 0,
-  "failedTests" : 0,
-  "finishTime" : 1794779917.039,
-  "passedTests" : 155,
-  "result" : "Passed",
-  "runtimeWarnings" : [
-
-  ],
-  "skippedTests" : 0,
-  "startTime" : 1794779530.524,
-  "statistics" : [
-
-  ],
-  "testFailures" : [
-
-  ],
-  "title" : "Test - MoonbaseAcademy",
-  "topInsights" : [
+      "test": "AmbientMusicTests/testAmbientLoopIsDeterministicAndNeverClips()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
     {
-      "category" : "Longest Test Runs",
-      "impact" : "76% of duration",
-      "text" : "3 longest test runs with outlier durations exceeding 1.43s (three standard deviations)"
+      "test": "BaseBuilderTests/testANewPlayerCanAlwaysAffordTheFirstGoals()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testBaseSurvivesASaveRoundTrip()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testBuildingsCannotOverlapOrLeaveTheBoard()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testBuildingSpendsCoinsAndOpensTheDrill()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testCosmeticsCostCoinsOnceAndCanBeWornAfter()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testDrillCoinsRewardLearningNotFailingFast()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testEarnAdvisorAlwaysOffersAWayAndPutsTheBiggestFirst()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testGoalBonusesArePaidOnceAndOldSavesDontGetBackPay()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testGreenhouseNeedsTheLessonAndHarderDrillsNeedLevelTwo()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testGuideAlwaysHasOneConcreteNextGoalInOrder()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testHabitatLevelLimitsArraysAndBatteries()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testLessonCoinsArePaidFullyOnceThenSmall()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testLessonFactsAreBuiltFromTheScienceInputs()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testMovingKeepsTheBuildingAndChecksTheSpot()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testNewPlayerStartsWithAHabitatAndEnoughForTheFirstDrill()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testOlderSavesGetTheBuildingsTheyAlreadyEarned()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testRunningOutOfCoinsOpensHelpInsteadOfAMessage()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testStylePreviewNeverSpendsOrSaves()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseBuilderTests/testUpgradesCostCoinsAndStopAtTheTop()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testAnotherArrayFixesItAtFullAir()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testAnotherBatteryAloneDoesNotHelpWhenThereIsNothingExtraToStore()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testASaveFromBeforeTheStationKeepsEverythingAndGainsTheRuin()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testAShortStormAndALongStormNeedDifferentPlans()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testBaseTestNeedsSayWhatToDo()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testComparisonExplainsUpgradesWithoutCountChanges()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testCosmeticsPositionsAndOtherBuildingsNeverChangeTheTest()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testDecorationsAreLooksOnly()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testEveryArchivedStormIsUsableAndCanBeSurvived()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testEveryLessonQuestionIsValidAtEveryLevel()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testOneArrayOneBatteryRunsOutAtFullAir()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testOnlyWorkingPowerGearBecomesTestInputs()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testRepairChargesExactlyOnce()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testRepairWithTooFewCoinsChangesNothing()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTheEquipmentCannotBeChangedInsideTheTest()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTheFirstPassPaysOnceAndFailuresCostNothing()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTheLearnLevelIsSavedAndOldSavesDefaultToBuilder()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testThePowerLessonReadsItsNumbersFromTheDrill()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTheReferenceDrillIsLeftAlone()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTheSameBaseAndPlanAlwaysGiveTheSameResult()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTheStationIsARuinThatNeverOverlapsAndCannotBeBought()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTheWholeLoopRestoreTestFailReviseAndPass()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testTurningTheAirDownSavesPowerButSpendsOxygen()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseExperimentTests/testUpgradedArraysAndBatteriesCountByTheStatedGameRule()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseStormTests/testAllArchivedStormsSupportTheReserveStrategyAndKeepReferenceRules()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseStormTests/testOwnBaseStormRecordsArePinnedSeparateAndSurviveRelaunch()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "BaseStormTests/testStormHasARealOpportunityCostAndTwoFeasibleStrategies()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ExperimentLearningTests/testExampleEquipmentExperimentsPreserveThePlayersSave()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ExperimentLearningTests/testShadowReportsActualStoppingTimeAndReserveCost()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testEachSettingIsIndependentAndPersists()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testFocusSuggestionsAreOnlyAStartingPoint()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testHarderVersionIsRestoredAsTheHarderVersion()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testInterruptedPlanReopensAtPlanningWithoutRecording()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testInvalidSavedPlanIsIgnored()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testMotionSettingReachesAnOpenDrill()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testNarrationReadsUnitsAsWords()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "FocusAccessibilityTests/testSettingsNeverChangeTheScience()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "InvestigationTests/testChangingOnlyTheForecastRepeatsTheSamePhysics()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "InvestigationTests/testEquipmentPreservesThePlanAndResetIsExplicit()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "InvestigationTests/testRevisionRetainsTheOriginalIdeaAndIdentifiesOneChange()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testConsumptionScalesWithCrewAndTime()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testExactZeroEnergyAtPhaseEndIsValidButEarlierShortageFails()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testFailedAttemptIsNotResurrectedByLaterGeneration()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testFivePointConfigurationIsRejectedWithoutSimulation()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testFourArraysNoBatteryFailsInShadow()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testInvalidInputsAreRejected()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testLowAirReserveIsAFailedConstraintWithoutExhaustion()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testNineHourVariantIsSeparateAndHarder()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testOneArrayThreeBatteriesSpendsOxygenReserve()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testOxygenCapacityBoundary()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testOxygenExhaustionFails()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testReplayIsDeterministic()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testThreeArraysOneBatteryCapsStorage()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LightsOutTests/testTwoArraysTwoBatteriesSucceeds()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testFullAirFullGardenSucceeds()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testHalfAirRunsOutOfOxygen()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testHalfLightSurvivesButHasNoHarvest()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testHarvestIsNeverAddedToPackagedFood()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testHorizonDerivesFromCropReference()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testOneResearchUnitPerDayStillSucceeds()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testSensitivityLongerCropReferenceMeansNoHarvestInThe33DayDrill()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testTightEnergyVariant()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "LivingBaseTests/testTwoResearchUnitsFailDuringDaySeven()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "MusicTests/testLofiLoopIsDeterministicAudibleAndNeverClips()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testAirStoryMatchesATankThatWentDown()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testCopyFollowsTheScienceInputs()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testGardenSuccessNoLongerClaimsAFullTankUnlessTrue()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testLightsOutOxygenSentenceOnlyWhenTheTankWentDown()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testNoBatteryCopyOnlyWhenTheShadowCausedIt()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testStormShortageNamesWhatWasRunning()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testStormSuccessStatesTheDoseLimitAndRealOxygenChange()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "NarrationTests/testVariantCopyUsesTheVariantsNumbers()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlanningRatesTests/testPlanningRatesIncludeScienceAndNASAConsumption()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackScriptTests/testGardenFailureCheckpointsEndOnTheFailureDay()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackScriptTests/testGardenFailureLeadNamesTheDailyGap()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackScriptTests/testGardenSuccessCheckpointsIncludeMilestones()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackScriptTests/testStepMissionsGetOneCheckpointPerStep()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackSessionTests/testLeavingTheAppPausesUntilThePlayerResumes()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackSessionTests/testModeChangeIsReportedForSaving()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackSessionTests/testRetryAndLeaveNeverRecordAStaleAttempt()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackSessionTests/testSkipRecordsExactlyOnce()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PlaybackSessionTests/testStepByStepReachesTheSameResultAsSkip()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PredictionReasonTests/testForecastAndReasonNeverChangeThePhysicalResult()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PredictionReasonTests/testPredictionChecksOxygenGoalAsWellAsElectricity()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PredictionReasonTests/testPredictionMetadataLoadsFromNewAndOldRecords()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PredictionStarSessionTests/testCorrectNoOnAFailedDrillIsRecognisedAndSaved()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "PredictionStarSessionTests/testNotSureEarnsNoPredictionStar()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ProgressTests/testCompletionIsAwardedOnce()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ProgressTests/testDamagedSaveIsReportedAndPreserved()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ProgressTests/testMissionsUnlockInOrder()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ProgressTests/testReplayFailureKeepsCompletion()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ProgressTests/testResetClearsTheSave()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ProgressTests/testSaveAndReloadRoundTrip()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ProgressTests/testUnsupportedSchemaIsNotLoaded()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "RewardTests/testAchievementsAddUpAcrossAttemptsAndSurviveAFailedReplay()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "RewardTests/testAnOlderSaveFileLoadsWithoutLoss()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "RewardTests/testCompletedIsNeverKeptWithoutARealSuccess()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "RewardTests/testCorrectPredictionOfAFailureEarnsOnlyThePredictionStar()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "RewardTests/testLegacyStarCountsAreRebuiltExactly()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "RewardTests/testSavesFromBeforeStarsGetCreditForWhatTheyFinished()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "RewardTests/testStarResultMapsToAchievements()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testBadTimestampsAndMissingEventFailValidation()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testBundledPackageValidatesAndCarriesReferenceValues()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testDelayIsDistanceOverLightSpeed()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testEveryValueHasUnitProvenanceAndVerification()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testMissingRequiredValueFailsValidation()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testStormDurationsDeriveFromUTCTimestamps()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testUndecodableDataIsAnErrorNotADefault()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ScienceContentTests/testWrongUnitNonPositiveAndUnknownSourceFailValidation()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testCameraObservationNeedsASuccessfulStop()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testDelayIsExactlyTwoOneWayJourneys()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testMarkerMustBeOffered()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testOnboardComputerStopsLocallyButUsesTheCargo()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testReferenceMarkers()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testResourceEngineRefusesTheRoverMission()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testSensitivityDistanceDrivesTheStop()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "SignalLagTests/testSlowRoverVariantIsDerivedNotMemorized()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testAllThreeItemsExceedCargo()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testHalfAirDuringRisingPhase()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testNoShelterFailsProtectionObjective()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testResearchNeedsTheScienceKit()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testResearchPlusFullAirFailsAboutTenHoursIn()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testReserveTradeOffSucceeds()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testSensitivityHigherOxygenUseBreaksTheReservePlan()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testSensitivityMovingTheArchivedEndChangesDurationAndConsumables()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testShelterAndBatteryIsSafe()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "StormDrillTests/testSmallLanderVariantKeepsTheEventRecord()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testExampleCanFailChangeEquipmentAndPassWithoutUnlocks()",
+      "result": "Passed",
+      "run": "refinement-ipad-initial-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testLargeTextExampleStillReachesResult()",
+      "result": "Passed",
+      "run": "refinement-ipad-initial-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testNoForecastCanMatchAFailedMissionAndLeadToRevision()",
+      "result": "Passed",
+      "run": "refinement-ipad-initial-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testPlanningDeskKeepsBaseVisibleAndPreservesSettings()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testPredictionWaitsForReasonAndExplainsMisconception()",
+      "result": "Passed",
+      "run": "refinement-ipad-initial-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testStormEquipmentSummaryAndRulesRemainReachable()",
+      "result": "Passed",
+      "run": "refinement-ipad-initial-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testStormExampleRequiresScienceAndCanSpendReservesToSucceed()",
+      "result": "Passed",
+      "run": "refinement-ipad-initial-summary.json"
+    },
+    {
+      "test": "ExampleLabFlowTests/testUnsureAndBackAllowACompleteUnskippedInvestigation()",
+      "result": "Passed",
+      "run": "refinement-ipad-initial-summary.json"
+    },
+    {
+      "test": "MissionOneFlowTests/testMissionOneFromLaunchToRelaunch()",
+      "result": "Passed",
+      "run": "refinement-ipad-rerun-summary.json"
     }
-  ],
-  "totalTestCount" : 155
+  ]
 }

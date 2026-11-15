@@ -8,6 +8,9 @@ final class WorldScene: SKScene {
     var onMarkerTapped: ((MissionID) -> Void)?
     var onFlagTapped: ((Double) -> Void)?
     var reduceMotion = false
+    var planningFocus = false {
+        didSet { if planningFocus != oldValue { layoutForSize() } }
+    }
     /// Space covered by the HUD at the top and bottom, in points. The base is framed in what remains.
     var hudInsets: UIEdgeInsets = .zero {
         didSet { if hudInsets != oldValue { layoutForSize() } }
@@ -182,7 +185,8 @@ final class WorldScene: SKScene {
 
     private func layoutForSize() {
         guard size.width > 1, size.height > 1 else { return }
-        let content = Self.contentRect
+        // Planning needs readable equipment, rather than empty space reserved for the rover track.
+        let content = planningFocus ? CGRect(x: -245, y: -150, width: 490, height: 320) : Self.contentRect
         let top = min(hudInsets.top, size.height * 0.4)
         let bottom = min(hudInsets.bottom, size.height * 0.55)
         let available = CGRect(x: -size.width / 2 + 8, y: -size.height / 2 + bottom,
@@ -1296,5 +1300,9 @@ final class WorldCoordinator {
 
     func setHUDInsets(top: CGFloat, bottom: CGFloat) {
         scene.hudInsets = UIEdgeInsets(top: top, left: 0, bottom: bottom, right: 0)
+    }
+
+    func setPlanningFocus(_ enabled: Bool) {
+        scene.planningFocus = enabled
     }
 }

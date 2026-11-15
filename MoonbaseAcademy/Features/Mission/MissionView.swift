@@ -12,6 +12,8 @@ struct MissionView: View {
     @State private var bottomHeight: CGFloat = 0
     @State private var banner: String?
     @State private var showSettings = false
+    @State private var planningSection = 0
+    @State private var planningPhase = 0
     @Environment(\.appReduceMotion) private var reduceMotion
     @Environment(\.focusView) private var focusView
     @Environment(\.dynamicTypeSize) private var textSize
@@ -66,6 +68,11 @@ struct MissionView: View {
                                         }
                                     }
                                     .onAppear { topHeight = 0; updateInsets() }
+                                } else if !session.isRover {
+                                    MissionPlanningWorkspace(model: model, session: session,
+                                                             section: $planningSection, phaseIndex: $planningPhase,
+                                                             openPlan: { planPhase = $0 })
+                                        .frame(height: min(430, proxy.size.height * (proxy.size.width < 600 ? 0.48 : 0.43)))
                                 } else {
                                     ViewThatFits(in: .vertical) {
                                         bottomArea
@@ -145,7 +152,11 @@ struct MissionView: View {
         .onChange(of: session.replayToken) { _, _ in
             if model.readAloud { Narrator.shared.speak(narrationText) }
         }
-        .onDisappear { Narrator.shared.stop() }
+        .onDisappear { Narrator.shared.stop(); model.missionWorld.setPlanningFocus(false) }
+        .onChange(of: session.stage, initial: true) { _, stage in
+            if stage == .planning { model.missionWorld.setPlanningFocus(!session.isRover) }
+            else if stage == .playback { model.missionWorld.setPlanningFocus(false) }
+        }
         // Return VoiceOver focus to the main action when a dialog closes.
         .onChange(of: planPhase) { old, new in
             if old != nil, new == nil { launchFocused = true }
@@ -302,6 +313,7 @@ struct MissionTopHUD: View {
                 TimelineStrip(session: session)
             }
         }
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(GamePalette.hud))
         }
     }
 
@@ -517,6 +529,7 @@ struct BuildTray: View {
 /// "Test My Base" has no lander: the tray shows the equipment the player's real base already has.
 struct BaseGearCard: View {
     let session: MissionSession
+    var embedded = false
     @State private var showRules = false
     @Environment(\.dynamicTypeSize) private var textSize
 
@@ -549,9 +562,9 @@ struct BaseGearCard: View {
         }
         .foregroundStyle(Theme.ink)
         .fixedSize(horizontal: false, vertical: true)
-        .padding(12)
+        .padding(embedded ? 0 : 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(GameCardBackground())
+        .background { if !embedded { GameCardBackground() } }
         .sheet(isPresented: $showRules) {
             NavigationStack {
                 ScrollView {
@@ -581,6 +594,7 @@ struct BaseGearCard: View {
 struct ExampleLabControls: View {
     let model: AppModel
     let kind: BaseTestKind
+    var compact = false
 
     private var choices: some View {
         ForEach(kind == .storm ? [.starter, .moreStorage] : ExampleBase.allCases, id: \.self) { preset in
@@ -608,13 +622,13 @@ struct ExampleLabControls: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Example lab • choose equipment, keep your settings")
+            Text(compact ? "Choose an equipment setup" : "Example lab • choose equipment, keep your settings")
                 .font(.system(.subheadline, design: .rounded).weight(.bold))
             ViewThatFits {
                 HStack { choices }
                 VStack(alignment: .leading) { choices }
             }
-            Text("Air and science settings stay the same. No campaign progress is saved.")
+            Text(compact ? "Your operating settings stay the same." : "Air and science settings stay the same. No campaign progress is saved.")
                 .font(.caption)
             Button("Reset lab to starter plan", systemImage: "arrow.counterclockwise") {
                 model.openExampleMission(.starter, resetHistory: true, kind: kind)
@@ -623,7 +637,7 @@ struct ExampleLabControls: View {
             .accessibilityIdentifier("example.reset")
         }
         .foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
-        .padding(10).background(GameCardBackground())
+        .padding(compact ? 0 : 10).background { if !compact { GameCardBackground() } }
     }
 }
 
@@ -689,86 +703,49 @@ struct BuildCard: View {
     let item: CargoItem
     var highlighted = false
     var dimmed = false
-    @State private var pop = false
-    @Environment(\.appReduceMotion) private var reduceMotion
-    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 118
-    @ScaledMetric(relativeTo: .footnote) private var cardHeight: CGFloat = 146
+    @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 148
 
     var body: some View {
         let count = session.count(item.kind)
         let name = CargoCopy.name(item.kind)
-        ZStack(alignment: .topLeading) {
-            Button {
-                if session.addCargo(item.kind) {
-                    Haptics.thump()
-                    SoundFX.shared.play(.pop)
-                    guard !reduceMotion else { return }
-                    pop = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { pop = false }
-                } else {
-                    Haptics.warning()
-                    SoundFX.shared.play(.denied)
-                }
-            } label: {
-                VStack(spacing: 4) {
-                    CargoIconView(kind: item.kind)
-                        .frame(height: 62)
-                    Text(name)
-                        .font(.system(.footnote, design: .rounded).weight(.heavy))
-                        .foregroundStyle(Theme.ink)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 3) {
-                        Image(systemName: "shippingbox.fill")
-                        Text("\(item.cost)")
-                    }
-                    .font(.system(.caption, design: .rounded).weight(.black))
-                    .foregroundStyle(Theme.amberInk)
-                }
-                .padding(10)
-                .frame(width: cardWidth)
-                .frame(minHeight: cardHeight)
-                .background(GameCardBackground(highlighted: highlighted || count > 0))
-                .scaleEffect(pop ? 1.08 : 1)
-                .animation(.spring(response: 0.2, dampingFraction: 0.5), value: pop)
-            }
-            .buttonStyle(PressableStyle())
-            .accessibilityLabel("Add \(name.lowercased())")
-            .accessibilityValue("\(count) on board, costs \(item.cost) crate\(item.cost == 1 ? "" : "s")")
-            .accessibilityIdentifier("cargo.add.\(item.kind.rawValue)")
-            .opacity(dimmed ? 0.45 : 1)
-            .overlay(alignment: .topTrailing) {
-                if count > 0 {
-                    Text("×\(count)")
-                        .font(.game(.subheadline))
-                        .gameText()
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(GamePalette.energy.bottom).overlay(Capsule().strokeBorder(Color.white, lineWidth: 2)))
-                        .offset(x: 6, y: -6)
-                        .accessibilityHidden(true)
-                }
-            }
-            .overlay(alignment: .bottom) {
-                if highlighted {
-                    Image(systemName: "hand.tap.fill")
-                        .font(.system(size: 30, weight: .black))
-                        .gameText(Color(hex: 0xFFE27A))
-                        .offset(y: 22)
-                        .accessibilityHidden(true)
-                }
-            }
-            .padding(.top, 44)
-            if count > 0 && session.tutorial != .placeFirstArray {
-                RoundIconButton(symbol: "minus", label: "Remove \(name.lowercased())", bevel: GamePalette.coral, size: 32) {
+        VStack(spacing: 8) {
+            CargoIconView(kind: item.kind).frame(height: 64).accessibilityHidden(true)
+            Text(name).font(.system(.footnote, design: .rounded).weight(.bold))
+                .foregroundStyle(Theme.ink).multilineTextAlignment(.center)
+            Label("\(item.cost) crate\(item.cost == 1 ? "" : "s") each", systemImage: "shippingbox")
+                .font(.caption).foregroundStyle(Theme.inkSecondary)
+            HStack(spacing: 6) {
+                Button {
                     session.removeCargo(item.kind)
                     SoundFX.shared.play(.remove)
+                } label: {
+                    Image(systemName: "minus").font(.headline).frame(width: 44, height: 44)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
                 }
+                .disabled(count == 0 || session.tutorial == .placeFirstArray)
+                .accessibilityLabel("Remove \(name.lowercased())")
                 .accessibilityIdentifier("cargo.remove.\(item.kind.rawValue)")
-                .contentShape(Rectangle())
-            }
+                Text("\(count)").font(.game(.headline)).monospacedDigit().frame(minWidth: 24)
+                    .accessibilityLabel("\(count) on board")
+                Button {
+                    if session.addCargo(item.kind) { Haptics.thump(); SoundFX.shared.play(.pop) }
+                    else { Haptics.warning(); SoundFX.shared.play(.denied) }
+                } label: {
+                    Image(systemName: "plus").font(.headline).frame(width: 44, height: 44)
+                        .foregroundStyle(.white)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Theme.energyInk))
+                }
+                .disabled(dimmed)
+                .accessibilityLabel("Add \(name.lowercased())")
+                .accessibilityValue("\(count) on board, costs \(item.cost) crate\(item.cost == 1 ? "" : "s")")
+                .accessibilityIdentifier("cargo.add.\(item.kind.rawValue)")
+            }.buttonStyle(.plain).tint(Theme.energyInk)
         }
+        .padding(12).frame(width: cardWidth)
+        .background(RoundedRectangle(cornerRadius: 18).fill(.white))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(highlighted ? Theme.amber : count > 0 ? Theme.energyInk : Theme.panelLine, lineWidth: highlighted ? 3 : 1.5))
+        .opacity(dimmed ? 0.45 : 1)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -905,6 +882,7 @@ struct QuickPlanCard: View {
     let index: Int
     let openDetails: () -> Void
     var fullWidth = false
+    var embedded = false
     @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 270
 
     var body: some View {
@@ -922,27 +900,29 @@ struct QuickPlanCard: View {
                     .font(.caption.weight(.bold)).foregroundStyle(Theme.amberInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            HStack(spacing: 8) {
-                Image(systemName: PlanCard.icon(phase.mood))
-                    .font(.system(size: 17, weight: .black))
-                    .gameText()
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(PlanCard.bevel(phase.mood).bottom))
-                    .accessibilityHidden(true)
-                Text("\(index + 1). \(title)")
-                    .font(.game(.subheadline))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                Button(action: openDetails) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(Theme.energyInk)
-                        .frame(width: 44, height: 44)
+            if !embedded {
+                HStack(spacing: 8) {
+                    Image(systemName: PlanCard.icon(phase.mood))
+                        .font(.system(size: 17, weight: .black))
+                        .gameText()
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(PlanCard.bevel(phase.mood).bottom))
+                        .accessibilityHidden(true)
+                    Text("\(index + 1). \(title)")
+                        .font(.game(.subheadline))
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Button(action: openDetails) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(Theme.energyInk)
+                            .frame(width: 44, height: 44)
+                    }
+                    .accessibilityLabel("\(title) plan")
+                    .accessibilityHint("Shows the numbers for this part")
                 }
-                .accessibilityLabel("\(title) plan")
-                .accessibilityHint("Shows the numbers for this part")
             }
             Text("\(Format.hours(phase.durationHours)) • \(phase.mood == .shadow ? "No solar electricity" : phase.mood == .sunlit ? "Solar arrays can charge batteries" : "Follow this part of your plan")")
                 .font(.caption).foregroundStyle(Theme.inkSecondary)
@@ -996,7 +976,7 @@ struct QuickPlanCard: View {
         .frame(width: fullWidth ? nil : cardWidth, alignment: .leading)
         .frame(maxWidth: fullWidth ? .infinity : nil, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
-        .background(GameCardBackground())
+        .background { if !embedded { GameCardBackground() } }
         .accessibilityElement(children: .contain)
     }
 
@@ -1587,7 +1567,7 @@ struct MissionStepsBar: View {
         case .briefing:
             return session.isLastIntroLine ? "Tap Let's build! to start planning." : "Tap Next to hear the mission."
         case .planning:
-            if session.tutorial == .placeFirstArray { return "Tap the glowing solar array card." }
+            if session.tutorial == .placeFirstArray { return "Tap + on the solar array." }
             if session.isRover { return session.canLaunch ? "Pick a plan, then tap Launch test." : "Pick a plan that fits the cargo." }
             return session.canLaunch ? "Change the plan if you like, then tap Launch test." : "Fix the plan so it fits, then launch."
         case .predicting:

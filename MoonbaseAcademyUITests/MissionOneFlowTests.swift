@@ -26,6 +26,10 @@ final class MissionOneFlowTests: XCTestCase {
     }
 
     private func tap(_ label: String, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
+        if (label.hasPrefix("cargo.") || label.hasPrefix("Add ")),
+           app.buttons["planning.section.equipment"].exists {
+            app.buttons["planning.section.equipment"].tap()
+        }
         let button = app.buttons[label].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(label)", file: file, line: line)
         // Wait for overlays to finish animating away instead of swiping, which could touch the world.

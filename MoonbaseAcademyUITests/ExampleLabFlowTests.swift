@@ -4,6 +4,15 @@ final class ExampleLabFlowTests: XCTestCase {
     private let app = XCUIApplication()
 
     private func tap(_ label: String) {
+        if app.buttons["planning.section.plan"].exists {
+            if label.hasPrefix("Shadow drill") || label.hasPrefix("Storm rising") || label.hasPrefix("Storm fading") {
+                app.buttons["planning.section.plan"].tap()
+                let index = label.hasPrefix("Shadow drill") || label.hasPrefix("Storm fading") ? 1 : 0
+                app.buttons["planning.phase.\(index)"].tap()
+            } else if ["Starter base", "Extra battery", "Extra array", "How this test works", "Reset lab to starter plan"].contains(label) {
+                app.buttons["planning.section.equipment"].tap()
+            }
+        }
         let button = app.buttons[label].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 8), "Missing \(label)")
         let tray = app.scrollViews["mission.planningTray"]
@@ -148,6 +157,42 @@ final class ExampleLabFlowTests: XCTestCase {
         XCTAssertTrue(feedback.waitForExistence(timeout: 5))
         XCTAssertTrue(feedback.label.contains("cannot create"))
         shot("prediction-misconception-feedback")
+    }
+
+    func testPlanningDeskKeepsBaseVisibleAndPreservesSettings() {
+        app.launchArguments = ["-uiTesting", "-resetProgress"]
+        app.launch()
+        tap("Drills")
+        tap("Start example lab")
+        let desk = app.otherElements["mission.planningDesk"].firstMatch
+        XCTAssertTrue(desk.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(desk.frame.minY, app.frame.height * 0.4,
+                             "Planning controls must leave a clear area for the base")
+        shot("workspace-equipment")
+        tap("Shadow drill, air maker: Half")
+        shot("workspace-plan")
+        tap("planning.section.equipment")
+        tap("planning.section.plan")
+        XCTAssertTrue(app.buttons["Shadow drill, air maker: Half"].isSelected)
+        XCTAssertTrue(app.buttons["Launch test"].isHittable)
+        tap("Leave drill")
+        tap("Show me")
+        tap("Place here")
+        tap("Show me")
+        tap("Place here")
+        tap("Show me")
+        tap("Start Lights Out")
+        tap("Next")
+        tap("Next")
+        tap("Let's build!")
+        tap("cargo.add.solarArray")
+        tap("cargo.add.battery")
+        let add = app.buttons["cargo.add.battery"]
+        let remove = app.buttons["cargo.remove.battery"]
+        XCTAssertTrue(add.isHittable && remove.isHittable)
+        XCTAssertTrue(add.frame.intersection(remove.frame).isNull,
+                      "Adding and removing equipment must have separate touch areas")
+        shot("workspace-reference-equipment")
     }
 
     func testStormEquipmentSummaryAndRulesRemainReachable() {

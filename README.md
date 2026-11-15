@@ -20,6 +20,8 @@ Moonbase Academy is an offline iPhone and iPad base-building game for children a
 
 Real NASA numbers drive the simulation: crew oxygen and food use (BVAD), the Veggie lettuce growth period, the archived CCMC event timestamps, and the average Earth–Moon distance. See [SCIENCE_AND_DATA.md](SCIENCE_AND_DATA.md) and the in-app **NASA sources** screen.
 
+Planning uses one bounded mission desk: **Equipment** loads items with separate +/− buttons; **Operating plan** shows one numbered stage at a time. The base remains visible above the desk, with closer equipment framing. Help and previous predictions open separately.
+
 The investigation loop is **plan → predict and explain → observe evidence → change one choice → test again**. Planning includes beginner explanations; results distinguish a correct forecast from a completed engineering mission.
 
 ## Review it quickly
@@ -59,7 +61,7 @@ MoonbaseAcademyUITests/  original mission, example labs and largest-text flows
 
 ## Status
 
-Verified November 15, 2026: the final iPad Air 11-inch (M4), iOS 27.0 regression passed all **155 tests** (147 unit + 8 UI), with zero failures or skips. The example labs and largest-text flow also passed on iPhone 17 Simulator. See [VALIDATION.md](VALIDATION.md) for evidence, reproducible checks and limits. Physical-device checks, a full VoiceOver pass and a child learning study are not claimed. Older handoffs are historical checkpoints.
+Verified November 15, 2026: **156 unique tests** (147 unit + 9 UI) have passing latest results across the iPad regression and focused rerun. The original mission navigation test was updated for the new Equipment tab and then passed through success and relaunch. Phone verification is recorded separately. See [VALIDATION.md](VALIDATION.md) for evidence, reproducible checks and limits. Physical-device checks, a full VoiceOver pass and a child learning study are not claimed. Older handoffs are historical checkpoints.
 
 ## Credits and licenses
 

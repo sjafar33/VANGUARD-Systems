@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-15",
+  "device": "iPhone 17 Simulator",
+  "osVersion": "27.0",
+  "description": "Four distinct refinement flows passed; the workspace flow passed again after the final phone reading-space adjustment and validation-message fallback.",
+  "runs": [
+    {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 237394,
+        "counts": {
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "testCases": [
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testExampleCanFailChangeEquipmentAndPassWithoutUnlocks",
+          "status": "passed",
+          "durationMs": 77680
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testLargeTextExampleStillReachesResult",
+          "status": "passed",
+          "durationMs": 58941
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testPlanningDeskKeepsBaseVisibleAndPreservesSettings",
+          "status": "passed",
+          "durationMs": 41256
+        },
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testStormExampleRequiresScienceAndCanSpendReservesToSucceed",
+          "status": "passed",
+          "durationMs": 43701
+        }
+      ]
+    },
+    {
+      "summary": {
+        "status": "SUCCEEDED",
+        "durationMs": 54273,
+        "counts": {
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0
+        },
+        "target": "simulator"
+      },
+      "testCases": [
+        {
+          "suite": "ExampleLabFlowTests",
+          "test": "testPlanningDeskKeepsBaseVisibleAndPreservesSettings",
+          "status": "passed",
+          "durationMs": 41347
+        }
+      ]
+    }
+  ],
+  "distinctFlows": 4,
+  "passedExecutions": 5,
+  "failed": 0,
+  "skipped": 0
+}

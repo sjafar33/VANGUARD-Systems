@@ -1,0 +1,52 @@
+{
+  "devicesAndConfigurations": [
+    {
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "CD8C05CF-FD1B-4A36-9E1A-2EAE2A9A607F",
+        "deviceName": "iPad Air 11-inch (M4)",
+        "modelName": "iPad Air 11-inch (M4)",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "expectedFailures": 0,
+      "failedTests": 1,
+      "passedTests": 155,
+      "skippedTests": 0,
+      "testPlanConfiguration": {
+        "configurationId": "1",
+        "configurationName": "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription": "MoonbaseAcademy \u00b7 Built with macOS 27.0.1",
+  "expectedFailures": 0,
+  "failedTests": 1,
+  "finishTime": 1794782650.401,
+  "passedTests": 155,
+  "result": "Failed",
+  "runtimeWarnings": [],
+  "skippedTests": 0,
+  "startTime": 1794782282.195,
+  "statistics": [],
+  "testFailures": [
+    {
+      "failureText": "XCTAssertTrue failed - Missing button: cargo.add.solarArray",
+      "targetName": "MoonbaseAcademyUITests",
+      "testIdentifier": 156,
+      "testIdentifierString": "MissionOneFlowTests/testMissionOneFromLaunchToRelaunch()",
+      "testIdentifierURL": "test://com.apple.xcode/MoonbaseAcademy/MoonbaseAcademyUITests/MissionOneFlowTests/testMissionOneFromLaunchToRelaunch",
+      "testName": "testMissionOneFromLaunchToRelaunch()"
+    }
+  ],
+  "title": "Test - MoonbaseAcademy",
+  "topInsights": [
+    {
+      "category": "Longest Test Runs",
+      "impact": "76% of duration",
+      "text": "3 longest test runs with outlier durations exceeding 1.43s (three standard deviations)"
+    }
+  ],
+  "totalTestCount": 156
+}

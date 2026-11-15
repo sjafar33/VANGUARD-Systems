@@ -335,7 +335,7 @@ final class MissionSession {
         case .briefing:
             return gameCopy.intro[min(introIndex, gameCopy.intro.count - 1)]
         case .planning:
-            if tutorial == .placeFirstArray { return "Tap the Solar array card below to build your first array!" }
+            if tutorial == .placeFirstArray { return "Tap + on the solar array to build your first array!" }
             if tutorial == .powered {
                 return "Power! The array lights the habitat while the Sun shines. Now a 6-hour shadow is coming, and the lander holds 4 crates. Plan for the dark!"
             }

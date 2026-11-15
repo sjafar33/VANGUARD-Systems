@@ -20,12 +20,12 @@ struct Scene {
     let evidence: String
 }
 let scenes = [
-    Scene(start:0,end:4,source:37.879,heading:"PLAN BEFORE YOU LAUNCH.",caption:"A mission trainer for ages 7–12.\nLearn how power, storage and oxygen connect.",evidence:"Numbered sunlight / shadow stages • replayable beginner help"),
-    Scene(start:4,end:9,source:43.536,heading:"PREDICT. THEN EXPLAIN WHY.",caption:"Choose an outcome and a reason.\nYour equipment and settings decide what happens.",evidence:"Hypotheses change feedback; they never change the physics"),
-    Scene(start:9,end:14,source:48.76,heading:"COMPARE WITH THE EVIDENCE.",caption:"Stored: 2.4 kWh. Needed: 3.6 kWh.\nThe starter plan stops at hour 10.",evidence:"An empty battery stores energy; it cannot generate electricity"),
-    Scene(start:14,end:19.5,source:64.468,heading:"ONE CHANGE. A NEW RESULT.",caption:"Half air in shadow reaches all 12 hours.\nSave 1.5 kWh; spend 0.20 kg of tank oxygen.",evidence:"The original prediction and exact change stay visible"),
-    Scene(start:19.5,end:24,source:253.133,heading:"SHELTER. SCIENCE. SURVIVAL.",caption:"Protect the crew and complete a science task\nduring a 98-hour archived storm.",evidence:"CCMC timestamps • explicit training rules • no radiation dose"),
-    Scene(start:24,end:29,source:94.301,heading:"TRACEABLE SCIENCE. OFFLINE PLAY.",caption:"NASA references drive the calculation.\nBuild. Predict. Observe. Revise.",evidence:"BVAD reference: 0.895 kg oxygen per adult crew member per day")
+    Scene(start:0,end:4,source:525.053,heading:"PLAN BEFORE YOU LAUNCH.",caption:"A mission trainer for ages 7–12.\nLearn how power, storage and oxygen connect.",evidence:"Visible base • equipment and operating settings in one mission desk"),
+    Scene(start:4,end:9,source:46.302,heading:"PREDICT. THEN EXPLAIN WHY.",caption:"Choose an outcome and a reason.\nYour equipment and settings decide what happens.",evidence:"Hypotheses change feedback; they never change the physics"),
+    Scene(start:9,end:14,source:51.406,heading:"COMPARE WITH THE EVIDENCE.",caption:"Stored: 2.4 kWh. Needed: 3.6 kWh.\nThe starter plan stops at hour 10.",evidence:"An empty battery stores energy; it cannot generate electricity"),
+    Scene(start:14,end:19.5,source:66.493,heading:"ONE CHANGE. A NEW RESULT.",caption:"Half air in shadow reaches all 12 hours.\nSave 1.5 kWh; spend 0.20 kg of tank oxygen.",evidence:"The original prediction and exact change stay visible"),
+    Scene(start:19.5,end:24,source:273.876,heading:"SHELTER. SCIENCE. SURVIVAL.",caption:"Protect the crew and complete a science task\nduring a 98-hour archived storm.",evidence:"CCMC timestamps • explicit training rules • no radiation dose"),
+    Scene(start:24,end:29,source:96.245,heading:"TRACEABLE SCIENCE. OFFLINE PLAY.",caption:"NASA references drive the calculation.\nBuild. Predict. Observe. Revise.",evidence:"BVAD reference: 0.895 kg oxygen per adult crew member per day")
 ]
 let width = 1080, height = 1920, fps: Int32 = 30
 let writer = try AVAssetWriter(outputURL: output, fileType: .mp4)

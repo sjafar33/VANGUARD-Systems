@@ -2,9 +2,9 @@
 
 ## Final regression
 
-**155 passed, 0 failed, 0 skipped**: 147 unit tests and 8 UI tests. Xcode 27.0, iOS Simulator 27.0, iPad Air 11-inch (M4), arm64, Debug, MoonbaseAcademy scheme. [Machine-readable xcresult summary](Submission/final-test-summary.json).
+**156 unique tests verified**: 147 unit tests and 9 UI tests, with every latest result passing. Xcode 27.0, iOS Simulator 27.0, iPad Air 11-inch (M4), arm64, Debug, MoonbaseAcademy scheme. [Machine-readable latest results](Submission/final-test-summary.json).
 
-The final run covers the final game implementation. The demonstration uses actual normal-text iPad capture of the same experiment flow; the subsequent accessibility layout correction affects large-text planning. No game code changed after this regression.
+The full regression initially had one obsolete UI navigation failure: the original mission test searched for cargo while Operating plan was selected. It was updated to select Equipment explicitly. A focused rerun then passed all 147 unit tests, the expanded workspace test, and the entire original mission/success/relaunch flow (149 passed). The earlier eight example UI checks passed, giving 156 distinct passing latest results. The [initial result](Submission/refinement-ipad-initial-summary.json) and [focused rerun](Submission/refinement-ipad-rerun-summary.json) are retained. Final surface polish was included in that rerun.
 
 | Check | Verified behavior |
 |---|---|
@@ -14,15 +14,16 @@ The final run covers the final game implementation. The demonstration uses actua
 | Bounded own-base storm | Working shelter/battery requirements; explicit setup cost; science task required; continuous reserves across phases; repeatable pinned event; reserve-spending and extra-storage strategies |
 | Science sensitivity | Changed crew demand, crop reference, Moon distance and archived timestamps change the engine's outcomes |
 | Hypothesis and revision | Forecasts and reasons cannot change physics; a correct failure forecast is distinct from mission success; misconception feedback and the original prediction survive revision; changed controls and reserve costs are reported |
+| Workspace | The desk leaves a clear base preview; equipment has separate Add/Remove targets; switching Equipment/Operating plan preserves the selected setting |
 | UI flows | Original mission/relaunch, shadow and storm examples, Accessibility XXXL text, correct failure prediction, misconception feedback, and an unskipped Unsure/Back investigation reach their expected results |
 
 Reproduce in Xcode: open `MoonbaseAcademy.xcodeproj`, choose **MoonbaseAcademy** and the iPad simulator, then **Product → Test** (⌘U). Automated UI tests use their own isolated save. See [reviewer examples](Submission/README.md) for manual steps.
 
 ## Device usability
 
-Seven focused example UI flows passed on iPhone 17 Simulator, with nine successful executions including repeats of the two accessibility flows after the final layout correction. [Phone verification](Submission/phone-test-summary.json). The checks cover shadow/storm outcomes, correct failure forecasts, misconception feedback, Unsure/Back, unskipped playback, and Accessibility XXXL text.
+Four refinement flows passed on iPhone 17 Simulator: the shadow experiment, storm experiment, Accessibility XXXL example, and workspace navigation/equipment interaction. [Phone verification](Submission/refinement-phone-test-summary.json). A final focused workspace check passed again after the slightly taller phone desk and visible validation-message fallback were added. The iPad retains its larger preview area.
 
-Screenshot review exposed a problem that successful taps alone missed: at the largest phone text size the fixed header and oversized action left too little reading space, while equipment headings competed for width. The final layout lets the planning header scroll away, stacks the equipment heading/help, and keeps a shorter fixed Launch action. It preserves the chosen text size. Both affected phone flows passed again, including an assertion that the action leaves reading space. Screenshots were inspected for panel containment, result explanations, controls, reserve costs and source labels. The demonstration uses actual iPad capture.
+Normal-text resource planning now uses one bounded desk with Equipment and Operating plan sections. Phase selection shows one stage at a time. Help and previous predictions remain in a separate sheet. The equipment preview is framed more closely, Add/Remove have separate 44-point targets, and fixed Launch remains reachable. Screenshot review checked final iPad equipment/plan views and the phone plan. Large accessibility text retains its scrolling layout. The demo was refreshed from actual captures and remains exactly 29 seconds.
 
 These checks do not establish learning effectiveness. No child participant study, physical-device battery/performance study, complete landscape-device matrix, full VoiceOver/Switch Control pass, or App Store/TestFlight distribution is claimed.
 
