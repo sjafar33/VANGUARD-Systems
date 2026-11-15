@@ -20,6 +20,12 @@ Moonbase Academy is an offline iPhone and iPad base-building game for children a
 
 Real NASA numbers drive the simulation: crew oxygen and food use (BVAD), the Veggie lettuce growth period, the archived CCMC event timestamps, and the average Earth–Moon distance. See [SCIENCE_AND_DATA.md](SCIENCE_AND_DATA.md) and the in-app **NASA sources** screen.
 
+## Review it quickly
+
+[29-second demonstration](Submission/media/moonbase-academy-demo.mp4) · [Two-minute example missions](Submission/README.md) · [Validation and limits](VALIDATION.md)
+
+The project is a native iOS prototype. Source and demonstration are public; running it requires Xcode and a simulator or a signed device build.
+
 ## Running it
 
 Requirements: Xcode 16 or later (built and tested with Xcode 27.0), iOS/iPadOS 17 or later.
@@ -46,12 +52,12 @@ MoonbaseAcademy/
   DesignSystem/    palette, buttons, meters, formatting
   Resources/Science/science_package.json
 MoonbaseAcademyTests/    engine, content, progress, base-builder and base-test unit tests
-MoonbaseAcademyUITests/  end-to-end Mission 1 flow with screenshots
+MoonbaseAcademyUITests/  original mission, example labs and largest-text flows
 ```
 
 ## Status
 
-Verified November 15, 2026 on the iPad Air 11-inch (M4) simulator with iOS 27.0: 135 unit tests passed, and the end-to-end mission UI test passed, including Add/Remove counts, a successful retry and progress after relaunch. Physical-device, iPhone and full VoiceOver checks remain separate. Older handoffs describe earlier checkpoints.
+Verified November 15, 2026: the final iPad Air 11-inch (M4), iOS 27.0 regression passed all **144 tests** (140 unit + 4 UI), with zero failures or skips. The example labs and largest-text flow also passed on iPhone 17 Simulator. See [VALIDATION.md](VALIDATION.md) for evidence, reproducible checks and limits. Physical-device checks, a full VoiceOver pass and a child learning study are not claimed. Older handoffs are historical checkpoints.
 
 ## Credits and licenses
 

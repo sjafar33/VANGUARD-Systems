@@ -1,3 +1,5 @@
+> Historical checkpoint (November 14). Current behavior and verification are in [README.md](README.md), [VALIDATION.md](VALIDATION.md), and [Submission/README.md](Submission/README.md). Earlier build status, push instructions, test counts and next actions below are superseded.
+
 # HANDOFF — Moonbase Academy
 
 Read with `PHASES.md` and the V2 brief (`Moonbase_Academy_V2_Phased_Coding_Prompt.md`, owner upload). The original foundation brief is `../Moonbase_Academy_Claude_Fable_Handoff.md` (historical context only).

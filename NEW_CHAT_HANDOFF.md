@@ -1,3 +1,5 @@
+> Historical checkpoint (November 14). Current behavior and verification are in [README.md](README.md), [VALIDATION.md](VALIDATION.md), and [Submission/README.md](Submission/README.md). Earlier build status, push instructions, test counts and next actions below are superseded.
+
 # Moonbase Academy — Handoff for a New Chat
 
 _Written 2026-11-14, about 21:05 Toronto time (America/Toronto). Attach this file at the start of a new chat. It replaces the older `NEW_CHAT_HANDOFF.md` and the previous conversation._
