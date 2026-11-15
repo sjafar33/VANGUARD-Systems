@@ -98,7 +98,12 @@ enum BoardArt {
         let node = SKNode()
         let size = b.kind.footprint
         node.addChild(plate(w: size.w, h: size.h, level: b.level))
+        // Levels 2 and 3 are different buildings, drawn in UpgradeArt. Level 1 is the original art below.
+        let upgraded = UpgradeArt.body(kind: b.kind, level: b.level, tint: habitatTint, animated: animated)
         let body: SKNode
+        if let upgraded {
+            body = upgraded
+        } else {
         switch b.kind {
         case .habitat:
             let group = SKNode()
@@ -208,26 +213,15 @@ enum BoardArt {
         case .rockGarden:
             body = rockGarden(animated: animated)
         }
+        }
         body.zPosition = 1
-        // Higher levels stand a little taller, on a lit deck, with new equipment around them.
-        body.setScale(1 + CGFloat(b.level - 1) * 0.06)
+        // Upgraded buildings stand on a lit deck.
         let lift = UpgradeArt.applies(to: b.kind) ? UpgradeArt.lift(b.level) : 0
         body.position = CGPoint(x: body.position.x, y: body.position.y + lift)
         if let deck = UpgradeArt.platform(kind: b.kind, level: b.level) {
             node.addChild(deck)
         }
-        let extras = UpgradeArt.extras(kind: b.kind, level: b.level, animated: animated)
-        if let back = extras.back {
-            back.position = CGPoint(x: 0, y: lift)
-            back.zPosition = 0.8
-            node.addChild(back)
-        }
         node.addChild(body)
-        if let front = extras.front {
-            front.position = CGPoint(x: 0, y: lift)
-            front.zPosition = 2
-            node.addChild(front)
-        }
         // The landing station has no levels: it is either a ruin or repaired.
         if b.kind != .landingStation && !b.kind.isDecoration {
             let height = max(pipHeight(b.kind), UpgradeArt.top(b.kind, level: b.level)) + lift

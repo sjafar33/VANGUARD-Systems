@@ -214,6 +214,7 @@ struct SettingsView: View {
     let model: AppModel
     @State private var name = ""
     @State private var confirmReset = false
+    @State private var aboutTaps = 0
     @FocusState private var nameFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -273,8 +274,16 @@ struct SettingsView: View {
                 } header: {
                     Text("Progress")
                 }
+                if model.developerMode {
+                    developerSection
+                }
                 Section("About") {
                     Text("Moonbase Academy by VANGUARD Systems, made for the NASA Space Apps Challenge 2026. Works offline. No accounts, ads or tracking.")
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            aboutTaps += 1
+                            if aboutTaps >= 7 && !model.developerMode { model.enableDeveloperMode() }
+                        }
                     Text("Code was written with help from an AI assistant. The team checked the science numbers against the NASA sources listed in the app.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -312,5 +321,41 @@ struct SettingsView: View {
             }
         }
         .preferredColorScheme(.light)
+    }
+
+    /// Demo tools, shown after seven taps on "About". Game rules only: coins, levels and unlocks.
+    @ViewBuilder private var developerSection: some View {
+        Section {
+            HStack {
+                Text("Moon coins")
+                Spacer()
+                Text("\(model.baseState.coins)").font(.headline.monospacedDigit())
+            }
+            HStack(spacing: 10) {
+                Button("+100") { model.devAddCoins(100) }
+                Button("+1,000") { model.devAddCoins(1_000) }
+                Button("+10,000") { model.devAddCoins(10_000) }
+                Button("Zero", role: .destructive) { model.devAddCoins(-model.baseState.coins) }
+            }
+            .buttonStyle(.bordered)
+            HStack(spacing: 10) {
+                Text("All buildings")
+                Spacer()
+                ForEach(1...BuildingKind.maxLevel, id: \.self) { level in
+                    Button("L\(level)") { model.devSetAllLevels(level) }
+                }
+            }
+            .buttonStyle(.bordered)
+            ForEach(model.baseState.buildings.filter { UpgradeArt.applies(to: $0.kind) }) { building in
+                Stepper("\(building.kind.name): level \(building.level)",
+                        value: Binding(get: { building.level }, set: { model.devSetLevel(building.id, $0) }),
+                        in: 1...BuildingKind.maxLevel)
+            }
+            Button("Unlock every drill, lesson and blueprint") { model.devUnlockEverything() }
+        } header: {
+            Text("Developer mode (demo only)")
+        } footer: {
+            Text("Changes coins, building levels and unlocks so the whole game can be shown quickly. It never changes a science number or a test result. It turns off when the app is closed.")
+        }
     }
 }

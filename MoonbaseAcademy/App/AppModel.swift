@@ -161,6 +161,51 @@ final class AppModel {
         route = .mission
     }
 
+    // MARK: Developer mode (demo only)
+
+    /// Turned on by tapping "About" seven times in Settings. Lasts until the app is closed. It only
+    /// changes game-rule state (coins, levels, unlocks). It never touches a science number.
+    private(set) var developerMode = false
+
+    func enableDeveloperMode() {
+        developerMode = true
+        Haptics.success()
+    }
+
+    func devAddCoins(_ amount: Int) {
+        updateBase { $0.coins = max(0, min(999_999, $0.coins + amount)) }
+    }
+
+    func devSetLevel(_ id: String, _ level: Int) {
+        updateBase { base in
+            guard let index = base.buildings.firstIndex(where: { $0.id == id }) else { return }
+            base.buildings[index].level = max(1, min(BuildingKind.maxLevel, level))
+        }
+    }
+
+    func devSetAllLevels(_ level: Int) {
+        updateBase { base in
+            for index in base.buildings.indices where UpgradeArt.applies(to: base.buildings[index].kind) {
+                base.buildings[index].level = max(1, min(BuildingKind.maxLevel, level))
+            }
+        }
+    }
+
+    /// Opens every drill and blueprint and repairs the station, for showing the whole game quickly.
+    func devUnlockEverything() {
+        for id in MissionID.allCases where !progress.completedMissions.contains(id) {
+            progress.completedMissions.append(id)
+        }
+        updateBase { base in
+            for id in [LessonLibrary.plantsAndAirID, LessonLibrary.powerAndBatteriesID] {
+                var record = base.lessons[id] ?? LessonRecord()
+                record.completed = true
+                base.lessons[id] = record
+            }
+            if let station = base.landingStation { _ = base.repair(station.id) }
+        }
+    }
+
     // MARK: Test My Base
 
     /// Opens the shadow test for the player's real base. The equipment is snapshotted here, so nothing
