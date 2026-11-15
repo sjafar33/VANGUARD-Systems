@@ -7,7 +7,7 @@ final class ExampleLabFlowTests: XCTestCase {
         let button = app.buttons[label].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 8), "Missing \(label)")
         let tray = app.scrollViews["mission.planningTray"]
-        if label.hasPrefix("Storm rising"), tray.exists {
+        if (label.hasPrefix("Storm rising") || label.hasPrefix("Shadow drill")), tray.exists {
             for _ in 0..<3 where !button.isHittable { tray.swipeLeft() }
         }
         for _ in 0..<5 where !button.isHittable { app.swipeUp() }
@@ -41,6 +41,12 @@ final class ExampleLabFlowTests: XCTestCase {
         runExperiment()
         XCTAssertTrue(app.staticTexts["The power ran out"].waitForExistence(timeout: 5))
         shot("02-generation-shortage")
+        tap("Try again")
+        tap("Shadow drill, air maker: Half")
+        shot("07-reserve-plan")
+        runExperiment()
+        XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 5))
+        shot("08-reserve-result")
         tap("example.moreStorage")
         runExperiment()
         XCTAssertTrue(app.staticTexts["The power ran out"].waitForExistence(timeout: 5))
@@ -50,6 +56,10 @@ final class ExampleLabFlowTests: XCTestCase {
         shot("03-more-generation-passes")
         tap("Continue")
         XCTAssertTrue(app.buttons["Show me"].waitForExistence(timeout: 5), "The original starting-base guide is preserved")
+        shot("09-home-base")
+        tap("NASA sources")
+        shot("10-nasa-sources")
+        tap("Done")
     }
     func testStormExampleRequiresScienceAndCanSpendReservesToSucceed() {
         app.launchArguments = ["-uiTesting", "-resetProgress"]
