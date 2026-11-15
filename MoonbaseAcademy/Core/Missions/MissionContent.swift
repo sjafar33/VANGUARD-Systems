@@ -55,7 +55,7 @@ struct MissionCopy {
                     objectives: ["Keep your base powered through \(Words.hours(sun)) of sunlight and \(Words.hours(shadow)) of shadow.",
                                  "Finish with at least \(minAir) of air in the tank."],
                     bonus: "Bonus: power a \(Words.kWh(observation)) science observation while the Sun is up.",
-                    question: "Will your base stay powered all through the shadow?",
+                    question: "Will your plan keep the lights on and enough oxygen in reserve?",
                     hint: "Batteries can only store what your arrays make in sunlight. Turning the air maker down saves power, but then the crew breathes from the oxygen tank. To change the equipment, build at your base.",
                     badge: nil)
             }
@@ -65,7 +65,7 @@ struct MissionCopy {
                 objectives: ["Keep the base powered through \(Words.hours(sun)) of sunlight and \(Words.hours(shadow)) of shadow.",
                              "Finish with at least \(minAir) of air in the tank."],
                 bonus: "Bonus: power a \(Words.kWh(observation)) science observation while the Sun is up.",
-                question: "Will the batteries keep the base powered all through the shadow?",
+                question: "Will your plan keep the lights on and enough oxygen in reserve?",
                 hint: "Batteries keep energy for later. Solar arrays only help while the Sun shines. The air maker uses a lot of power, and the oxygen tank can cover a few hours if you turn it down.",
                 badge: badge(id))
         case .livingBase:
@@ -78,7 +78,7 @@ struct MissionCopy {
                 objectives: ["Harvest fresh lettuce by day \(days).",
                              "Keep power, air and packaged food from running out."],
                 bonus: "Bonus: run research with spare energy.",
-                question: "Will the lettuce be ready to harvest by day \(days)?",
+                question: "Will the crew finish safely with lettuce ready by day \(days)?",
                 hint: "In this game, lettuce needs its lights on \(light) hours a day to be ready by day \(days). Research uses extra energy every single day.",
                 badge: badge(id))
         case .stormDrill:
@@ -96,7 +96,7 @@ struct MissionCopy {
                 objectives: ["Keep the crew in a shelter for the whole storm.",
                              "Finish with at least \(minAir) of air in the tank."],
                 bonus: "Bonus: run science during the storm with the science kit.",
-                question: "Will there still be at least \(minAir) of air when the storm ends?",
+                question: "Will the crew stay sheltered and finish with at least \(minAir) of air?",
                 hint: "The shelter is required. Building it uses \(shelter). You can turn the air maker down for a while, because the oxygen tank is a reserve, but the reserve is not endless.",
                 badge: badge(id))
         case .signalLag:

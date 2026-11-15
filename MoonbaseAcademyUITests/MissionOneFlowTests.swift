@@ -78,6 +78,8 @@ final class MissionOneFlowTests: XCTestCase {
         pause(0.6)
         shot("06-prediction")
         tap("Yes")
+        tap("reason.resourceBudget")
+        tap("Start test")
         pause(0.9)
         shot("07-countdown")
         pause(2.2)
@@ -117,6 +119,8 @@ final class MissionOneFlowTests: XCTestCase {
         // Second attempt: the player controls the pace, one checkpoint at a time.
         tap("One step at a time")
         tap("Yes")
+        tap("reason.resourceBudget")
+        tap("Start test")
         XCTAssertTrue(app.buttons["Next step"].waitForExistence(timeout: 8) || app.buttons["See result"].waitForExistence(timeout: 1))
         pause(0.8)
         shot("11-playback-step-by-step")

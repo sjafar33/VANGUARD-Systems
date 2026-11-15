@@ -1176,115 +1176,6 @@ struct PowerBalance: View {
     }
 }
 
-// MARK: Prediction
-
-struct BetChoice {
-    let text: String
-    let symbol: String
-}
-
-struct BetOverlay: View {
-    let session: MissionSession
-    var readAloud = false
-    @AccessibilityFocusState private var titleFocused: Bool
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.5).ignoresSafeArea().accessibilityHidden(true)
-            ViewThatFits(in: .vertical) {
-                card
-                ScrollView { card.padding(.vertical, 30) }
-            }
-        }
-        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { titleFocused = true } }
-        .accessibilityAction(.escape) { session.backToPlanning() }
-    }
-
-    /// The two outcomes in the drill's own words, so the guess is about what happens, not "Yes" or "No".
-    private var outcomes: [BetChoice] {
-        switch session.definition.missionID {
-        case .lightsOut:
-            return [BetChoice(text: "Lights stay on", symbol: "lightbulb.fill"),
-                    BetChoice(text: "Lights go out", symbol: "lightbulb.slash.fill")]
-        case .livingBase:
-            return [BetChoice(text: "Lettuce is ready", symbol: "leaf.fill"),
-                    BetChoice(text: "Not ready yet", symbol: "hourglass")]
-        case .stormDrill:
-            if session.isBaseTest {
-                return [BetChoice(text: "Crew and task succeed", symbol: "checkmark.shield.fill"),
-                        BetChoice(text: "Plan needs a change", symbol: "arrow.counterclockwise")]
-            }
-            return [BetChoice(text: "Enough air left", symbol: "wind"),
-                    BetChoice(text: "Air runs low", symbol: "exclamationmark.triangle.fill")]
-        case .signalLag:
-            return [BetChoice(text: "Stops in the bay", symbol: "checkmark.circle.fill"),
-                    BetChoice(text: "Misses the bay", symbol: "xmark.circle.fill")]
-        }
-    }
-
-    private func betButton(_ choice: BetChoice, bevel: GamePalette.Bevel, prediction: Prediction) -> some View {
-        Button {
-            Haptics.thump()
-            session.run(predicting: prediction)
-        } label: {
-            VStack(spacing: 4) {
-                Image(systemName: choice.symbol).font(.system(size: 30, weight: .black))
-                Text(choice.text)
-                    .font(.game(.headline))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.75)
-            }
-            .padding(.horizontal, 6)
-        }
-        .buttonStyle(GameButtonStyle(bevel: bevel, height: 100, font: .game(.headline)))
-        .accessibilityLabel(prediction.label)
-        .accessibilityHint(choice.text)
-    }
-
-    private var card: some View {
-            VStack(spacing: 14) {
-                Ribbon(text: "What will happen?", bevel: GamePalette.energy)
-                    .padding(.top, -34)
-                    .accessibilityFocused($titleFocused)
-                HStack(alignment: .top, spacing: 10) {
-                    NovaAvatar(size: 62, talking: true)
-                    Text(session.copy.question)
-                        .font(.system(.title3, design: .rounded).weight(.heavy))
-                        .foregroundStyle(Theme.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    ReadAloudButton(enabled: readAloud, text: session.copy.question, size: 40)
-                }
-                HStack(spacing: 10) {
-                    betButton(outcomes[0], bevel: GamePalette.go, prediction: .yes)
-                    betButton(outcomes[1], bevel: GamePalette.coral, prediction: .no)
-                }
-                Label(session.isBaseTest ? "Lock in your guess, then watch what really happens!"
-                                         : "Guess right to earn a star, even if the drill fails",
-                      systemImage: "star.fill")
-                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                    .foregroundStyle(Theme.amberInk)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button { session.run(predicting: .unsure) } label: { Text("Not sure? Just watch") }
-                    .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 46, font: .game(.headline)))
-                    .accessibilityLabel("Not sure")
-                PlaybackModePicker(session: session)
-                Button("Change my plan") { session.backToPlanning() }
-                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                    .foregroundStyle(Theme.energyInk)
-                    .frame(minHeight: 44)
-            }
-            .padding(20)
-            .padding(.top, 14)
-            .frame(maxWidth: 460)
-            .background(GameCardBackground(corner: 26))
-            .padding(24)
-            .accessibilityElement(children: .contain)
-            .accessibilityAddTraits(.isModal)
-    }
-}
-
 // MARK: Results
 
 struct ResultOverlay: View {
@@ -1349,6 +1240,15 @@ struct ResultOverlay: View {
                             .font(.system(.subheadline, design: .rounded).weight(.heavy))
                             .foregroundStyle(Theme.ink)
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let reason = session.predictionReason {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Your reason: \(reason.text)").font(.subheadline.weight(.bold))
+                            Text(reason.feedback).font(.subheadline)
+                                .accessibilityIdentifier("prediction.reasonFeedback")
+                        }
+                        .foregroundStyle(Theme.ink)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     if !success {
                         Label(session.isBaseTest ? "Try a different air plan or change the equipment." : session.copy.hint, systemImage: "lightbulb.fill")
@@ -1418,9 +1318,9 @@ struct ResultOverlay: View {
         guard let prediction = session.prediction else { return nil }
         switch session.predictionWasRight {
         case .some(true):
-            return ("You predicted \"\(prediction.label)\" and you were right.\(session.isBaseTest ? "" : " Prediction star earned!")", "brain.head.profile")
+            return ("You predicted \"\(prediction.outcome(in: session.definition))\" and the evidence matched.\(session.isBaseTest ? "" : " Prediction star earned!")", "brain.head.profile")
         case .some(false):
-            return ("You predicted \"\(prediction.label)\". Now you know why it went the other way!", "sparkles")
+            return ("You predicted \"\(prediction.outcome(in: session.definition))\". The result was different; compare the evidence below.", "sparkles")
         case .none:
             return ("You weren't sure, and that's okay. Now you've seen what happens, so next time you can make a guess.", "eye.fill")
         }
@@ -1668,7 +1568,7 @@ struct MissionStepsBar: View {
             if session.isRover { return session.canLaunch ? "Pick a plan, then tap Launch test." : "Pick a plan that fits the cargo." }
             return session.canLaunch ? "Change the plan if you like, then tap Launch test." : "Fix the plan so it fits, then launch."
         case .predicting:
-            return "Choose Yes, No or Not sure."
+            return "Choose a prediction and explain your idea."
         case .playback:
             if session.countdown != nil { return "Get ready to watch." }
             if session.isPaused { return "Tap Resume or Next when you're ready." }

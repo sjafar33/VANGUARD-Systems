@@ -40,7 +40,7 @@ struct BaseDecor: Equatable {
     }
 }
 
-/// Up to three stars per attempt. Stars are only earned on a successful drill, and only the best result is kept.
+/// Three independent achievements: mission completion, prediction accuracy and the successful bonus.
 struct StarResult: Equatable {
     var finished: Bool
     var predicted: Bool
@@ -87,6 +87,7 @@ final class MissionSession {
     private(set) var configuration: ResourceConfiguration
     private(set) var roverConfiguration: RoverConfiguration
     private(set) var prediction: Prediction?
+    private(set) var predictionReason: PredictionReason?
     private(set) var resourceResult: ResourceMissionResult?
     private(set) var roverResult: RoverMissionResult?
     private(set) var explanation: Explanation?
@@ -227,12 +228,7 @@ final class MissionSession {
         if let r = roverResult {
             truth = r.success
         } else if let r = resourceResult {
-            switch definition.missionID {
-            case .lightsOut: truth = r.failure?.constraint != .energyShortage
-            case .livingBase: truth = r.harvestAchieved
-            case .stormDrill: truth = r.success
-            case .signalLag: truth = r.success
-            }
+            truth = r.success
         } else {
             return nil
         }
@@ -425,6 +421,7 @@ final class MissionSession {
         guard stage == .planning, canLaunch else { return }
         notice = nil
         prediction = nil
+        predictionReason = nil
         stage = .predicting
     }
 
@@ -433,9 +430,10 @@ final class MissionSession {
         stage = .planning
     }
 
-    func run(predicting choice: Prediction) {
+    func run(predicting choice: Prediction, reason: PredictionReason? = nil) {
         guard stage == .predicting, canRun else { return }
         prediction = choice
+        predictionReason = reason
         attemptToken += 1
         let token = attemptToken
         if isRover {
@@ -695,6 +693,7 @@ final class MissionSession {
         roverResult = nil
         explanation = nil
         prediction = nil
+        predictionReason = nil
         playbackIndex = 0
         refreshWorld()
     }
@@ -724,7 +723,9 @@ final class MissionSession {
                       finalStopM: roverResult?.finalStopM,
                       researchUnits: resourceResult?.researchUnits ?? (roverResult?.observationEarned == true ? 1 : 0),
                       resourceConfiguration: isRover ? nil : configuration,
-                      roverConfiguration: isRover ? roverConfiguration : nil)
+                      roverConfiguration: isRover ? roverConfiguration : nil,
+                      prediction: prediction, predictionReason: predictionReason,
+                      predictionQuestion: copy.question)
     }
 
     // MARK: Descriptions

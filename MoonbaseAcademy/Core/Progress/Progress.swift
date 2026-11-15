@@ -12,6 +12,9 @@ struct AttemptRecord: Codable, Equatable, Sendable {
     var researchUnits: Double
     var resourceConfiguration: ResourceConfiguration?
     var roverConfiguration: RoverConfiguration?
+    var prediction: Prediction? = nil
+    var predictionReason: PredictionReason? = nil
+    var predictionQuestion: String? = nil
 }
 
 /// One of the three separate stars a drill can give. Each is earned on its own:

@@ -29,6 +29,9 @@ final class ExampleLabFlowTests: XCTestCase {
     private func runExperiment() {
         tap("Launch test")
         tap("Yes")
+        if app.buttons["reason.shelterAndSupplies"].exists { tap("reason.shelterAndSupplies") }
+        else { tap("reason.resourceBudget") }
+        tap("Start test")
         tap("Skip to the result")
     }
 
@@ -77,6 +80,24 @@ final class ExampleLabFlowTests: XCTestCase {
         shot("05-storm-task-complete")
         tap("Continue")
         XCTAssertTrue(app.buttons["Show me"].waitForExistence(timeout: 5))
+    }
+
+    func testPredictionWaitsForReasonAndExplainsMisconception() {
+        app.launchArguments = ["-uiTesting", "-resetProgress"]
+        app.launch()
+        tap("Drills")
+        tap("Start example lab")
+        tap("Launch test")
+        tap("Yes")
+        XCTAssertFalse(app.buttons["Start test"].isEnabled, "A forecast alone does not launch the simulation")
+        tap("reason.batteryCreatesEnergy")
+        shot("prediction-with-reason")
+        tap("Start test")
+        tap("Skip to the result")
+        let feedback = app.staticTexts["prediction.reasonFeedback"]
+        XCTAssertTrue(feedback.waitForExistence(timeout: 5))
+        XCTAssertTrue(feedback.label.contains("cannot create"))
+        shot("prediction-misconception-feedback")
     }
 
     func testStormEquipmentSummaryAndRulesRemainReachable() {
