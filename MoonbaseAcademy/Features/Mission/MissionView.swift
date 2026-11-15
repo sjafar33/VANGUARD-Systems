@@ -231,8 +231,12 @@ struct MissionTopHUD: View {
     let onSources: () -> Void
     let onSettings: () -> Void
     @Environment(\.focusView) private var focusView
+    @Environment(\.dynamicTypeSize) private var textSize
 
     var body: some View {
+        if textSize.isAccessibilitySize {
+            compactHeader
+        } else {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
                 RoundIconButton(symbol: "chevron.backward", label: "Leave drill", action: onBack)
@@ -241,7 +245,7 @@ struct MissionTopHUD: View {
                     Text(session.definition.drillLabel)
                         .font(.system(.caption, design: .rounded).weight(.heavy))
                         .gameText(Color(hex: 0xFFE27A))
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
                 Spacer(minLength: 4)
                 ReadAloudButton(enabled: readAloud, text: narration)
@@ -258,6 +262,31 @@ struct MissionTopHUD: View {
                 TimelineStrip(session: session)
             }
         }
+        }
+    }
+
+    private var compactHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(session.gameCopy.title).font(.headline.weight(.bold)).foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                RoundIconButton(symbol: "chevron.backward", label: "Leave drill", action: onBack)
+                RoundIconButton(symbol: "books.vertical.fill", label: "Where the numbers come from", action: onSources)
+                RoundIconButton(symbol: "gearshape.fill", label: "Settings", action: onSettings)
+                if session.stage == .playback {
+                    RoundIconButton(symbol: "forward.end.fill", label: "Skip to the result", bevel: GamePalette.gold) { session.skipPlayback() }
+                }
+            }
+            if !session.isRover {
+                let state = session.displayState
+                let air = ResourceEngine.airHours(oxygenKg: state.oxygenKg, crewCount: session.definition.initial.crewCount, science: session.science)
+                Text("Energy: \(Format.kWh(state.batteryKWh)). Air: \(Format.wholeHours(air)).")
+                    .font(.caption).foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 14).fill(GamePalette.hud))
     }
 
     private var pills: some View {
@@ -393,6 +422,7 @@ struct BuildTray: View {
         ViewThatFits(in: .horizontal) {
             row
             ScrollView(.horizontal, showsIndicators: false) { row }
+                .accessibilityIdentifier("mission.planningTray")
         }
         .shake(session.shakeToken)
         .animation(.default, value: session.shakeToken)
@@ -1281,14 +1311,14 @@ struct ResultOverlay: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if !success {
-                        Label(session.copy.hint, systemImage: "lightbulb.fill")
+                        Label(session.isBaseTest ? "Try a different air plan or change the equipment." : session.copy.hint, systemImage: "lightbulb.fill")
                             .font(.system(.subheadline, design: .rounded).weight(.semibold))
                             .foregroundStyle(Theme.ink)
                             .padding(12)
                             .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: 0xFFF4D6)))
                     }
-                    whySection
                     if session.isBaseTest { BaseTestCard(session: session) }
+                    whySection
                     if session.baseTest?.isExample == true { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
                     if !session.isBaseTest, let previous = session.previousAttempt, let current = session.currentAttempt {
                         VStack(alignment: .leading, spacing: 4) {
@@ -1358,14 +1388,14 @@ struct ResultOverlay: View {
 
     private var explanationLead: String {
         let paragraphs = session.explanation?.paragraphs ?? []
-        return paragraphs.prefix(2).joined(separator: " ")
+        return paragraphs.prefix(session.isBaseTest ? 1 : 2).joined(separator: " ")
     }
 
     @ViewBuilder private var whySection: some View {
         if let e = session.explanation {
             VStack(alignment: .leading, spacing: 8) {
                 Button {
-                    withAnimation(.easeOut(duration: 0.2)) { showWhy.toggle() }
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { showWhy.toggle() }
                 } label: {
                     Label(showWhy ? "Hide the numbers" : "Why? See the numbers", systemImage: "magnifyingglass")
                         .font(.system(.subheadline, design: .rounded).weight(.black))
@@ -1382,7 +1412,7 @@ struct ResultOverlay: View {
                         .font(.system(.subheadline, design: .rounded))
                         .accessibilityElement(children: .combine)
                     }
-                    ForEach(Array(e.paragraphs.dropFirst(2)), id: \.self) { paragraph in
+                    ForEach(Array(e.paragraphs.dropFirst(session.isBaseTest ? 1 : 2)), id: \.self) { paragraph in
                         Text(paragraph).font(.system(.subheadline, design: .rounded)).foregroundStyle(Theme.ink)
                     }
                     if !session.isRover {

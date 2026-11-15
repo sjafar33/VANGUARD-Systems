@@ -12,9 +12,9 @@ struct SourcesView: View {
         NavigationStack {
             List {
                 Section {
-                    Text("Every number in this game is one of three kinds. NASA reference numbers come from NASA documents and data. Worked-out numbers are calculated from those. Training numbers were made up for this game so the drills stay short and fair.")
+                    Text("Every number in this game has an evidence label. NASA reference numbers come from NASA documents and data. Worked-out numbers are calculated from those. Training numbers were made up for this game so the drills stay short and fair. Physical constants, such as the speed of light, have their own label.")
                         .font(.body)
-                    ForEach([EvidenceCategory.nasaReference, .derived, .trainingAssumption], id: \.self) { category in
+                    ForEach(EvidenceCategory.allCases, id: \.self) { category in
                         CategoryChip(category: category)
                     }
                 }
@@ -24,7 +24,7 @@ struct SourcesView: View {
                             ValueRow(value: value, source: package.source(value.sourceID), verification: verification(value.sourceID))
                         }
                         if focus.missionID == .stormDrill {
-                            Text("Archived storms recorded near Earth by the GOES-13 satellite. They are replayed, never live. The first play uses September 10, 2017; replays pick one of these at random.")
+                            Text(BaseExperiment.isBaseTest(focus) ? "This rehearsal keeps the archived September 10, 2017 event fixed during retries. Other archived events below are used in reference-drill replays. These near-Earth measurements are not lunar doses." : "Archived storms recorded near Earth by the GOES-13 satellite. They are replayed, never live. The first play uses September 10, 2017; replays pick one of these at random.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                             ForEach(package.usableStorms) { event in
@@ -98,7 +98,7 @@ struct SourcesView: View {
         "Storm drill: 0.8 kW available on average; shelter takes 3 kWh to build; the crew must be inside for the whole storm. The lander holds 4 crates (3 in the harder version).",
         "Rover: drives at a steady 1 m/s (0.75 m/s in the harder version) and stops instantly. The yellow bay is 5 to 6 m.",
         "Power and air use stay the same within each drill step. This is a training model, not an electrical simulator.",
-        "Building the base, Moon coins, upgrades and styles are game rules. They unlock drills and looks but never change the numbers inside a drill."
+        "Building the base, Moon coins, upgrades and styles are game rules. They unlock reference drills and looks. Array and battery levels also change equipment strength in own-base tests; reference drill definitions stay unchanged."
     ]
 
     static let limits = [

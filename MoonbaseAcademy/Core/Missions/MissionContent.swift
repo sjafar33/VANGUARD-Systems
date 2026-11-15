@@ -378,7 +378,7 @@ enum ExplanationWriter {
                 paragraphs.append(airStory(r, definition: d, science: s))
                 paragraphs.append("Lettuce is a fresh extra. It does not replace the packaged meals.")
             case .stormDrill:
-                headline = "Everyone stayed sheltered"
+                headline = BaseExperiment.isBaseTest(d) ? "Crew safe, science task complete" : "Everyone stayed sheltered"
                 paragraphs.append("The crew stayed in the shelter for the whole \(Format.hours(s.stormActiveHours)) storm, timed from the \(Words.date(s.stormThresholdCrossing)) event. You finished with \(Format.wholeHours(r.finalAirHours)) of air.")
                 if r.researchUnits > 1e-9 {
                     paragraphs.append("Your storm science ran and used \(Words.kWh(r.trace.reduce(0) { $0 + $1.researchKWh })) of energy.")
