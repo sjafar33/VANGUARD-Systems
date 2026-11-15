@@ -151,6 +151,19 @@ final class BaseExperimentTests: MoonbaseTestCase {
         XCTAssertEqual(old.arrayFactor, 1)
     }
 
+    func testComparisonExplainsUpgradesWithoutCountChanges() {
+        let old = BaseTestInputs(arrays: 1, batteries: 1)
+        let upgraded = BaseTestInputs(arrays: 1, batteries: 1, arrayLevels: [2], batteryLevels: [3])
+        let explanation = BaseExperiment.change(from: old, to: upgraded)
+        XCTAssertTrue(explanation.contains("solar power 1 → 1.5 kW"), explanation)
+        XCTAssertTrue(explanation.contains("battery storage 4 → 8 kWh"), explanation)
+        XCTAssertEqual(BaseExperiment.change(from: old, to: old),
+                       "Same base as last time. Only your plan changed.")
+        let explicitLevelOne = BaseTestInputs(arrays: 1, batteries: 1, arrayLevels: [1], batteryLevels: [1])
+        XCTAssertEqual(BaseExperiment.change(from: old, to: explicitLevelOne),
+                       "Your base has the same power and storage as last time.")
+    }
+
     // MARK: Real archived storms
 
     func testEveryArchivedStormIsUsableAndCanBeSurvived() throws {

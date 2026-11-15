@@ -1,7 +1,7 @@
 import Foundation
 
 /// The equipment a base test starts with, counted from the player's real, working buildings.
-/// This is the whole bridge between the board and the simulation: two counts, nothing hidden.
+/// The bridge contains the counted arrays and batteries plus their levels; no other board state feeds the test.
 struct BaseTestInputs: Codable, Equatable, Sendable {
     var arrays: Int
     var batteries: Int
@@ -46,7 +46,8 @@ struct BaseTestRecord: Codable, Equatable, Sendable {
 /// training assumptions and the same `ResourceEngine`, but the equipment is fixed to what the player
 /// really built instead of being chosen from a lander. Rules, all stated to the player:
 /// - Each working solar array and battery counts once, with the same training numbers as Lights Out.
-/// - Building levels, colours, positions and the robot buddy change nothing here.
+/// - Array and battery levels scale their strength by 1 / 1.5 / 2 (game rule).
+/// - Other building levels, colours, positions and the robot buddy change nothing here.
 /// - A damaged building counts for nothing.
 /// - The snapshot is taken when the test opens; changing the base later never changes a running test.
 enum BaseExperiment {
@@ -125,6 +126,17 @@ enum BaseExperiment {
         let batteries = new.batteries - old.batteries
         if arrays != 0 { parts.append("\(arrays > 0 ? "+" : "−")\(abs(arrays)) solar array\(abs(arrays) == 1 ? "" : "s")") }
         if batteries != 0 { parts.append("\(batteries > 0 ? "+" : "−")\(abs(batteries)) batter\(abs(batteries) == 1 ? "y" : "ies")") }
+        let oldPower = Double(old.arrays) * old.arrayFactor
+        let newPower = Double(new.arrays) * new.arrayFactor
+        let oldStorage = 4 * Double(old.batteries) * old.batteryFactor
+        let newStorage = 4 * Double(new.batteries) * new.batteryFactor
+        if arrays == 0, abs(newPower - oldPower) > 1e-9 {
+            parts.append("solar power \(Format.number(oldPower)) → \(Format.number(newPower)) kW")
+        }
+        if batteries == 0, abs(newStorage - oldStorage) > 1e-9 {
+            parts.append("battery storage \(Format.number(oldStorage)) → \(Format.number(newStorage)) kWh")
+        }
+        guard !parts.isEmpty else { return "Your base has the same power and storage as last time." }
         return "You changed your base: \(parts.joined(separator: " and "))."
     }
 }

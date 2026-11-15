@@ -57,7 +57,7 @@ Production data is never modified by tests.
 
 Game rules (not NASA data), shown to the player on the result card:
 - Each working solar array counts as one Lights Out array (1 kW in sunlight). Each working battery counts as one Lights Out battery (4 kWh, starts empty). At most four of each.
-- Building level, colour, position and the robot buddy do not change any number. A damaged building counts for nothing.
+- Array and battery levels scale power and capacity: level 1 = 1×, level 2 = 1.5×, level 3 = 2× (game rules, not NASA hardware figures). Other building levels, colour, position and the robot buddy do not change any number. A damaged building counts for nothing.
 - The landing station is fictional. Repairing it costs Moon coins and only opens the test. It adds no power, oxygen, supplies or communication.
 - Coins (repair price, the one-time reward for a first pass) never enter the simulation.
 

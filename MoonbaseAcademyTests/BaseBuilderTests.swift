@@ -65,7 +65,7 @@ final class BaseBuilderTests: MoonbaseTestCase {
 
     func testMovingKeepsTheBuildingAndChecksTheSpot() throws {
         var base = fresh
-        XCTAssertEqual(base.move("habitat", x: 2, y: 2), .ok)
+        XCTAssertEqual(base.move("habitat", x: 2, y: -4), .ok)
         XCTAssertEqual(base.buildings.first?.x, 2)
         XCTAssertEqual(base.move("habitat", x: 4, y: 4), .blocked, "3x3 at 4,4 runs off a board that ends at 5")
     }

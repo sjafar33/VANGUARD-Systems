@@ -2,8 +2,9 @@ import Foundation
 
 // MARK: Buildings
 
-/// Things the player can build on the base board. Game rules only: none of these numbers feed the drills'
-/// science. Building and upgrading unlock drills, harder drills and new looks.
+/// Things the player can build on the base board. Building and upgrading unlock drills and new looks.
+/// Working arrays, batteries and their levels also feed Test My Base through authored game rules;
+/// the reference drills and NASA science inputs stay unchanged.
 enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
     case habitat
     case solarArray

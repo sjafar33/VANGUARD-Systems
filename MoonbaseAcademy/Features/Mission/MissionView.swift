@@ -511,75 +511,78 @@ struct BuildCard: View {
     var body: some View {
         let count = session.count(item.kind)
         let name = CargoCopy.name(item.kind)
-        Button {
-            if session.addCargo(item.kind) {
-                Haptics.thump()
-                SoundFX.shared.play(.pop)
-                guard !reduceMotion else { return }
-                pop = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { pop = false }
-            } else {
-                Haptics.warning()
-                SoundFX.shared.play(.denied)
-            }
-        } label: {
-            VStack(spacing: 4) {
-                CargoIconView(kind: item.kind)
-                    .frame(height: 62)
-                Text(name)
-                    .font(.system(.footnote, design: .rounded).weight(.heavy))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 3) {
-                    Image(systemName: "shippingbox.fill")
-                    Text("\(item.cost)")
+        ZStack(alignment: .topLeading) {
+            Button {
+                if session.addCargo(item.kind) {
+                    Haptics.thump()
+                    SoundFX.shared.play(.pop)
+                    guard !reduceMotion else { return }
+                    pop = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { pop = false }
+                } else {
+                    Haptics.warning()
+                    SoundFX.shared.play(.denied)
                 }
-                .font(.system(.caption, design: .rounded).weight(.black))
-                .foregroundStyle(Theme.amberInk)
+            } label: {
+                VStack(spacing: 4) {
+                    CargoIconView(kind: item.kind)
+                        .frame(height: 62)
+                    Text(name)
+                        .font(.system(.footnote, design: .rounded).weight(.heavy))
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 3) {
+                        Image(systemName: "shippingbox.fill")
+                        Text("\(item.cost)")
+                    }
+                    .font(.system(.caption, design: .rounded).weight(.black))
+                    .foregroundStyle(Theme.amberInk)
+                }
+                .padding(10)
+                .frame(width: cardWidth)
+                .frame(minHeight: cardHeight)
+                .background(GameCardBackground(highlighted: highlighted || count > 0))
+                .scaleEffect(pop ? 1.08 : 1)
+                .animation(.spring(response: 0.2, dampingFraction: 0.5), value: pop)
             }
-            .padding(10)
-            .frame(width: cardWidth)
-            .frame(minHeight: cardHeight)
-            .background(GameCardBackground(highlighted: highlighted || count > 0))
-            .scaleEffect(pop ? 1.08 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.5), value: pop)
-        }
-        .buttonStyle(PressableStyle())
-        .opacity(dimmed ? 0.45 : 1)
-        .overlay(alignment: .topTrailing) {
-            if count > 0 {
-                Text("×\(count)")
-                    .font(.game(.subheadline))
-                    .gameText()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(GamePalette.energy.bottom).overlay(Capsule().strokeBorder(Color.white, lineWidth: 2)))
-                    .offset(x: 6, y: -6)
-                    .accessibilityHidden(true)
+            .buttonStyle(PressableStyle())
+            .accessibilityLabel("Add \(name.lowercased())")
+            .accessibilityValue("\(count) on board, costs \(item.cost) crate\(item.cost == 1 ? "" : "s")")
+            .accessibilityIdentifier("cargo.add.\(item.kind.rawValue)")
+            .opacity(dimmed ? 0.45 : 1)
+            .overlay(alignment: .topTrailing) {
+                if count > 0 {
+                    Text("×\(count)")
+                        .font(.game(.subheadline))
+                        .gameText()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(GamePalette.energy.bottom).overlay(Capsule().strokeBorder(Color.white, lineWidth: 2)))
+                        .offset(x: 6, y: -6)
+                        .accessibilityHidden(true)
+                }
             }
-        }
-        .overlay(alignment: .topLeading) {
+            .overlay(alignment: .bottom) {
+                if highlighted {
+                    Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 30, weight: .black))
+                        .gameText(Color(hex: 0xFFE27A))
+                        .offset(y: 22)
+                        .accessibilityHidden(true)
+                }
+            }
+            .padding(.top, 44)
             if count > 0 && session.tutorial != .placeFirstArray {
                 RoundIconButton(symbol: "minus", label: "Remove \(name.lowercased())", bevel: GamePalette.coral, size: 32) {
                     session.removeCargo(item.kind)
                     SoundFX.shared.play(.remove)
                 }
-                .offset(x: -8, y: -10)
+                .accessibilityIdentifier("cargo.remove.\(item.kind.rawValue)")
+                .contentShape(Rectangle())
             }
         }
-        .overlay(alignment: .bottom) {
-            if highlighted {
-                Image(systemName: "hand.tap.fill")
-                    .font(.system(size: 30, weight: .black))
-                    .gameText(Color(hex: 0xFFE27A))
-                    .offset(y: 22)
-                    .accessibilityHidden(true)
-            }
-        }
-        .accessibilityLabel("Add \(name.lowercased())")
-        .accessibilityValue("\(count) on board, costs \(item.cost) crate\(item.cost == 1 ? "" : "s")")
     }
 }
 

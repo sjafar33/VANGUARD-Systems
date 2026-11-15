@@ -94,9 +94,23 @@ final class MissionOneFlowTests: XCTestCase {
         tap("Try again")
         XCTAssertTrue(app.buttons["Launch test"].waitForExistence(timeout: 5))
         pause(0.8)
-        tap("Add solar array")
-        tap("Add battery")
-        tap("Add battery")
+        tap("cargo.add.solarArray")
+        tap("cargo.add.battery")
+        tap("cargo.remove.battery")
+        let removed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value BEGINSWITH %@", "0 on board"),
+                                                object: app.buttons["cargo.add.battery"])
+        let removalWait = XCTWaiter.wait(for: [removed], timeout: 3)
+        shot("10a-after-remove")
+        XCTAssertEqual(removalWait, .completed,
+                       "Remove must leave zero batteries; actual value: \(String(describing: app.buttons["cargo.add.battery"].value))")
+        tap("cargo.add.battery")
+        tap("cargo.add.battery")
+        for kind in ["solarArray", "battery"] {
+            let control = app.buttons["cargo.add.\(kind)"]
+            XCTAssertTrue(control.exists)
+            XCTAssertTrue((control.value as? String)?.hasPrefix("2 on board") == true,
+                          "The improved plan must actually contain two \(kind) items before launch")
+        }
         pause(0.8)
         shot("10-planning-improved")
         tap("Launch test")
