@@ -4,6 +4,8 @@ _Written 2026-11-14, about 14:45 Toronto time. Paste or attach this file at the 
 
 ---
 
+> **Update, 2026-11-14 evening.** Sections 5-7 below are older than the code. Read the "Base-builder brief" part of `PHASES.md` first: it has the Phase 0 audit, the Phases 1-2 checkpoint (landing station, Test My Base) and "Play-test round 1". Corrections to this file: the app target DOES compile (build logs, commits `12dd3c9` and `38e91c6`); commit `f12c3d8` and later are not yet compiled; no unit or UI test has run since before V2. Claude can read build logs but cannot build: Xcode only accepts plain clicks from it.
+
 ## 1. What this is
 
 - **App:** Moonbase Academy, a native **iPhone + iPad** game (SwiftUI + SpriteKit, iOS 17+). It's built for the **NASA Space Apps Challenge 2026** by team **VANGUARD Systems**. The owner (Sadegh) has teammates.

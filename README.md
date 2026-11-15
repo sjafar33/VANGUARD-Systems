@@ -2,7 +2,12 @@
 
 **VANGUARD Systems · NASA Space Apps Challenge 2026 · Junior Astronaut Mission Trainer**
 
-Moonbase Academy is an offline iPhone and iPad game for children aged 7 to 12. The player is the engineer of a small lunar training base and works through four short drills. In each drill they notice a problem, build or configure a solution, predict what will happen, run a test, see the consequences, and improve.
+Moonbase Academy is an offline iPhone and iPad base-building game for children aged 7 to 12. The player owns a small lunar outpost: they place, move, upgrade and decorate buildings on a board, earn Moon coins from short lessons, repair an old landing station, and then **test the base they really built**. In every drill and test they notice a problem, set a plan, predict what will happen, watch the consequences, and improve.
+
+- **Build:** solar arrays, batteries, greenhouse, storm shelter, radio dish, plus decorations (flag, lamp post, rock garden) that are looks only.
+- **Learn:** lessons at three question levels (Explorer, Builder, Mission Engineer) with question pools, so replays differ.
+- **Test My Base:** a shadow test that counts the player's own working solar arrays and batteries and runs them through the same engine as the Lights Out drill. Colours, levels and decorations change nothing in it.
+- **Four reference drills** cover all five challenge topics:
 
 | Drill | Topic | The engineering trade-off |
 |---|---|---|
@@ -32,11 +37,13 @@ MoonbaseAcademy/
   Core/Simulation/ deterministic resource and rover engines (Foundation only)
   Core/Missions/   mission models, the four drill definitions, child-facing copy
   Core/Progress/   campaign progress and the JSON save store
+  Core/Base/       base board rules, coins, guide goals, landing station, Test My Base bridge
+  Core/Learn/      lessons, question pools and levels
   Features/        base, mission shell, sources and settings screens
   Rendering/       isometric projection, procedural art, SpriteKit world scene
   DesignSystem/    palette, buttons, meters, formatting
   Resources/Science/science_package.json
-MoonbaseAcademyTests/    56 engine, content, progress and sensitivity tests
+MoonbaseAcademyTests/    engine, content, progress, base-builder and base-test unit tests
 MoonbaseAcademyUITests/  end-to-end Mission 1 flow with screenshots
 ```
 
