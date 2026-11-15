@@ -52,11 +52,23 @@ struct MissionView: View {
                             updateInsets()
                         }
                     Spacer(minLength: 0)
-                    // At large text sizes the bottom controls scroll instead of being pushed off screen.
-                    ViewThatFits(in: .vertical) {
-                        bottomArea
-                        ScrollView { bottomArea.padding(.bottom, 4) }
-                            .frame(maxHeight: proxy.size.height * 0.55)
+                    Group {
+                        if session.stage == .planning {
+                            VStack(spacing: 10) {
+                                ViewThatFits(in: .vertical) {
+                                    bottomArea
+                                    ScrollView { bottomArea.padding(.bottom, 6) }
+                                        .frame(maxHeight: max(140, proxy.size.height * 0.52))
+                                }
+                                launchControl
+                            }
+                        } else {
+                            ViewThatFits(in: .vertical) {
+                                bottomArea
+                                ScrollView { bottomArea.padding(.bottom, 4) }
+                                    .frame(maxHeight: proxy.size.height * 0.55)
+                            }
+                        }
                     }
                         .frame(maxWidth: 760)
                         .readHeight { height in
@@ -202,16 +214,8 @@ struct MissionView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if session.baseTest?.isExample == true { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
+                InvestigationReminder(session: session)
                 BuildTray(session: session) { planPhase = $0 }
-                Button {
-                    session.goToPrediction()
-                } label: {
-                    Label("Launch test", systemImage: "flame.fill")
-                }
-                .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 62, font: .game(.title2)))
-                .disabled(!session.canLaunch)
-                .accessibilityFocused($launchFocused)
-                .accessibilityHint(session.canLaunch ? "Then you predict what will happen" : "Finish the plan first")
             }
         case .playback:
             PlaybackPanel(session: session)
@@ -219,6 +223,18 @@ struct MissionView: View {
             EmptyView()
         }
     }
+    private var launchControl: some View {
+        Button {
+            session.goToPrediction()
+        } label: {
+            Label("Launch test", systemImage: "flame.fill")
+        }
+        .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 62, font: .game(.title2)))
+        .disabled(!session.canLaunch)
+        .accessibilityFocused($launchFocused)
+        .accessibilityHint(session.canLaunch ? "Then you predict what will happen" : "Finish the plan first")
+    }
+
 }
 
 // MARK: Top HUD
@@ -458,6 +474,11 @@ struct BuildTray: View {
                     QuickPlanCard(session: session, index: index, openDetails: { openPlan(index) }, fullWidth: fullWidth)
                 }
             }
+            .overlay {
+                if session.revisionPhaseIndex == index {
+                    RoundedRectangle(cornerRadius: 20).strokeBorder(Theme.amber, lineWidth: 3).allowsHitTesting(false)
+                }
+            }
             .disabled(session.tutorial == .placeFirstArray)
             .opacity(session.tutorial == .placeFirstArray ? 0.5 : 1)
         }
@@ -535,29 +556,46 @@ struct ExampleLabControls: View {
 
     private var choices: some View {
         ForEach(kind == .storm ? [.starter, .moreStorage] : ExampleBase.allCases, id: \.self) { preset in
-            Button(preset.title) { model.openExampleMission(preset, resetHistory: false, kind: kind) }
-                .font(.system(.caption, design: .rounded).weight(.bold))
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.energyInk)
-                .foregroundStyle(.white)
-                .accessibilityIdentifier("example.\(preset.rawValue)")
+            let current = model.session?.baseTest?.inputs
+            let selected = current?.arrays == preset.inputs.arrays && current?.batteries == preset.inputs.batteries
+            let arrays = "\(preset.inputs.arrays) \(preset.inputs.arrays == 1 ? "array" : "arrays")"
+            let batteries = "\(preset.inputs.batteries) \(preset.inputs.batteries == 1 ? "battery" : "batteries")"
+            Button {
+                model.openExampleMission(preset, resetHistory: false, kind: kind)
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    Label(preset.title, systemImage: selected ? "checkmark.circle.fill" : "circle")
+                    Text(kind == .storm ? batteries : "\(arrays) • \(batteries)")
+                        .font(.caption2)
+                }
+                .frame(minHeight: 44)
+            }
+            .font(.system(.caption, design: .rounded).weight(.bold))
+            .buttonStyle(.borderedProminent).tint(Theme.energyInk).foregroundStyle(.white)
+            .accessibilityLabel(preset.title)
+            .accessibilityIdentifier("example.\(preset.rawValue)")
+            .accessibilityAddTraits(selected ? .isSelected : [])
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Example lab • compare with the starter base")
+            Text("Example lab • choose equipment, keep your settings")
                 .font(.system(.subheadline, design: .rounded).weight(.bold))
             ViewThatFits {
                 HStack { choices }
                 VStack(alignment: .leading) { choices }
             }
-            Text("Each new equipment choice resets the air plan to Full. No coins or progress are saved.")
+            Text("Air and science settings stay the same. No campaign progress is saved.")
                 .font(.caption)
+            Button("Reset lab to starter plan", systemImage: "arrow.counterclockwise") {
+                model.openExampleMission(.starter, resetHistory: true, kind: kind)
+            }
+            .font(.caption.weight(.bold)).foregroundStyle(Theme.energyInk).frame(minHeight: 44)
+            .accessibilityIdentifier("example.reset")
         }
-        .foregroundStyle(Theme.ink)
-        .padding(10)
-        .background(GameCardBackground())
+        .foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
+        .padding(10).background(GameCardBackground())
     }
 }
 
@@ -851,6 +889,11 @@ struct QuickPlanCard: View {
         let fromTank = rates.oxygenNetPerHour < -1e-9
         let title = PlanCard.title(session, index)
         VStack(alignment: .leading, spacing: 6) {
+            if session.revisionPhaseIndex == index {
+                Label("Suggested part for your next test", systemImage: "lightbulb.fill")
+                    .font(.caption.weight(.bold)).foregroundStyle(Theme.amberInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             HStack(spacing: 8) {
                 Image(systemName: PlanCard.icon(phase.mood))
                     .font(.system(size: 17, weight: .black))
@@ -1235,48 +1278,12 @@ struct ResultOverlay: View {
                             .background(Capsule().fill(LinearGradient(colors: [GamePalette.gold.top, GamePalette.gold.bottom], startPoint: .top, endPoint: .bottom)))
                     }
                     NovaBubble(text: explanationLead, compact: true)
-                    if let line = predictionLine {
-                        Label(line.text, systemImage: line.symbol)
-                            .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                            .foregroundStyle(Theme.ink)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if let reason = session.predictionReason {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Your reason: \(reason.text)").font(.subheadline.weight(.bold))
-                            Text(reason.feedback).font(.subheadline)
-                                .accessibilityIdentifier("prediction.reasonFeedback")
-                        }
-                        .foregroundStyle(Theme.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if !success {
-                        Label(session.isBaseTest ? "Try a different air plan or change the equipment." : session.copy.hint, systemImage: "lightbulb.fill")
-                            .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                            .foregroundStyle(Theme.ink)
-                            .padding(12)
-                            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: 0xFFF4D6)))
-                    }
-                    if session.isBaseTest { BaseTestCard(session: session) }
+                    InvestigationResultCard(session: session)
                     whySection
                     if session.baseTest?.isExample == true { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
-                    if !session.isBaseTest, let previous = session.previousAttempt, let current = session.currentAttempt {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Last try vs this try").font(.system(.subheadline, design: .rounded).weight(.black)).foregroundStyle(Theme.ink)
-                            AttemptLine(title: "Last", summary: previous)
-                            AttemptLine(title: "Now", summary: current)
-                            Text(previous.setup == current.setup
-                                 ? "Both tries used the same plan."
-                                 : "Both tries started from the same base. Only your plan changed.")
-                                .font(.caption).foregroundStyle(Theme.inkSecondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.panel))
-                    }
                     HStack(spacing: 10) {
                         if success {
-                            Button("Replay") { session.retry() }
+                            Button("Replay") { session.reviseExperiment() }
                                 .buttonStyle(GameButtonStyle(bevel: GamePalette.steel))
                             Button { model.leaveMission() } label: { Label("Continue", systemImage: "arrow.right") }
                                 .buttonStyle(GameButtonStyle(bevel: GamePalette.go))
@@ -1284,7 +1291,7 @@ struct ResultOverlay: View {
                         } else {
                             Button(session.isBaseTest ? "Improve base" : "Base") { model.leaveMission() }
                                 .buttonStyle(GameButtonStyle(bevel: GamePalette.steel))
-                            Button { session.retry() } label: { Label("Try again", systemImage: "arrow.counterclockwise") }
+                            Button { session.reviseExperiment() } label: { Label("Try again", systemImage: "arrow.counterclockwise") }
                                 .buttonStyle(GameButtonStyle(bevel: GamePalette.gold))
                                 .accessibilityLabel("Try again")
                         }
@@ -1313,19 +1320,6 @@ struct ResultOverlay: View {
         }
     }
 
-    /// Matches the prediction star exactly: a correct Yes or No earns it, pass or fail.
-    private var predictionLine: (text: String, symbol: String)? {
-        guard let prediction = session.prediction else { return nil }
-        switch session.predictionWasRight {
-        case .some(true):
-            return ("You predicted \"\(prediction.outcome(in: session.definition))\" and the evidence matched.\(session.isBaseTest ? "" : " Prediction star earned!")", "brain.head.profile")
-        case .some(false):
-            return ("You predicted \"\(prediction.outcome(in: session.definition))\". The result was different; compare the evidence below.", "sparkles")
-        case .none:
-            return ("You weren't sure, and that's okay. Now you've seen what happens, so next time you can make a guess.", "eye.fill")
-        }
-    }
-
     private var explanationLead: String {
         let paragraphs = session.explanation?.paragraphs ?? []
         return paragraphs.prefix(session.isBaseTest ? 1 : 2).joined(separator: " ")
@@ -1343,6 +1337,7 @@ struct ResultOverlay: View {
                         .frame(minHeight: 44)
                 }
                 if showWhy {
+                    if session.isBaseTest { BaseTestCard(session: session) }
                     ForEach(e.numbers, id: \.self) { row in
                         HStack {
                             Text(row.label).foregroundStyle(Theme.inkSecondary)

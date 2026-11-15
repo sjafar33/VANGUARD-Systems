@@ -28,7 +28,7 @@ final class ExampleLabFlowTests: XCTestCase {
 
     private func runExperiment() {
         tap("Launch test")
-        tap("Yes")
+        tap("prediction.yes")
         if app.buttons["reason.shelterAndSupplies"].exists { tap("reason.shelterAndSupplies") }
         else { tap("reason.resourceBudget") }
         tap("Start test")
@@ -50,6 +50,7 @@ final class ExampleLabFlowTests: XCTestCase {
         runExperiment()
         XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 5))
         shot("08-reserve-result")
+        tap("example.reset")
         tap("example.moreStorage")
         runExperiment()
         XCTAssertTrue(app.staticTexts["The power ran out"].waitForExistence(timeout: 5))
@@ -88,7 +89,7 @@ final class ExampleLabFlowTests: XCTestCase {
         tap("Drills")
         tap("Start example lab")
         tap("Launch test")
-        tap("Yes")
+        tap("prediction.yes")
         XCTAssertFalse(app.buttons["Start test"].isEnabled, "A forecast alone does not launch the simulation")
         tap("reason.batteryCreatesEnergy")
         shot("prediction-with-reason")

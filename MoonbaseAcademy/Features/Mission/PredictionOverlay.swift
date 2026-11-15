@@ -3,8 +3,8 @@ import SwiftUI
 struct BetOverlay: View {
     let session: MissionSession
     var readAloud = false
-    @State private var forecast: Prediction?
-    @State private var reason: PredictionReason?
+    private var forecast: Prediction? { session.pendingPrediction }
+    private var reason: PredictionReason? { session.pendingReason }
     @AccessibilityFocusState private var titleFocused: Bool
 
     private var reasons: [PredictionReason] { PredictionReason.choices(for: session.definition.missionID) }
@@ -38,20 +38,19 @@ struct BetOverlay: View {
                 .font(.subheadline).foregroundStyle(Theme.inkSecondary)
             ForEach(Prediction.allCases, id: \.self) { choice in
                 selection(choice.outcome(in: session.definition), selected: forecast == choice) {
-                    forecast = choice
-                    if choice == .unsure { reason = .unsure }
-                    else if reason == .unsure { reason = nil }
+                    session.choosePrediction(choice)
                 }
-                .accessibilityLabel(choice.label)
+                .accessibilityLabel(choice.outcome(in: session.definition))
+                .accessibilityIdentifier("prediction.\(choice.rawValue)")
                 .accessibilityHint(choice.outcome(in: session.definition))
             }
             if forecast != nil && forecast != .unsure {
                 Text("Why do you think that?").font(.headline)
                 ForEach(reasons, id: \.self) { idea in
-                    selection(idea.text, selected: reason == idea) { reason = idea }
+                    selection(idea.text, selected: reason == idea) { session.chooseReason(idea) }
                         .accessibilityIdentifier("reason.\(idea.rawValue)")
                 }
-                selection(PredictionReason.unsure.text, selected: reason == .unsure) { reason = .unsure }
+                selection(PredictionReason.unsure.text, selected: reason == .unsure) { session.chooseReason(.unsure) }
                     .accessibilityIdentifier("reason.unsure")
             }
             Text("Your equipment and settings decide the result. A prediction is an idea we can test.")

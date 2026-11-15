@@ -72,6 +72,18 @@ struct AttemptSummary: Equatable {
     var headline: String
     var setup: String
     var numbers: [NumberRow]
+    var prediction: Prediction? = nil
+    var reason: PredictionReason? = nil
+    var question: String? = nil
+    var configuration: ResourceConfiguration? = nil
+    var roverConfiguration: RoverConfiguration? = nil
+    var elapsedHours: Double? = nil
+    var inputs: BaseTestInputs? = nil
+}
+
+struct RevisionSuggestion {
+    var text: String
+    var phaseIndex: Int?
 }
 
 @MainActor
@@ -88,6 +100,10 @@ final class MissionSession {
     private(set) var roverConfiguration: RoverConfiguration
     private(set) var prediction: Prediction?
     private(set) var predictionReason: PredictionReason?
+    private(set) var pendingPrediction: Prediction?
+    private(set) var pendingReason: PredictionReason?
+    private(set) var revisionPhaseIndex: Int?
+    private(set) var revisionInstruction: String?
     private(set) var resourceResult: ResourceMissionResult?
     private(set) var roverResult: RoverMissionResult?
     private(set) var explanation: Explanation?
@@ -132,6 +148,7 @@ final class MissionSession {
          reduceMotion: Bool, firstVisit: Bool, playbackMode: PlaybackMode = .automatic,
          onModeChange: @escaping (PlaybackMode) -> Void = { _ in },
          baseTest: BaseTestContext? = nil,
+         previousAttempt: AttemptSummary? = nil,
          onRecord: @escaping (AttemptRecord, String?, Set<Achievement>) -> Bool) {
         self.definition = definition
         self.science = science
@@ -144,6 +161,13 @@ final class MissionSession {
         self.onModeChange = onModeChange
         self.playbackMode = playbackMode
         self.baseTest = baseTest
+        self.currentAttempt = previousAttempt
+        if previousAttempt == nil, let record = baseTest?.previous {
+            self.currentAttempt = AttemptSummary(success: record.success, headline: record.headline,
+                setup: record.inputs.summary, numbers: [], prediction: record.prediction,
+                reason: record.predictionReason, question: record.predictionQuestion,
+                configuration: record.resourceConfiguration, elapsedHours: record.elapsedHours, inputs: record.inputs)
+        }
         if let baseTest {
             self.configuration = BaseExperiment.configuration(for: definition, inputs: baseTest.inputs)
         } else {
@@ -317,6 +341,7 @@ final class MissionSession {
             }
             if let notice { return notice }
             if let issue = issues.first { return issue.childMessage }
+            if let revisionInstruction { return revisionInstruction }
             if hintVisible { return copy.hint }
             return gameCopy.planTip
         case .predicting:
@@ -422,7 +447,23 @@ final class MissionSession {
         notice = nil
         prediction = nil
         predictionReason = nil
+        pendingPrediction = nil
+        pendingReason = nil
+        revisionPhaseIndex = nil
+        revisionInstruction = nil
         stage = .predicting
+    }
+
+    func choosePrediction(_ choice: Prediction) {
+        guard stage == .predicting else { return }
+        pendingPrediction = choice
+        if choice == .unsure { pendingReason = .unsure }
+        else if pendingReason == .unsure { pendingReason = nil }
+    }
+
+    func chooseReason(_ reason: PredictionReason) {
+        guard stage == .predicting, pendingPrediction != nil else { return }
+        pendingReason = reason
     }
 
     func backToPlanning() {
@@ -577,7 +618,7 @@ final class MissionSession {
     }
 
     /// Reopens a saved plan after the app was closed. Starts at planning; nothing is simulated or recorded.
-    func restorePlan(configuration saved: ResourceConfiguration?, rover: RoverConfiguration?) {
+    func restorePlan(configuration saved: ResourceConfiguration?, rover: RoverConfiguration?, isDraft: Bool = true) {
         if isRover, let rover, RoverEngine.validateConfiguration(mission: definition, configuration: rover).isEmpty {
             roverConfiguration = rover
         } else if !isRover, let saved, validateConfiguration(mission: definition, configuration: saved).isEmpty {
@@ -590,7 +631,7 @@ final class MissionSession {
         }
         tutorial = .done
         stage = .planning
-        resumedFromDraft = true
+        resumedFromDraft = isDraft
         refreshWorld()
     }
 
@@ -659,9 +700,17 @@ final class MissionSession {
             previousBaseRecord = currentBaseRecord ?? context.previous
             currentBaseRecord = BaseExperiment.record(inputs: context.inputs, result: result,
                                                       definition: definition, headline: explanation?.headline ?? "", eventID: context.eventID)
+            currentBaseRecord?.prediction = prediction
+            currentBaseRecord?.predictionReason = predictionReason
+            currentBaseRecord?.predictionQuestion = copy.question
+            currentBaseRecord?.resourceConfiguration = configuration
         }
         let summary = AttemptSummary(success: success, headline: explanation?.headline ?? "",
-                                     setup: setupDescription, numbers: explanation?.numbers ?? [])
+                                     setup: setupDescription, numbers: explanation?.numbers ?? [],
+                                     prediction: prediction, reason: predictionReason, question: copy.question,
+                                     configuration: isRover ? nil : configuration,
+                                     roverConfiguration: isRover ? roverConfiguration : nil,
+                                     elapsedHours: resourceResult?.trace.last?.endHour, inputs: baseTest?.inputs)
         previousAttempt = currentAttempt
         currentAttempt = summary
         if !success {
@@ -687,6 +736,8 @@ final class MissionSession {
         pausedByInterruption = false
         stars = nil
         notice = nil
+        revisionPhaseIndex = nil
+        revisionInstruction = nil
         stage = .planning
         world.setSpeed(1)
         resourceResult = nil
@@ -696,6 +747,72 @@ final class MissionSession {
         predictionReason = nil
         playbackIndex = 0
         refreshWorld()
+    }
+
+    /// Keeps the prior hypothesis while returning to the relevant part of the same scenario.
+    func reviseExperiment() {
+        let suggestion = revisionSuggestion
+        retry()
+        revisionPhaseIndex = suggestion.phaseIndex
+        revisionInstruction = suggestion.text
+    }
+
+    var revisionSuggestion: RevisionSuggestion {
+        if let r = resourceResult {
+            if r.failedConstraints.contains(.researchGoalNotReached) {
+                return RevisionSuggestion(text: "Try science On during the first storm part. Watch what it costs in power, then test your idea.", phaseIndex: 0)
+            }
+            if r.failure?.constraint == .oxygenExhausted || r.failedConstraints.contains(.airReserveBelowMinimum) {
+                let index = configuration.plans.firstIndex { $0.airFraction < 1 } ?? 0
+                return RevisionSuggestion(text: "Try a higher air-maker setting in one part. Check the extra power it needs.", phaseIndex: index)
+            }
+            if r.failure?.constraint == .energyShortage {
+                let index = definition.phases.firstIndex { $0.id == r.failure?.phaseID } ?? 0
+                return RevisionSuggestion(text: "Try changing one power choice in this part. Lower air-maker power uses more oxygen from the tank; extra sunlight generation can help before shadow.", phaseIndex: index)
+            }
+            if r.failedConstraints.contains(.harvestNotReached) {
+                return RevisionSuggestion(text: "Try more greenhouse light in one part. Compare growth with the energy left for the crew.", phaseIndex: configuration.plans.firstIndex { $0.gardenFraction < 1 } ?? 0)
+            }
+            if r.failure?.constraint == .shelterMissing {
+                return RevisionSuggestion(text: "Rebalance the cargo to include a shelter within the crate limit. The crew must stay protected.", phaseIndex: nil)
+            }
+        }
+        return RevisionSuggestion(text: isRover ? "Try a different STOP marker and predict where the rover will stop." : "Change one equipment or operating choice, then predict whether the mission will still work.", phaseIndex: isRover ? nil : 0)
+    }
+
+    var learningRecord: BaseTestRecord? {
+        if let currentBaseRecord { return currentBaseRecord }
+        guard let result = resourceResult else { return nil }
+        let gear = BaseTestInputs(arrays: configuration.count(.solarArray), batteries: configuration.count(.battery))
+        return BaseExperiment.record(inputs: gear, result: result, definition: definition, headline: explanation?.headline ?? "")
+    }
+
+    /// A concrete difference list. It never claims a controlled experiment when several settings changed.
+    var investigationChanges: [String]? {
+        guard let old = previousAttempt, let now = currentAttempt else { return nil }
+        if let before = old.configuration, let after = now.configuration {
+            var changes: [String] = []
+            for kind in CargoKind.allCases where before.count(kind) != after.count(kind) {
+                changes.append("\(CargoCopy.name(kind)): \(before.count(kind)) → \(after.count(kind))")
+            }
+            for index in 0..<min(before.plans.count, after.plans.count) {
+                let a = before.plans[index], b = after.plans[index]
+                let label = definition.phases.indices.contains(index) ? definition.phases[index].label : "Part \(index + 1)"
+                if a.airFraction != b.airFraction { changes.append("\(label) air: \(Self.airLabel(a.airFraction)) → \(Self.airLabel(b.airFraction))") }
+                if a.researchLevel != b.researchLevel { changes.append("\(label) science: \(a.researchLevel > 0 ? "On" : "Off") → \(b.researchLevel > 0 ? "On" : "Off")") }
+                if a.gardenFraction != b.gardenFraction { changes.append("\(label) greenhouse light changed") }
+            }
+            if let a = old.inputs, let b = now.inputs,
+               a.arrays == b.arrays, a.batteries == b.batteries,
+               (a.arrayFactor != b.arrayFactor || a.batteryFactor != b.batteryFactor) {
+                changes.append(BaseExperiment.change(from: a, to: b))
+            }
+            return changes
+        }
+        if let before = old.roverConfiguration, let after = now.roverConfiguration {
+            return before == after ? [] : ["The rover's control, marker or cargo changed"]
+        }
+        return nil
     }
 
     func leave() {
@@ -747,7 +864,7 @@ final class MissionSession {
         case .stormDrill:
             let items = definition.catalog.filter { count($0.kind) > 0 }.map { CargoCopy.name($0.kind) }
             let cargo = items.isEmpty ? "No cargo" : items.joined(separator: " + ")
-            return "\(cargo) · air \(Self.airLabel(plan(0).airFraction)) then \(Self.airLabel(plan(1).airFraction))"
+            return "\(cargo) · air \(Self.airLabel(plan(0).airFraction)) then \(Self.airLabel(plan(1).airFraction)); science \(plan(0).researchLevel > 0 ? "On" : "Off") then \(plan(1).researchLevel > 0 ? "On" : "Off")"
         case .signalLag:
             switch roverPlan {
             case .onboard: return "Onboard computer"

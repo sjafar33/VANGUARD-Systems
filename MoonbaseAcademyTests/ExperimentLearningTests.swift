@@ -49,7 +49,7 @@ final class ExperimentLearningTests: MoonbaseTestCase {
         XCTAssertEqual(storage.previousBaseRecord?.inputs, ExampleBase.starter.inputs)
         let sun = try run(.moreSunlight, reset: false)
         XCTAssertTrue(try XCTUnwrap(sun.currentBaseRecord).success)
-        XCTAssertEqual(sun.previousBaseRecord?.inputs, ExampleBase.starter.inputs)
+        XCTAssertEqual(sun.previousBaseRecord?.inputs, ExampleBase.moreStorage.inputs)
         XCTAssertEqual(sun.previousBaseRecord?.elapsedHours, 10)
         XCTAssertEqual(sun.currentBaseRecord?.elapsedHours, 12)
         sun.setPlaybackMode(.automatic)

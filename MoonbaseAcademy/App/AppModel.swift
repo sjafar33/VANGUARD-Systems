@@ -221,13 +221,15 @@ final class AppModel {
     // MARK: Test My Base
 
     private var exampleRecord: BaseTestRecord?
-    private var exampleBaseline: BaseTestRecord?
     private var exampleKind: BaseTestKind = .shadow
 
     /// A temporary equipment snapshot. Never writes campaign progress, rewards, or a draft.
     func openExampleMission(_ preset: ExampleBase = .starter, resetHistory: Bool = true, kind: BaseTestKind = .shadow) {
         guard let science else { return }
-        if resetHistory || kind != exampleKind { exampleRecord = nil; exampleBaseline = nil }
+        let continuing = !resetHistory && kind == exampleKind && session?.baseTest?.isExample == true
+        let priorPlan = continuing ? session?.configuration : nil
+        let priorAttempt = continuing ? session?.currentAttempt : nil
+        if !continuing { exampleRecord = nil }
         exampleKind = kind
         session?.leave()
         var inputs = preset.inputs
@@ -239,13 +241,16 @@ final class AppModel {
         session = MissionSession(definition: definition, science: science, world: missionWorld,
                                  decor: BaseDecor(progress: CampaignProgress()), reduceMotion: reduceMotion,
                                  firstVisit: false, playbackMode: .stepByStep,
-                                 baseTest: BaseTestContext(inputs: inputs, previous: exampleBaseline ?? exampleRecord, isExample: true, kind: kind, eventID: kind == .storm ? ScienceKeys.stormEvent : nil)) { [weak self] _, _, _ in
+                                 baseTest: BaseTestContext(inputs: inputs, previous: exampleRecord, isExample: true, kind: kind, eventID: kind == .storm ? ScienceKeys.stormEvent : nil),
+                                 previousAttempt: priorAttempt) { [weak self] _, _, _ in
             guard let self, let record = self.session?.currentBaseRecord else { return false }
             self.exampleRecord = record
-            if preset == .starter, record.airSunlight == 1, record.airShadow == 1, !record.observation {
-                self.exampleBaseline = record
-            }
             return false
+        }
+        if let priorPlan, let session {
+            var next = session.configuration
+            next.plans = priorPlan.plans
+            session.restorePlan(configuration: next, rover: nil, isDraft: false)
         }
         session?.beginPlanning()
         selectedMission = nil

@@ -49,6 +49,10 @@ struct BaseTestRecord: Codable, Equatable, Sendable {
     var eventID: String? = nil
     var scienceEnergyKWh: Double? = nil
     var scienceDeclining: Bool? = nil
+    var prediction: Prediction? = nil
+    var predictionReason: PredictionReason? = nil
+    var predictionQuestion: String? = nil
+    var resourceConfiguration: ResourceConfiguration? = nil
 
     var timeSummary: String {
         guard let elapsedHours, let plannedHours else { return "Time not recorded in this older test" }

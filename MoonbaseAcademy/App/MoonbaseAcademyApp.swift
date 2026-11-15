@@ -27,6 +27,7 @@ struct RootView: View {
                 ZStack {
                     if model.route == .mission, let session = model.session {
                         MissionView(model: model, session: session, package: package, isActive: scenePhase == .active)
+                            .id(ObjectIdentifier(session))
                             .transition(.opacity)
                     } else {
                         BaseView(model: model, package: package, isActive: scenePhase == .active)
