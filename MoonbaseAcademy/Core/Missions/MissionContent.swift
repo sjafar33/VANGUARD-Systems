@@ -295,6 +295,14 @@ enum ExplanationWriter {
                     headline = "The power ran out"
                     paragraphs.append("The batteries ran empty \(into) into the \(phase). The base needed \(Format.kW(failure.deficitKW)) more than it was getting, so it was short \(Format.kWh(failure.shortfall)) by the end of that step.")
                 }
+                if BaseExperiment.isBaseTest(d), failure.phaseID == "shadow",
+                   let sun = r.trace.first(where: { $0.phaseID == "sunlit" }),
+                   let shadow = r.trace.last(where: { $0.phaseID == "shadow" }) {
+                    let needed = max(0, shadow.demand.totalKW - shadow.generationKW) * shadow.plannedHours
+                    let reason = sun.after.batteryKWh < sun.after.batteryCapacityKWh - 1e-9
+                        ? "Empty storage cannot make extra energy." : "The batteries were full, so more storage could help."
+                    paragraphs.insert("Before the shadow, your batteries held \(Format.kWh(sun.after.batteryKWh)). This shadow plan needed \(Format.kWh(needed)). \(reason)", at: 0)
+                }
                 switch d.missionID {
                 case .lightsOut:
                     if BaseExperiment.isBaseTest(d) {
@@ -375,7 +383,8 @@ enum ExplanationWriter {
         }
         if curtailed > 0.05 {
             let what = d.phases.contains { $0.solarKWPerArray > 0 } ? "sunshine energy" : "energy"
-            paragraphs.append("\(Format.kWh(curtailed)) of \(what) went to waste because the batteries were already full.")
+            let reason = r.initialState.batteryCapacityKWh <= 1e-9 ? "there was no battery to store it" : "the batteries were already full"
+            paragraphs.append("\(Format.kWh(curtailed)) of \(what) went to waste because \(reason).")
         }
         return Explanation(success: r.success, headline: headline, paragraphs: paragraphs, numbers: numbers)
     }

@@ -62,6 +62,7 @@ struct StarResult: Equatable {
 struct BaseTestContext: Equatable {
     var inputs: BaseTestInputs
     var previous: BaseTestRecord?
+    var isExample = false
 }
 
 struct AttemptSummary: Equatable {
@@ -159,6 +160,8 @@ final class MissionSession {
     var isRover: Bool { definition.kind == .rover }
     var isVariant: Bool { definition.variant != nil }
     var isBaseTest: Bool { baseTest != nil }
+    private(set) var currentBaseRecord: BaseTestRecord?
+    private(set) var previousBaseRecord: BaseTestRecord?
     static let baseGearNotice = "This test uses your real base. To change it, build at your base, then test again."
 
     var cargoCost: Int {
@@ -652,6 +655,11 @@ final class MissionSession {
         stage = .results
         world.setSpeed(1)
         let success = resourceResult?.success ?? roverResult?.success ?? false
+        if let context = baseTest, let result = resourceResult {
+            previousBaseRecord = currentBaseRecord ?? context.previous
+            currentBaseRecord = BaseExperiment.record(inputs: context.inputs, result: result,
+                                                      definition: definition, headline: explanation?.headline ?? "")
+        }
         let summary = AttemptSummary(success: success, headline: explanation?.headline ?? "",
                                      setup: setupDescription, numbers: explanation?.numbers ?? [])
         previousAttempt = currentAttempt

@@ -77,7 +77,7 @@ struct GameCopy {
         let power = Double(gear.arrays) * (d.phases.map(\.solarKWPerArray).max() ?? 0)
         let storage = Double(gear.batteries) * (d.item(.battery)?.batteryCapacityKWh ?? 0)
         return GameCopy(
-            title: "Test My Base",
+            title: d.title,
             intro: ["This test is about YOUR base. No lander and no spare crates: only what you really built.",
                     "You have \(gear.summary): up to \(Format.kW(power)) in sunlight and \(Words.kWh(storage)) of storage. A \(Words.hourAdjective(shadow)) shadow is coming, with no sun at all.",
                     "Set the air maker for sunlight and for the shadow, then test it!"],

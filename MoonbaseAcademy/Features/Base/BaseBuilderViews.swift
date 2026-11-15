@@ -467,6 +467,18 @@ struct DrillsListView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Try the engineering experiment")
+                        .font(.headline)
+                    Text("An example base, ready now. No coins or unlocks needed. Your own base stays unchanged.")
+                        .font(.subheadline)
+                    Button("Start example lab") {
+                        close()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openExampleMission() }
+                    }
+                    .buttonStyle(GameButtonStyle(bevel: GamePalette.energy, height: 54, font: .game(.headline)))
+                }
+                .padding(16)
                 if model.baseState.stationRestored {
                     Button {
                         close()

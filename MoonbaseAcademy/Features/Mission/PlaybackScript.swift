@@ -93,7 +93,8 @@ enum PlaybackScript {
         let used = step.demand.totalKW * step.elapsedHours
         var text = "In \(Format.hours(step.elapsedHours)) the base made \(Format.number(made)) kWh and used \(Format.number(used)) kWh. \(battery)"
         if step.curtailedKWh > 0.05 {
-            text += " \(Format.number(step.curtailedKWh)) kWh was wasted because the battery was full."
+            let reason = step.after.batteryCapacityKWh <= 1e-9 ? "there was no battery to store it" : "the battery was full"
+            text += " \(Format.number(step.curtailedKWh)) kWh was wasted because \(reason)."
         }
         let oxygenChange = step.after.oxygenKg - step.before.oxygenKg
         if oxygenChange < -0.01 {

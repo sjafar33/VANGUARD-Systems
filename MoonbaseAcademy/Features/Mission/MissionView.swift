@@ -201,6 +201,7 @@ struct MissionView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                if session.baseTest?.isExample == true { ExampleLabControls(model: model) }
                 BuildTray(session: session) { planPhase = $0 }
                 Button {
                     session.goToPrediction()
@@ -443,7 +444,7 @@ struct BaseGearCard: View {
     var body: some View {
         let gear = session.baseTest?.inputs ?? BaseTestInputs(arrays: 0, batteries: 0)
         VStack(alignment: .leading, spacing: 6) {
-            Label("Your base", systemImage: "house.fill")
+            Label(session.baseTest?.isExample == true ? "Example base" : "Your base", systemImage: "house.fill")
                 .font(.game(.subheadline))
                 .foregroundStyle(Theme.ink)
             Label("\(gear.arrays) solar array\(gear.arrays == 1 ? "" : "s")", systemImage: "sun.max.fill")
@@ -465,35 +466,80 @@ struct BaseGearCard: View {
 
 /// On the result of a base test: what the base had, how it compares with the last saved test, and the
 /// rules that turned buildings into numbers.
+struct ExampleLabControls: View {
+    let model: AppModel
+
+    private var choices: some View {
+        ForEach(ExampleBase.allCases, id: \.self) { preset in
+            Button(preset.title) { model.openExampleMission(preset, resetHistory: false) }
+                .font(.system(.caption, design: .rounded).weight(.bold))
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.energyInk)
+                .foregroundStyle(.white)
+                .accessibilityIdentifier("example.\(preset.rawValue)")
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Example lab • compare with the starter base")
+                .font(.system(.subheadline, design: .rounded).weight(.bold))
+            ViewThatFits {
+                HStack { choices }
+                VStack(alignment: .leading) { choices }
+            }
+            Text("Each new equipment choice resets the air plan to Full. No coins or progress are saved.")
+                .font(.caption)
+        }
+        .foregroundStyle(Theme.ink)
+        .padding(10)
+        .background(GameCardBackground())
+    }
+}
+
 struct BaseTestCard: View {
     let session: MissionSession
 
+    private func resultLine(_ title: String, _ record: BaseTestRecord) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("\(title): \(record.success ? "passed" : "stopped") • \(record.timeSummary)")
+                .fontWeight(.bold)
+            Text(record.inputs.summary)
+            Text("Air maker: \(MissionSession.airLabel(record.airSunlight)) in sunlight, \(MissionSession.airLabel(record.airShadow)) in shadow. Science: \(record.observation ? "On" : "Off").")
+            Text("At that stopping time: \(Format.kWh(record.finalBatteryKWh)) energy; \(Format.wholeHours(record.finalAirHours)) of stored oxygen.")
+        }
+        .font(.system(.caption, design: .rounded))
+        .accessibilityElement(children: .combine)
+    }
+
     var body: some View {
         if let context = session.baseTest {
-            let d = session.definition
-            let arrayKW = d.phases.map(\.solarKWPerArray).max() ?? 0
-            let batteryKWh = d.item(.battery)?.batteryCapacityKWh ?? 0
-            VStack(alignment: .leading, spacing: 6) {
-                Label("Your base: \(context.inputs.summary)", systemImage: "house.fill")
+            VStack(alignment: .leading, spacing: 8) {
+                Label(context.isExample ? "Example experiment" : "Your base experiment", systemImage: "house.fill")
                     .font(.system(.subheadline, design: .rounded).weight(.black))
-                    .foregroundStyle(Theme.ink)
-                if let previous = context.previous, session.previousAttempt == nil {
-                    Text("Last saved test: \(previous.inputs.summary). \(previous.headline).")
-                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
-                        .foregroundStyle(Theme.ink)
-                    Text(BaseExperiment.change(from: previous.inputs, to: context.inputs))
-                        .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                        .foregroundStyle(Theme.energyInk)
+                if let current = session.currentBaseRecord {
+                    resultLine("Now", current)
+                    if let spent = current.oxygenSpentKg, let saved = current.energySavedKWh, spent > 1e-9 {
+                        Text("The reserve cost: saved \(Format.kWh(saved)) vs Full air, spent \(Format.kg(spent)) from the oxygen tank during this run.")
+                            .font(.subheadline).fontWeight(.bold)
+                    }
+                    if let previous = session.previousBaseRecord {
+                        Divider()
+                        resultLine("Last", previous)
+                        Text(BaseExperiment.change(from: previous.inputs, to: current.inputs))
+                            .font(.subheadline).fontWeight(.bold)
+                        Text("Every shadow test restarts with the same air supply and empty batteries. Compare the stopping times before comparing reserves.")
+                            .font(.caption)
+                    }
                 }
-                Text("Game rules for this test: your solar arrays make \(Format.kW(arrayKW * Double(context.inputs.arrays))) in sunlight and your batteries store \(Words.kWh(batteryKWh * Double(context.inputs.batteries))). A level 1 array or battery is the same as in Lights Out; level 2 counts 1.5 times and level 3 counts 2 times. Colours, decorations and other buildings' levels change nothing.")
+                Text("Game rules: \(Format.kW((session.definition.phases.map(\.solarKWPerArray).max() ?? 0) * Double(context.inputs.arrays))) of sunlight power; \(Format.kWh((session.definition.item(.battery)?.batteryCapacityKWh ?? 0) * Double(context.inputs.batteries))) of storage. Levels 1 / 2 / 3 count 1× / 1.5× / 2×. Positions and decoration change nothing.")
                     .font(.caption)
-                    .foregroundStyle(Theme.inkSecondary)
             }
+            .foregroundStyle(Theme.ink)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.panel))
-            .accessibilityElement(children: .combine)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
         }
     }
 }
@@ -777,11 +823,16 @@ struct QuickPlanCard: View {
                 .font(.system(.caption, design: .rounded).weight(.heavy))
                 .foregroundStyle(draining ? Theme.warningInk : Theme.plantInk)
                 .fixedSize(horizontal: false, vertical: true)
-            Label(fromTank ? "Crew breathes from the tank" : "Air maker keeps up",
+            Label(fromTank ? "Tank cost: \(Format.kg((breathe - oxygen) * phase.durationHours / 24))" : "Air maker keeps up",
                   systemImage: fromTank ? "lungs.fill" : "checkmark.circle.fill")
                 .font(.system(.caption, design: .rounded).weight(.heavy))
                 .foregroundStyle(fromTank ? Theme.warningInk : Theme.plantInk)
                 .fixedSize(horizontal: false, vertical: true)
+            if plan.airFraction < 1 {
+                Text("Saves \(Format.kWh(a.fullGeneratorKW * (1 - plan.airFraction) * phase.durationHours)) vs Full over \(Format.hours(phase.durationHours)).")
+                    .font(.caption).foregroundStyle(Theme.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(10)
         .frame(width: cardWidth, alignment: .leading)
@@ -1215,7 +1266,8 @@ struct ResultOverlay: View {
                     }
                     whySection
                     if session.isBaseTest { BaseTestCard(session: session) }
-                    if let previous = session.previousAttempt, let current = session.currentAttempt {
+                    if session.baseTest?.isExample == true { ExampleLabControls(model: model) }
+                    if !session.isBaseTest, let previous = session.previousAttempt, let current = session.currentAttempt {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Last try vs this try").font(.system(.subheadline, design: .rounded).weight(.black)).foregroundStyle(Theme.ink)
                             AttemptLine(title: "Last", summary: previous)

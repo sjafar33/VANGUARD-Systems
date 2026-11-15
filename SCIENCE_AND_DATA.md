@@ -74,3 +74,11 @@ The Storm Drill's timing comes from NASA's CCMC SEP Scoreboard archive (source N
 How the seven added rows were entered: read from the official archive page by an automated fetch and entered by an AI assistant on 2026-11-14. Two checks were made: the same fetch returned the 2017-09-10 row identical to the record transcribed by hand earlier, and for five of the seven rows the duration derived from the timestamps equals the table's own duration column (the other two differ by less than 0.3 hours). **A team member should still re-read the seven rows against the source page before submission.**
 
 Limits that still apply: these are particle measurements by a satellite near Earth. They are not a radiation dose on the Moon, and the game does not calculate a dose. The shelter rule is a simple training rule. DONKI itself is not used: it could not be reached from the build environment, so the game makes no DONKI claim.
+
+## Experiment comparison and example lab (November 15)
+
+Results record elapsed and planned hours separately. A failed run stops at its actual failure time; its remaining oxygen must not be treated as a full-mission reserve. Saved records from older versions still load with timing marked unavailable.
+
+Reserve expenditure sums net oxygen withdrawn during each simulated step. Energy saved compares the air maker with Full over the same elapsed time, using the authored generator-power assumption. For one array and one battery, Full air fails at hour 10; Half air in the six-hour shadow completes hour 12, saving 1.5 kWh and spending 0.1975 kg from the oxygen tank during the shadow. These are outputs of NASA crew demand plus the training assumptions, not hardware specifications.
+
+The Example lab provides fixed equipment snapshots (1 array/1 battery, 1 array/2 batteries, 2 arrays/1 battery). Selecting equipment restores the default Full-air plan and the same initial resources. Example results remain in memory only; they do not award coins, unlock missions, replace the base, clear an existing draft, or save playback preferences.

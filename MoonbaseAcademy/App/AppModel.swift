@@ -220,6 +220,36 @@ final class AppModel {
 
     // MARK: Test My Base
 
+    private var exampleRecord: BaseTestRecord?
+    private var exampleBaseline: BaseTestRecord?
+
+    /// A temporary equipment snapshot. Never writes campaign progress, rewards, or a draft.
+    func openExampleMission(_ preset: ExampleBase = .starter, resetHistory: Bool = true) {
+        guard let science else { return }
+        if resetHistory { exampleRecord = nil; exampleBaseline = nil }
+        session?.leave()
+        let inputs = preset.inputs
+        var definition = BaseExperiment.shadowTest(inputs: inputs)
+        definition.title = "Example lab"
+        definition.drillLabel = "Example base • your save stays unchanged"
+        lastDrillCoins = 0
+        session = MissionSession(definition: definition, science: science, world: missionWorld,
+                                 decor: BaseDecor(progress: CampaignProgress()), reduceMotion: reduceMotion,
+                                 firstVisit: false, playbackMode: .stepByStep,
+                                 baseTest: BaseTestContext(inputs: inputs, previous: exampleBaseline ?? exampleRecord, isExample: true)) { [weak self] _, _, _ in
+            guard let self, let record = self.session?.currentBaseRecord else { return false }
+            self.exampleRecord = record
+            if preset == .starter, record.airSunlight == 1, record.airShadow == 1, !record.observation {
+                self.exampleBaseline = record
+            }
+            return false
+        }
+        session?.beginPlanning()
+        selectedMission = nil
+        selectedBuildingID = nil
+        route = .mission
+    }
+
     /// Opens the shadow test for the player's real base. The equipment is snapshotted here, so nothing
     /// done to the base afterwards can change this test. Reference drills are not touched.
     func openBaseTest() {
@@ -251,16 +281,7 @@ final class AppModel {
     /// Saves a base test. It never counts as a drill: no completion, no stars, no drill attempts.
     private func recordBaseTest(_ attempt: AttemptRecord, inputs: BaseTestInputs) -> Bool {
         var base = progress.baseState
-        let plans = attempt.resourceConfiguration?.plans ?? []
-        let record = BaseTestRecord(inputs: inputs,
-                                    airSunlight: plans.first?.airFraction ?? 1,
-                                    airShadow: plans.last?.airFraction ?? 1,
-                                    observation: (plans.first?.researchLevel ?? 0) > 0,
-                                    success: attempt.success,
-                                    headline: attempt.headline,
-                                    finalBatteryKWh: attempt.finalBatteryKWh ?? 0,
-                                    finalAirHours: attempt.finalAirHours ?? 0,
-                                    date: attempt.date)
+        guard let record = session?.currentBaseRecord else { return false }
         let first = base.recordBaseTest(record)
         lastDrillCoins = first ? BaseExperiment.firstPassCoins : 0
         progress.base = base
@@ -306,8 +327,10 @@ final class AppModel {
     }
 
     func leaveMission() {
-        progress.draft = nil
-        save()
+        if session?.baseTest?.isExample != true {
+            progress.draft = nil
+            save()
+        }
         Narrator.shared.stop()
         session?.leave()
         session = nil

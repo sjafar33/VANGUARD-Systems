@@ -7,6 +7,7 @@ Moonbase Academy is an offline iPhone and iPad base-building game for children a
 - **Build:** solar arrays, batteries, greenhouse, storm shelter, radio dish, plus decorations (flag, lamp post, rock garden) that are looks only.
 - **Learn:** lessons at three question levels (Explorer, Builder, Mission Engineer) with question pools, so replays differ.
 - **Test My Base:** a shadow test that counts the player's own working solar arrays and batteries and runs them through the same engine as the Lights Out drill. Array and battery levels scale their power and capacity: level 1 = 1×, level 2 = 1.5×, level 3 = 2× (game rules). Colours, positions, decorations and other buildings’ levels do not affect the test.
+- **Example lab:** Drills → Start example lab opens a ready-to-test equipment snapshot. Try an extra battery, an extra array, or a lower air-maker setting. It uses the same engine and leaves the player’s save unchanged. Results show actual stopping times and reserve costs.
 - **Four reference drills** cover all five challenge topics:
 
 | Drill | Topic | The engineering trade-off |

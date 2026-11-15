@@ -38,6 +38,32 @@ struct BaseTestRecord: Codable, Equatable, Sendable {
     var finalBatteryKWh: Double
     var finalAirHours: Double
     var date: Date
+    var elapsedHours: Double? = nil
+    var plannedHours: Double? = nil
+    var oxygenSpentKg: Double? = nil
+    var energySavedKWh: Double? = nil
+
+    var timeSummary: String {
+        guard let elapsedHours, let plannedHours else { return "Time not recorded in this older test" }
+        return "Reached \(Format.number(elapsedHours)) of \(Format.number(plannedHours)) hours"
+    }
+}
+
+enum ExampleBase: String, CaseIterable {
+    case starter, moreStorage, moreSunlight
+
+    var title: String {
+        switch self {
+        case .starter: return "Starter base"
+        case .moreStorage: return "Extra battery"
+        case .moreSunlight: return "Extra array"
+        }
+    }
+
+    var inputs: BaseTestInputs {
+        BaseTestInputs(arrays: self == .moreSunlight ? 2 : 1,
+                       batteries: self == .moreStorage ? 2 : 1)
+    }
 }
 
 /// "Test My Base": a shadow test built from a snapshot of the player's own base.
@@ -116,6 +142,26 @@ enum BaseExperiment {
         c.setCount(.solarArray, max(0, inputs.arrays))
         c.setCount(.battery, max(0, inputs.batteries))
         return c
+    }
+
+    static func record(inputs: BaseTestInputs, result: ResourceMissionResult,
+                       definition: MissionDefinition, headline: String, date: Date = Date()) -> BaseTestRecord {
+        let plans = result.configuration.plans
+        var record = BaseTestRecord(inputs: inputs, airSunlight: plans.first?.airFraction ?? 1,
+                                    airShadow: plans.last?.airFraction ?? 1,
+                                    observation: (plans.first?.researchLevel ?? 0) > 0,
+                                    success: result.success, headline: headline,
+                                    finalBatteryKWh: result.finalState.batteryKWh,
+                                    finalAirHours: result.finalAirHours, date: date)
+        record.elapsedHours = result.trace.last?.endHour ?? 0
+        record.plannedHours = definition.totalHours
+        record.oxygenSpentKg = result.trace.reduce(0) { $0 + max(0, $1.oxygenConsumedKg - $1.oxygenGeneratedKg) }
+        record.energySavedKWh = zip(definition.phases, plans).reduce(0) { sum, pair in
+            let (phase, plan) = pair
+            let hours = result.trace.filter { $0.phaseID == phase.id }.reduce(0) { $0 + $1.elapsedHours }
+            return sum + definition.assumptions.fullGeneratorKW * (1 - plan.airFraction) * hours
+        }
+        return record
     }
 
     /// One plain sentence saying what changed on the base between two tests.
