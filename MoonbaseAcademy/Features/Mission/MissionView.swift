@@ -419,23 +419,25 @@ struct BuildTray: View {
     let openPlan: (Int) -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            row
-            ScrollView(.horizontal, showsIndicators: false) { row }
-                .accessibilityIdentifier("mission.planningTray")
+        VStack(spacing: 10) {
+            if session.isBaseTest { BaseGearCard(session: session) }
+            ViewThatFits(in: .horizontal) {
+                row
+                ScrollView(.horizontal, showsIndicators: false) { row }
+                    .accessibilityIdentifier("mission.planningTray")
+            }
         }
+        .fixedSize(horizontal: false, vertical: true)
         .shake(session.shakeToken)
         .animation(.default, value: session.shakeToken)
     }
 
     private var row: some View {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 if session.isRover {
                     RoverTray(session: session)
                 } else {
-                    if session.isBaseTest {
-                        BaseGearCard(session: session)
-                    } else {
+                    if !session.isBaseTest {
                         ForEach(session.definition.catalog) { item in
                             BuildCard(session: session, item: item,
                                       highlighted: session.tutorial == .placeFirstArray && item.kind == .solarArray,
@@ -469,36 +471,58 @@ struct BuildTray: View {
 /// "Test My Base" has no lander: the tray shows the equipment the player's real base already has.
 struct BaseGearCard: View {
     let session: MissionSession
-    @ScaledMetric(relativeTo: .footnote) private var cardHeight: CGFloat = 146
+    @State private var showRules = false
 
     var body: some View {
         let gear = session.baseTest?.inputs ?? BaseTestInputs(arrays: 0, batteries: 0)
-        VStack(alignment: .leading, spacing: 6) {
-            Label(session.baseTest?.isExample == true ? "Example base" : "Your base", systemImage: "house.fill")
-                .font(.game(.subheadline))
-                .foregroundStyle(Theme.ink)
-            if session.baseTest?.kind == .storm {
-                Label(gear.shelter == true ? "Working shelter" : "No shelter", systemImage: "shield.fill")
-                Text("\(Format.hours(session.definition.totalHours)) archived storm. Finish the \(Format.kWh(session.definition.success.minimumResearchUnits)) science task.")
-                    .font(.caption).fixedSize(horizontal: false, vertical: true)
-            } else {
-                Label("\(gear.arrays) solar array\(gear.arrays == 1 ? "" : "s")", systemImage: "sun.max.fill")
+        let storm = session.baseTest?.kind == .storm
+        let batteries = "\(gear.batteries) \(gear.batteries == 1 ? "battery" : "batteries")"
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                Label(session.baseTest?.isExample == true ? "Example equipment" : "Your equipment", systemImage: "house.fill")
+                    .font(.headline)
+                Spacer(minLength: 4)
+                Button("How this test works", systemImage: "info.circle") { showRules = true }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("mission.testRules")
             }
-            Label("\(gear.batteries) batter\(gear.batteries == 1 ? "y" : "ies")", systemImage: "battery.75percent")
-            Text(session.baseTest?.kind == .storm
-                 ? "Batteries start charged. Training backup: 0.8 kW. Shelter preparation: 3 kWh. Arrays do not supply this rehearsal."
-                 : "Upgrades count: level 2 and 3 make and store more. Build or upgrade at your base.")
-                .font(.system(.caption, design: .rounded).weight(.semibold))
-                .foregroundStyle(Theme.inkSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(storm
+                 ? "\(gear.shelter == true ? "Working shelter" : "No shelter") • \(batteries) • \(Format.kWh(session.definition.initial.batteryKWh)) charged"
+                 : "\(gear.arrays) solar \(gear.arrays == 1 ? "array" : "arrays") • \(batteries) • Batteries start empty")
+                .font(.subheadline.weight(.semibold))
+            if storm {
+                Text("Preparation: \(Format.kWh(session.definition.item(.shelterKit)?.assemblyEnergyKWh ?? 0)). Backup power: \(Format.kW(session.definition.phases.first?.baseSupplyKW ?? 0)).")
+                    .font(.caption).foregroundStyle(Theme.inkSecondary)
+                    .accessibilityIdentifier("mission.stormPreparation")
+            }
         }
-        .font(.system(.footnote, design: .rounded).weight(.heavy))
         .foregroundStyle(Theme.ink)
-        .padding(10)
-        .frame(width: 170, alignment: .leading)
-        .frame(minHeight: cardHeight)
-        .background(GameCardBackground(highlighted: true))
-        .accessibilityElement(children: .combine)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(GameCardBackground())
+        .sheet(isPresented: $showRules) {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text(storm ? "Protect the crew and finish the science task" : "Generate energy, then store it")
+                            .font(.title2.bold())
+                        Text(storm
+                             ? "This rehearsal lasts \(Format.hours(session.definition.totalHours)), using an archived storm. Stay sheltered, leave \(Format.wholeHours(session.definition.success.minimumAirHours)) of air, and supply \(Format.kWh(session.definition.success.minimumResearchUnits)) to the science task."
+                             : "Solar arrays make electricity in sunlight. Batteries store energy for the shadow. More empty storage cannot create energy.")
+                        Text(storm
+                             ? "Batteries start charged. Preparing the shelter uses \(Format.kWh(session.definition.item(.shelterKit)?.assemblyEnergyKWh ?? 0)). An independent training backup supplies \(Format.kW(session.definition.phases.first?.baseSupplyKW ?? 0)); solar arrays do not supply this rehearsal."
+                             : "Working arrays and batteries count, including upgrades. Level 2 is 1.5 times level 1; level 3 is twice level 1. Positions and decorations do not change these calculations.")
+                        Text("Equipment values are training rules. Crew oxygen demand comes from NASA references. Storm timing comes from archived observations near Earth; this game does not calculate radiation dose.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding()
+                }
+                .navigationTitle("How this test works")
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showRules = false } } }
+            }
+        }
     }
 }
 
@@ -885,6 +909,7 @@ struct QuickPlanCard: View {
         }
         .padding(10)
         .frame(width: cardWidth, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
         .background(GameCardBackground())
         .accessibilityElement(children: .contain)
     }

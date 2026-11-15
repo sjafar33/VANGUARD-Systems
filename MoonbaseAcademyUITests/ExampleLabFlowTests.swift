@@ -79,6 +79,25 @@ final class ExampleLabFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["Show me"].waitForExistence(timeout: 5))
     }
 
+    func testStormEquipmentSummaryAndRulesRemainReachable() {
+        for size in ["UICTContentSizeCategoryL", "UICTContentSizeCategoryAccessibilityXXXL"] {
+            app.launchArguments = ["-uiTesting", "-resetProgress", "-UIPreferredContentSizeCategoryName", size]
+            app.launch()
+            tap("Drills")
+            tap("Start storm example")
+            shot("storm-summary-\(size)")
+            tap("How this test works")
+            XCTAssertTrue(app.staticTexts["Protect the crew and finish the science task"].waitForExistence(timeout: 5))
+            shot("storm-rules-\(size)")
+            tap("Done")
+            let launch = app.buttons["Launch test"]
+            for _ in 0..<8 where !launch.isHittable { app.swipeUp() }
+            XCTAssertTrue(launch.isHittable, "Launch stays reachable after reading the equipment rules")
+            shot("storm-layout-\(size)")
+            app.terminate()
+        }
+    }
+
     func testLargeTextExampleStillReachesResult() {
         app.launchArguments = ["-uiTesting", "-resetProgress", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
