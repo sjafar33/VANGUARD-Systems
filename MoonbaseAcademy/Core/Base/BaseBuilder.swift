@@ -249,10 +249,10 @@ struct BaseState: Codable, Equatable, Sendable {
     /// What reaching a level gives. Never a change to a drill's science numbers.
     static func levelReward(_ kind: BuildingKind, level: Int) -> String {
         switch (kind, level) {
-        case (.habitat, 2): return "Build up to 3 solar arrays and 3 batteries."
-        case (.habitat, 3): return "Build up to 4 solar arrays and 4 batteries."
-        case (_, 2): return kind.drill.map { _ in "Unlocks the harder version of its drill." } ?? "A bigger, brighter building."
-        case (_, 3): return "Gold trim and a shining beacon."
+        case (.habitat, 2): return "Build up to 3 solar arrays and 3 batteries. Adds light pylons and a new module."
+        case (.habitat, 3): return "Build up to 4 solar arrays and 4 batteries. Adds a spire, a second module and a hologram ring."
+        case (_, 2): return kind.drill.map { _ in "Unlocks the harder version of its drill, and adds a tech deck and new equipment." } ?? "A bigger, brighter building."
+        case (_, 3): return "The futuristic look: gold deck, glowing core and a hologram ring. Looks only."
         default: return ""
         }
     }

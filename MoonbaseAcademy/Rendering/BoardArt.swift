@@ -209,12 +209,29 @@ enum BoardArt {
             body = rockGarden(animated: animated)
         }
         body.zPosition = 1
-        // Higher levels stand a little taller.
+        // Higher levels stand a little taller, on a lit deck, with new equipment around them.
         body.setScale(1 + CGFloat(b.level - 1) * 0.06)
+        let lift = UpgradeArt.applies(to: b.kind) ? UpgradeArt.lift(b.level) : 0
+        body.position = CGPoint(x: body.position.x, y: body.position.y + lift)
+        if let deck = UpgradeArt.platform(kind: b.kind, level: b.level) {
+            node.addChild(deck)
+        }
+        let extras = UpgradeArt.extras(kind: b.kind, level: b.level, animated: animated)
+        if let back = extras.back {
+            back.position = CGPoint(x: 0, y: lift)
+            back.zPosition = 0.8
+            node.addChild(back)
+        }
         node.addChild(body)
+        if let front = extras.front {
+            front.position = CGPoint(x: 0, y: lift)
+            front.zPosition = 2
+            node.addChild(front)
+        }
         // The landing station has no levels: it is either a ruin or repaired.
         if b.kind != .landingStation && !b.kind.isDecoration {
-            node.addChild(levelPips(b.level, height: pipHeight(b.kind)))
+            let height = max(pipHeight(b.kind), UpgradeArt.top(b.kind, level: b.level)) + lift
+            node.addChild(levelPips(b.level, height: height))
         }
         if animated && b.level >= BuildingKind.maxLevel {
             // Top level: a few gold sparkles now and then.

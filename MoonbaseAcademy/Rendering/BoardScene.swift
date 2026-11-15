@@ -268,9 +268,7 @@ final class BoardScene: SKScene {
                 if animate && isNew {
                     construct(node, at: target)
                 } else if animate && levelledUp {
-                    node.setScale(0.9)
-                    node.run(.sequence([.scale(to: 1.12, duration: 0.16), .scale(to: 1, duration: 0.12)]))
-                    sparkle(at: target + CGPoint(x: 0, y: 40), count: 12)
+                    celebrateUpgrade(node, at: target, level: b.level)
                 } else if animate && repaired {
                     // A ruin coming back to life: dust off, pop up, and a burst of sparkles.
                     puff(at: target)
@@ -308,6 +306,48 @@ final class BoardScene: SKScene {
                             },
                             .scaleX(to: 1.12, y: 0.86, duration: 0.08),
                             .scale(to: 1, duration: 0.16)]))
+    }
+
+    /// An upgrade lands with a light column, a shock ring, two bursts of sparkles and a "LEVEL" tag,
+    /// while the new, bigger building pops into place.
+    private func celebrateUpgrade(_ node: SKNode, at point: CGPoint, level: Int) {
+        let color = UIColor(hex: level >= 3 ? 0xFFE27A : 0x8BE3EE)
+        node.setScale(0.55)
+        node.alpha = 0.4
+        node.run(.sequence([.group([.scale(to: 1.18, duration: 0.22), .fadeIn(withDuration: 0.12)]),
+                            .scale(to: 0.96, duration: 0.1),
+                            .scale(to: 1, duration: 0.1)]))
+        let beam = SKSpriteNode(color: color, size: CGSize(width: 46, height: 280))
+        beam.anchorPoint = CGPoint(x: 0.5, y: 0)
+        beam.position = point
+        beam.alpha = 0.5
+        beam.blendMode = .add
+        effectsLayer.addChild(beam)
+        beam.run(.sequence([.group([.scaleX(to: 0.08, duration: 0.55), .fadeOut(withDuration: 0.55)]), .removeFromParent()]))
+        let ring = SKShapeNode(ellipseOf: CGSize(width: 64, height: 32))
+        ring.strokeColor = color
+        ring.fillColor = .clear
+        ring.lineWidth = 4
+        ring.glowWidth = 2
+        ring.position = point
+        effectsLayer.addChild(ring)
+        ring.run(.sequence([.group([.scale(to: 3.4, duration: 0.55), .fadeOut(withDuration: 0.55)]), .removeFromParent()]))
+        puff(at: point)
+        sparkle(at: point + CGPoint(x: 0, y: 40), count: 18)
+        run(.sequence([.wait(forDuration: 0.2), .run { [weak self] in
+            self?.sparkle(at: point + CGPoint(x: 0, y: 76), count: 14)
+        }]))
+        let tag = SKLabelNode(text: "LEVEL \(level)!")
+        tag.fontName = "AvenirNext-Heavy"
+        tag.fontSize = 22
+        tag.fontColor = color
+        tag.position = point + CGPoint(x: 0, y: 96)
+        tag.setScale(0.6)
+        effectsLayer.addChild(tag)
+        tag.run(.sequence([.scale(to: 1.15, duration: 0.18), .scale(to: 1, duration: 0.1),
+                           .group([.moveBy(x: 0, y: 34, duration: 0.9),
+                                   .sequence([.wait(forDuration: 0.5), .fadeOut(withDuration: 0.4)])]),
+                           .removeFromParent()]))
     }
 
     private func puff(at point: CGPoint) {

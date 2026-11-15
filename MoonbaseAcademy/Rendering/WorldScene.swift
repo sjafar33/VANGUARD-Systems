@@ -1274,6 +1274,11 @@ final class WorldCoordinator {
         scene.apply(snapshot)
     }
 
+    /// Plays the scene's animations faster or slower (the playback speed buttons).
+    func setSpeed(_ speed: CGFloat) {
+        scene.speed = max(0.1, speed)
+    }
+
     var onPadTapped: ((PadID) -> Void)? {
         get { scene.onPadTapped }
         set { scene.onPadTapped = newValue }

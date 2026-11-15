@@ -14,6 +14,10 @@ final class SoundFX {
         case success
         case fail
         case denied
+        /// A rising run with a long bright top note, for an upgrade or a repair.
+        case upgrade
+        /// A low thump, for something heavy landing.
+        case thud
     }
 
     static let shared = SoundFX()
@@ -173,6 +177,9 @@ final class SoundFX {
         case .success: return [(523, 523, 0.09), (659, 659, 0.09), (784, 784, 0.09), (1047, 1047, 0.22)]
         case .fail: return [(440, 300, 0.22), (300, 250, 0.25)]
         case .denied: return [(220, 200, 0.12)]
+        case .upgrade: return [(392, 392, 0.06), (523, 523, 0.06), (659, 659, 0.06), (784, 784, 0.06),
+                               (1047, 1047, 0.08), (1319, 1319, 0.08), (1568, 2093, 0.34)]
+        case .thud: return [(160, 70, 0.16)]
         }
     }
 

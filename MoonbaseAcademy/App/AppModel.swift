@@ -585,7 +585,7 @@ final class AppModel {
         explain(result)
         if result == .ok {
             Haptics.success()
-            SoundFX.shared.play(.star)
+            SoundFX.shared.play(.upgrade)
         }
         return result == .ok
     }
@@ -598,7 +598,7 @@ final class AppModel {
         explain(result)
         if result == .ok && wasDamaged {
             Haptics.success()
-            SoundFX.shared.play(.success)
+            SoundFX.shared.play(.upgrade)
         }
         return result == .ok
     }

@@ -1462,6 +1462,30 @@ struct PlaybackPanel: View {
                     }
                     Spacer(minLength: 0)
                 }
+                HStack(spacing: 6) {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 12, weight: .black))
+                        .foregroundStyle(.white)
+                        .accessibilityHidden(true)
+                    Text("Speed:")
+                        .font(.system(.caption, design: .rounded).weight(.heavy))
+                        .gameText()
+                    ForEach([1.0, 2.0, 5.0], id: \.self) { speed in
+                        let selected = session.playbackSpeed == speed
+                        Button("\(Int(speed))×") {
+                            Haptics.tap()
+                            session.setPlaybackSpeed(speed)
+                        }
+                        .font(.system(.subheadline, design: .rounded).weight(.black))
+                        .foregroundStyle(selected ? Theme.ink : .white)
+                        .padding(.horizontal, 16)
+                        .frame(minWidth: 52, minHeight: 40)
+                        .background(Capsule().fill(selected ? Color(hex: 0xFFD66B) : GamePalette.hud))
+                        .accessibilityLabel("\(Int(speed)) times speed")
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                    }
+                    Spacer(minLength: 0)
+                }
             }
         }
     }

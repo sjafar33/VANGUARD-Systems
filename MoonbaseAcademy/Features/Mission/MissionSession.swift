@@ -102,6 +102,8 @@ final class MissionSession {
     private(set) var checkpoints: [PlaybackCheckpoint] = []
     private(set) var checkpointIndex = 0
     private(set) var isPaused = false
+    /// How fast a test plays: 1, 2 or 5 times. The player's choice; it never changes a result.
+    private(set) var playbackSpeed: Double = 1
     private(set) var pausedByInterruption = false
     /// Bumped to replay the current explanation (restarts reading time and the highlight).
     private(set) var replayToken = 0
@@ -456,6 +458,7 @@ final class MissionSession {
         }
         stars = nil
         stage = .playback
+        world.setSpeed(CGFloat(playbackSpeed))
         countdown = reduceMotion ? nil : 3
         refreshWorld()
         startPlayback(token: token)
@@ -474,7 +477,13 @@ final class MissionSession {
         if let r = roverResult, !reduceMotion {
             seconds = max(seconds, r.stopAtSecond + 1.2)
         }
-        return seconds
+        return seconds / playbackSpeed
+    }
+
+    /// Speeds the playback up (2x, 5x) or back to normal. Presentation only: the result was already computed.
+    func setPlaybackSpeed(_ speed: Double) {
+        playbackSpeed = max(1, min(5, speed))
+        if stage == .playback { world.setSpeed(CGFloat(playbackSpeed)) }
     }
 
     private func startPlayback(token: Int) {
@@ -512,7 +521,7 @@ final class MissionSession {
                 await waitWhilePaused(token: token)
                 playbackIndex = step
                 refreshWorld()
-                try? await Task.sleep(nanoseconds: 110_000_000)
+                try? await Task.sleep(nanoseconds: UInt64(110_000_000 / playbackSpeed))
                 step += 1
             }
         }
@@ -641,6 +650,7 @@ final class MissionSession {
     private func finishAttempt(token: Int) {
         guard token == attemptToken, stage == .playback else { return }
         stage = .results
+        world.setSpeed(1)
         let success = resourceResult?.success ?? roverResult?.success ?? false
         let summary = AttemptSummary(success: success, headline: explanation?.headline ?? "",
                                      setup: setupDescription, numbers: explanation?.numbers ?? [])
@@ -670,6 +680,7 @@ final class MissionSession {
         stars = nil
         notice = nil
         stage = .planning
+        world.setSpeed(1)
         resourceResult = nil
         roverResult = nil
         explanation = nil
@@ -681,6 +692,7 @@ final class MissionSession {
     func leave() {
         playbackTask?.cancel()
         attemptToken += 1
+        world.setSpeed(1)
         world.onPadTapped = nil
         world.onFlagTapped = nil
     }
@@ -791,8 +803,15 @@ final class MissionSession {
     /// While Nova briefs the drill, the scene changes with each line. Presentation only.
     private func applyBriefingBeat(_ w: inout WorldSnapshot) {
         guard stage == .briefing else { return }
-        // "Test My Base" has no lander story: the briefing simply shows the player's own equipment.
-        guard !isBaseTest else { return }
+        // "Test My Base" has no lander story: the briefing shows the player's own equipment. On the line
+        // about the coming shadow, the base goes dark with its lights still on, then the Sun returns.
+        guard !isBaseTest else {
+            if introIndex == 1 {
+                w.mood = .shadow
+                w.habitatLit = true
+            }
+            return
+        }
         let beats = SceneBeat.briefing(for: definition.missionID)
         let beat = beats[min(introIndex, beats.count - 1)]
         w.beat = beat

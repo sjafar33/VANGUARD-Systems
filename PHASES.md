@@ -91,3 +91,13 @@ Fixed or changed in this round (NOT yet compiled):
 - **Plan controls without a popup:** in Lights Out, Storm Drill and Test My Base the air-maker (Off / Half / Full) and science switches sit on the plan card, with a live line for "drains the battery / spare power" and "air maker keeps up / crew breathes from the tank". The popup remains behind the info button. The garden drill keeps its popup.
 - **Prediction dialog:** now "What will happen?" with two big outcome buttons in the drill's own words (for example "Lights stay on" / "Lights go out"); "Not sure? Just watch"; the watch-mode choice moved below. VoiceOver labels stay Yes / No / Not sure. Test My Base no longer promises a star.
 - **Lessons:** three question levels (Explorer: two choices; Builder: three choices; Mission Engineer: sums and reasons), chosen in Learn and saved (`CampaignProgress.learnLevel`, optional). Each fact has a pool of six questions (two per level); one is picked per play and the answer order is shuffled. 54 questions across the two lessons. Facts, sources and coins are the same at every level.
+
+## Play-test round 2 (2026-11-14, about 20:50 Toronto) — owner feedback
+
+Verified by the owner's screenshots: round 1 (`f12c3d8`) builds and runs on the iPad. Unit and UI tests still not run.
+
+Added in this round (NOT yet compiled; all art drawn without being seen):
+- **Upgrades change the building's shape** (`Rendering/UpgradeArt.swift`). Level 2: a cyan-lit tech deck plus new equipment (second solar panel deck, extra battery cell, relay dish, water tank and grow lights, shelter armour, habitat light pylons and a module). Level 3: gold deck, glowing core, hologram ring, and a top piece per building (third panel deck with a sun core, signal spire with rings, bio-tower, shield bubble, habitat spire and second module). Looks only; no drill or base-test number changes.
+- **Upgrade moment:** light column, shock ring, two sparkle bursts, a rising "LEVEL N!" tag, the new building popping in, and a new rising-run sound (`SoundFX.Kind.upgrade`, also used for the station repair).
+- **Test My Base briefing:** on the "shadow is coming" line the base goes dark with the habitat lights on, then the Sun returns on the next line.
+- **Playback speed:** 1x / 2x / 5x buttons in the playback panel. Speeds up reading waits, the fast-forward between checkpoints and the scene's animations; results are unchanged.
