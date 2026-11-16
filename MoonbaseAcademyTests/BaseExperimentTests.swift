@@ -109,59 +109,59 @@ final class BaseExperimentTests: MoonbaseTestCase {
         let before = BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b))
         XCTAssertEqual(b.buyCosmetic("board.night"), .ok)
         XCTAssertTrue(b.equip("board.night"))
-        XCTAssertEqual(b.upgrade("habitat"), .ok)
         XCTAssertEqual(b.move("array0", x: 5, y: -6), .ok)
         XCTAssertEqual(BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b)), before)
     }
 
-    func testUpgradedArraysAndBatteriesCountByTheStatedGameRule() throws {
+    func testEveryWorkingArrayAndBatteryCountsExactlyAsLightsOutEquipment() throws {
         var b = base(arrays: 1, batteries: 1)
         b.coins = 10_000
         let reference = MissionCatalog.lightsOut()
-        let level1 = BaseExperiment.shadowTest(inputs: BaseExperiment.inputs(from: b))
-        XCTAssertEqual(level1.phases, reference.phases, "Level 1 equipment is exactly the Lights Out equipment")
-
-        // A bigger battery alone does not help: one array still stores only 2.4 kWh before the shadow.
-        XCTAssertEqual(b.upgrade("battery0"), .ok)
         var inputs = BaseExperiment.inputs(from: b)
         var d = BaseExperiment.shadowTest(inputs: inputs)
-        XCTAssertEqual(d.item(.battery)?.batteryCapacityKWh ?? 0, 6, accuracy: 1e-9)
-        var config = BaseExperiment.configuration(for: d, inputs: inputs)
-        var r = simulateResourceMission(definition: d, configuration: config, science: try science())
-        XCTAssertFalse(r.success)
-        XCTAssertEqual(r.trace[0].after.batteryKWh, 2.4, accuracy: 1e-9)
+        XCTAssertEqual(d.phases, reference.phases, "Base equipment is exactly the Lights Out equipment")
+        XCTAssertEqual(d.item(.battery)?.batteryCapacityKWh ?? 0, 4, accuracy: 1e-9)
+        var r = simulateResourceMission(definition: d, configuration: BaseExperiment.configuration(for: d, inputs: inputs),
+                                        science: try science())
+        XCTAssertFalse(r.success, "One array and one battery run out at Full air")
 
-        // A stronger array does: 1.5 kW fills the battery, and the base gets through at full air.
-        XCTAssertEqual(b.upgrade("array0"), .ok)
+        // Another empty battery cannot create the missing energy.
+        let twoBatteries = BaseTestInputs(arrays: 1, batteries: 2)
+        d = BaseExperiment.shadowTest(inputs: twoBatteries)
+        r = simulateResourceMission(definition: d, configuration: BaseExperiment.configuration(for: d, inputs: twoBatteries),
+                                    science: try science())
+        XCTAssertFalse(r.success)
+
+        // Another solar array does: the base gets through at Full air.
+        let spot = try XCTUnwrap(b.firstFreeSpot(for: .solarArray))
+        XCTAssertEqual(b.build(.solarArray, x: spot.x, y: spot.y, progress: CampaignProgress()), .ok)
         inputs = BaseExperiment.inputs(from: b)
+        XCTAssertEqual(inputs, BaseTestInputs(arrays: 2, batteries: 1))
         d = BaseExperiment.shadowTest(inputs: inputs)
-        XCTAssertEqual(d.phases[0].solarKWPerArray, 1.5, accuracy: 1e-9)
-        XCTAssertEqual(d.phases[1].solarKWPerArray, 0, accuracy: 1e-9, "Still nothing in shadow")
-        config = BaseExperiment.configuration(for: d, inputs: inputs)
-        r = simulateResourceMission(definition: d, configuration: config, science: try science())
+        r = simulateResourceMission(definition: d, configuration: BaseExperiment.configuration(for: d, inputs: inputs),
+                                    science: try science())
         XCTAssertTrue(r.success)
 
-        // Mixed levels add up exactly: levels 3 and 1 make 2 + 1 = 3 kW.
-        let mixed = BaseTestInputs(arrays: 2, batteries: 2, arrayLevels: [3, 1], batteryLevels: [2, 2])
-        let m = BaseExperiment.shadowTest(inputs: mixed)
-        XCTAssertEqual(m.phases[0].solarKWPerArray * 2, 3, accuracy: 1e-9)
-        XCTAssertEqual((m.item(.battery)?.batteryCapacityKWh ?? 0) * 2, 12, accuracy: 1e-9)
-        // A result saved before upgrades counted still loads, as level 1.
-        let old = try JSONDecoder().decode(BaseTestInputs.self, from: Data(#"{"arrays":2,"batteries":1}"#.utf8))
-        XCTAssertEqual(old.arrayFactor, 1)
+        // Results saved when upgrades existed still load; their old level lists are ignored.
+        let old = try JSONDecoder().decode(BaseTestInputs.self,
+                                           from: Data(#"{"arrays":2,"batteries":1,"arrayLevels":[3,1]}"#.utf8))
+        XCTAssertEqual(old, BaseTestInputs(arrays: 2, batteries: 1))
     }
 
-    func testComparisonExplainsUpgradesWithoutCountChanges() {
+    func testOldSavesLoadEveryBuildingAtLevelOne() throws {
+        let json = #"{"id":"array0","kind":"solarArray","x":1,"y":2,"level":3}"#
+        let building = try JSONDecoder().decode(PlacedBuilding.self, from: Data(json.utf8))
+        XCTAssertEqual(building.level, 1, "Buildings have no upgrades")
+        XCTAssertEqual(building.x, 1)
+        XCTAssertTrue(building.isWorking)
+    }
+
+    func testComparisonNamesTheChangedEquipment() {
         let old = BaseTestInputs(arrays: 1, batteries: 1)
-        let upgraded = BaseTestInputs(arrays: 1, batteries: 1, arrayLevels: [2], batteryLevels: [3])
-        let explanation = BaseExperiment.change(from: old, to: upgraded)
-        XCTAssertTrue(explanation.contains("solar power 1 → 1.5 kW"), explanation)
-        XCTAssertTrue(explanation.contains("battery storage 4 → 8 kWh"), explanation)
+        XCTAssertEqual(BaseExperiment.change(from: old, to: BaseTestInputs(arrays: 2, batteries: 1)),
+                       "You changed your base: +1 solar array.")
         XCTAssertEqual(BaseExperiment.change(from: old, to: old),
                        "Same base as last time. Only your plan changed.")
-        let explicitLevelOne = BaseTestInputs(arrays: 1, batteries: 1, arrayLevels: [1], batteryLevels: [1])
-        XCTAssertEqual(BaseExperiment.change(from: old, to: explicitLevelOne),
-                       "Your base has the same power and storage as last time.")
     }
 
     // MARK: Real archived storms
@@ -232,7 +232,6 @@ final class BaseExperimentTests: MoonbaseTestCase {
         for kind in BuildingKind.allCases where kind.isDecoration {
             let spot = try XCTUnwrap(b.firstFreeSpot(for: kind))
             XCTAssertEqual(b.build(kind, x: spot.x, y: spot.y, progress: CampaignProgress()), .ok)
-            XCTAssertNil(BaseState.upgradeCost(kind, from: 1), "Decorations have no levels")
             XCTAssertNil(kind.drill)
         }
         XCTAssertEqual(b.coins, 1_000 - BaseState.buildCost(.flag) - BaseState.buildCost(.lamp) - BaseState.buildCost(.rockGarden))

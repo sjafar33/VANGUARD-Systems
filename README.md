@@ -2,11 +2,11 @@
 
 **VANGUARD Systems · NASA Space Apps Challenge 2026 · Junior Astronaut Mission Trainer**
 
-Moonbase Academy is an offline iPhone and iPad base-building game for children aged 7 to 12. The player owns a small lunar outpost: they place, move, upgrade and decorate buildings on a board, earn Moon coins from short lessons, repair an old landing station, and then **test the base they really built**. In every drill and test they notice a problem, set a plan, predict what will happen, watch the consequences, and improve.
+Moonbase Academy is an offline iPhone and iPad base-building game for children aged 7 to 12. The player owns a small lunar outpost: they place, move and decorate buildings on a board, earn Moon coins from short lessons, repair an old landing station, and then **test the base they really built**. In every drill and test they notice a problem, set a plan, predict what will happen, watch the consequences, and improve.
 
 - **Build:** solar arrays, batteries, greenhouse, storm shelter, radio dish, plus decorations (flag, lamp post, rock garden) that are looks only.
 - **Learn:** lessons at three question levels (Explorer, Builder, Mission Engineer) with question pools, so replays differ.
-- **Test My Base:** a shadow test that counts the player's own working solar arrays and batteries and runs them through the same engine as the Lights Out drill. Array and battery levels scale their power and capacity: level 1 = 1×, level 2 = 1.5×, level 3 = 2× (game rules). Colours, positions, decorations and other buildings’ levels do not affect the test.
+- **Test My Base:** a shadow test that counts the player's own working solar arrays and batteries and runs them through the same engine as the Lights Out drill. Buildings have no upgrades: every working array and battery counts exactly as one Lights Out array or battery, up to four of each. Colours, positions and decorations do not affect the test.
 - **Storm test:** the repaired landing station can rehearse an archived storm using the base’s working shelter and charged batteries. Protect the crew and finish a science task while balancing power against oxygen reserves. Backup supply and preparation costs are labeled game rules; no radiation dose is computed.
 - **Example lab:** Drills → Start example lab opens a ready-to-test equipment snapshot. Try an extra battery, an extra array, or a lower air-maker setting. It uses the same engine and leaves the player’s save unchanged. Results show actual stopping times and reserve costs.
 - **Four reference drills** cover all five challenge topics:

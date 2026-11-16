@@ -148,77 +148,92 @@ enum Art {
 
     // MARK: Solar array
 
+    /// A tall panel on a mast, like the vertical arrays planned for the lunar south pole, where the Sun stays
+    /// low on the horizon. The mast would turn the panel to follow the Sun.
     static func solarArray() -> SKSpriteNode {
-        sprite("array", arrayCanvas) { pt in
-            func z(_ x: CGFloat) -> CGFloat { 11 + (x + 0.46) * 15 }
-            pt.fill([pt.p(-0.25, -0.42), pt.p(1.05, -0.42), pt.p(1.05, 0.42), pt.p(-0.25, 0.42)], UIColor(white: 0, alpha: 0.13))
-            pt.fill([pt.p(-0.15, -0.36), pt.p(0.95, -0.36), pt.p(0.95, 0.36), pt.p(-0.15, 0.36)], UIColor(white: 0, alpha: 0.1))
-            let steel = IsoPainter.BoxColors(0x9AA4B1, 0x7D8897, 0x667180)
-            for x in [-0.28, 0.28] as [CGFloat] {
-                pt.box(x - 0.07, -0.07, x + 0.07, 0.07, z1: 3, colors: steel)
-                pt.line(pt.p(x, 0, 3), pt.p(x, 0, z(x)), UIColor(hex: 0x566173), width: 2.4)
-            }
-            pt.line(pt.p(-0.28, 0, 6), pt.p(0.28, 0, z(0.28) - 4), UIColor(hex: 0x6E7A8B), width: 1.2)
-            let a = pt.p(-0.46, -0.42, z(-0.46))
-            let b = pt.p(0.46, -0.42, z(0.46))
-            let c = pt.p(0.46, 0.42, z(0.46))
-            let d = pt.p(-0.46, 0.42, z(-0.46))
-            pt.fill([b, c, c.offset(0, 2.6), b.offset(0, 2.6)], UIColor(hex: 0x4F5B6B))
-            pt.fill([d, c, c.offset(0, 2.6), d.offset(0, 2.6)], UIColor(hex: 0x76828F))
+        sprite("array.mast", arrayCanvas) { pt in
+            // Long, low-Sun shadow toward +x.
+            pt.fill([pt.p(-0.62, -0.06), pt.p(0.95, -0.06), pt.p(1.1, 0.1), pt.p(-0.5, 0.1)], UIColor(white: 0, alpha: 0.16))
+            pt.softShadow(cx: 0.05, cy: 0, r: 0.22, alpha: 0.3)
+            // Footing and mast.
+            pt.box(-0.13, -0.13, 0.13, 0.13, z1: 4, colors: .init(0x9AA4B1, 0x7D8897, 0x667180))
+            pt.line(pt.p(0, -0.06, 4), pt.p(0, -0.06, 54), UIColor(hex: 0x566173), width: 3)
+            pt.box(-0.06, -0.12, 0.06, 0.0, z0: 50, z1: 55, colors: .init(0xC9D1DA, 0xA4AFBC, 0x7D8898))
+            // The vertical panel, with a thin frame edge so it reads as a solid object.
+            let a = pt.p(-0.62, 0, 50)
+            let b = pt.p(0.62, 0, 50)
+            let c = pt.p(0.62, 0, 15)
+            let d = pt.p(-0.62, 0, 15)
+            pt.fill([b, c, c.offset(2.4, -1.2), b.offset(2.4, -1.2)], UIColor(hex: 0x4F5B6B))
             pt.fill([a, b, c, d], UIColor(hex: 0xDCE3EA))
             let cols = 4
-            let rows = 3
+            let rows = 4
             for i in 0..<cols {
                 for j in 0..<rows {
-                    let gap: CGFloat = 0.035
+                    let gap: CGFloat = 0.03
                     let u0 = CGFloat(i) / CGFloat(cols) + gap
                     let u1 = CGFloat(i + 1) / CGFloat(cols) - gap
-                    let v0 = CGFloat(j) / CGFloat(rows) + gap * 1.3
-                    let v1 = CGFloat(j + 1) / CGFloat(rows) - gap * 1.3
+                    let v0 = CGFloat(j) / CGFloat(rows) + gap
+                    let v1 = CGFloat(j + 1) / CGFloat(rows) - gap
                     let cell = [pt.lerpQuad(a, b, c, d, u0, v0), pt.lerpQuad(a, b, c, d, u1, v0),
                                 pt.lerpQuad(a, b, c, d, u1, v1), pt.lerpQuad(a, b, c, d, u0, v1)]
-                    let shade: UInt32 = (i + j) % 2 == 0 ? 0x3D77A8 : 0x376E9D
-                    pt.fill(cell, UIColor(hex: shade))
+                    pt.fill(cell, UIColor(hex: (i + j) % 2 == 0 ? 0x3D77A8 : 0x376E9D))
                     let um = (u0 + u1) / 2
-                    pt.line(pt.lerpQuad(a, b, c, d, um, v0), pt.lerpQuad(a, b, c, d, um, v1), UIColor(hex: 0x76A3CB, alpha: 0.55), width: 0.5)
+                    pt.line(pt.lerpQuad(a, b, c, d, um, v0), pt.lerpQuad(a, b, c, d, um, v1),
+                            UIColor(hex: 0x76A3CB, alpha: 0.55), width: 0.5)
                 }
             }
             pt.gradient(pt.polygon([a, b, c, d]), from: a, to: c,
-                        colors: [UIColor(white: 1, alpha: 0.28), UIColor(white: 1, alpha: 0), UIColor(white: 1, alpha: 0.1)])
-            pt.stroke([a, b, c, d], UIColor(hex: 0xC4CDD7), width: 0.8, close: true)
+                        colors: [UIColor(white: 1, alpha: 0.3), UIColor(white: 1, alpha: 0), UIColor(white: 1, alpha: 0.12)])
+            pt.stroke([a, b, c, d], UIColor(hex: 0xC4CDD7), width: 0.9, close: true)
         }
     }
 
     // MARK: Battery
 
+    /// The two energy cells of one battery. Charge bars sit on the front of each cell.
+    private static let batteryCells: [(CGFloat, CGFloat)] = [(-0.17, 0.17), (0.17, -0.17)]
+    private static let batteryCellRadius: CGFloat = 0.19
+
+    /// Squat cylindrical energy-storage cells on a shared pad, with a shielding band at the foot.
     static func batteryBody() -> SKSpriteNode {
-        sprite("battery.body", batteryCanvas) { pt in
-            pt.shadow(-0.38, -0.38, 0.38, 0.38, length: 0.45)
-            pt.box(-0.39, -0.39, 0.39, 0.39, z1: 4, colors: .init(0x8A95A4, 0x6F7A8A, 0x5B6574))
-            pt.box(-0.31, -0.31, 0.31, 0.31, z0: 4, z1: 31, colors: .init(0xDDE2E8, 0xBAC3CE, 0x8F9AAA),
-                   edge: UIColor(hex: 0x7D8898, alpha: 0.6))
-            for z in stride(from: CGFloat(11), through: 25, by: 4) {
-                pt.line(pt.p(0.31, -0.2, z), pt.p(0.31, 0.2, z), UIColor(hex: 0x667182), width: 1.3)
+        sprite("battery.cells", batteryCanvas) { pt in
+            pt.softShadow(cx: 0.14, cy: 0.05, r: 0.5)
+            pt.box(-0.4, -0.4, 0.4, 0.4, z1: 4, colors: .init(0x8A95A4, 0x6F7A8A, 0x5B6574))
+            let r = batteryCellRadius
+            for (cx, cy) in batteryCells {
+                pt.cylinder(cx: cx, cy: cy, r: r + 0.02, z0: 4, z1: 10, side: (0x9AA4B1, 0x5F6A7A), top: 0x9AA4B1)
+                pt.cylinder(cx: cx, cy: cy, r: r, z0: 10, z1: 24, side: (0xE6EBF0, 0x8F9AAA), top: 0xC9D1DA)
+                pt.cylinder(cx: cx, cy: cy, r: r, z0: 24, z1: 26.5, side: (0x8BE3EE, 0x2CAEC3), top: 0x8BE3EE)
+                pt.cylinder(cx: cx, cy: cy, r: r, z0: 26.5, z1: 30, side: (0xE6EBF0, 0x8F9AAA), top: 0xD6DDE4)
+                pt.fill(pt.domePath(cx: cx, cy: cy, r: r * 0.72, z: 30, height: 4.5), UIColor(hex: 0xEEF2F5))
             }
-            pt.box(-0.17, -0.17, -0.05, -0.05, z0: 31, z1: 35, colors: .init(0x8BE3EE, 0x53C6D7, 0x3BA3B2))
-            pt.box(0.05, 0.05, 0.17, 0.17, z0: 31, z1: 35, colors: .init(0xF6CF7C, 0xF2B84B, 0xC9952F))
-            pt.fill([pt.p(-0.31, 0.31, 27), pt.p(0.31, 0.31, 27), pt.p(0.31, 0.31, 29), pt.p(-0.31, 0.31, 29)], UIColor(hex: 0x53C6D7))
+            // A cable joins the two cells.
+            pt.line(pt.p(-0.05, 0.05, 6), pt.p(0.05, -0.05, 6), UIColor(hex: 0x3B4657), width: 2)
         }
     }
 
-    /// Five charge bars on the battery's front face. The level comes from the model's stored energy.
+    /// Five charge bars on the front of each cell. The level comes from the model's stored energy.
     static func batteryChargeTexture(level: Int, low: Bool) -> SKTexture {
-        texture("battery.charge.\(level).\(low)", batteryCanvas) { pt in
-            let frame = [pt.p(-0.22, 0.31, 7), pt.p(0.22, 0.31, 7), pt.p(0.22, 0.31, 27.5), pt.p(-0.22, 0.31, 27.5)]
-            pt.fill(frame, UIColor(hex: 0x1F2A3B))
-            for i in 0..<5 {
-                let z0 = 8.5 + CGFloat(i) * 3.8
-                let bar = [pt.p(-0.17, 0.31, z0), pt.p(0.17, 0.31, z0), pt.p(0.17, 0.31, z0 + 2.6), pt.p(-0.17, 0.31, z0 + 2.6)]
-                let on = i < level
-                let color: UIColor = on ? (low ? UIColor(hex: 0xE98772) : UIColor(hex: 0x53C6D7)) : UIColor(hex: 0x33435A)
-                if on { pt.ctx.setShadow(offset: .zero, blur: 3, color: color.cgColor) }
-                pt.fill(bar, color)
-                pt.ctx.setShadow(offset: .zero, blur: 0, color: nil)
+        texture("battery.cells.charge.\(level).\(low)", batteryCanvas) { pt in
+            let r = batteryCellRadius
+            for (cx, cy) in batteryCells {
+                let front = { (z: CGFloat) in pt.p(cx + r * 0.7071, cy + r * 0.7071, z) }
+                let top = front(23)
+                let bottom = front(11)
+                pt.ctx.setFillColor(UIColor(hex: 0x1F2A3B).cgColor)
+                pt.ctx.fill(CGRect(x: top.x - 4.5, y: top.y - 0.5, width: 9, height: bottom.y - top.y + 1))
+                for i in 0..<5 {
+                    let z0 = 11.6 + CGFloat(i) * 2.25
+                    let lo = front(z0)
+                    let hi = front(z0 + 1.5)
+                    let on = i < level
+                    let color: UIColor = on ? (low ? UIColor(hex: 0xE98772) : UIColor(hex: 0x53C6D7)) : UIColor(hex: 0x33435A)
+                    if on { pt.ctx.setShadow(offset: .zero, blur: 3, color: color.cgColor) }
+                    pt.ctx.setFillColor(color.cgColor)
+                    pt.ctx.fill(CGRect(x: hi.x - 3.4, y: hi.y, width: 6.8, height: lo.y - hi.y))
+                    pt.ctx.setShadow(offset: .zero, blur: 0, color: nil)
+                }
             }
         }
     }
@@ -304,48 +319,51 @@ enum Art {
 
     // MARK: Shelter
 
+    /// A low dome buried under a mound of Moon soil (regolith). The soil is the shield: real shelter designs
+    /// pile regolith over a habitat to block radiation. The crew goes in through a short airlock tunnel.
     static func shelterBody() -> SKSpriteNode {
-        sprite("shelter.body", shelterCanvas) { pt in
-            pt.shadow(-0.8, -0.6, 1.3, 0.8, length: 0.45)
-            let bags = IsoPainter.BoxColors(0xC9CDD3, 0xA8AFB9, 0x89919D)
-            pt.box(-0.8, -0.6, 0.8, 0.6, z1: 17, colors: bags)
-            pt.box(-0.62, -0.44, 0.62, 0.44, z0: 17, z1: 25, colors: .init(0xD3D7DC, 0xB2B8C1, 0x939BA6))
-            let seam = UIColor(hex: 0x7F8793, alpha: 0.7)
-            for (index, z) in [4.0, 8.5, 13.0].enumerated() {
-                let zz = CGFloat(z)
-                pt.line(pt.p(-0.8, 0.6, zz), pt.p(0.8, 0.6, zz), seam, width: 0.8)
-                pt.line(pt.p(0.8, -0.6, zz), pt.p(0.8, 0.6, zz), seam, width: 0.8)
-                let shift: CGFloat = index % 2 == 0 ? 0 : 0.1
-                for x in stride(from: -0.7 + shift, through: 0.75, by: 0.2) {
-                    pt.line(pt.p(x, 0.6, zz), pt.p(x, 0.6, zz + 4.2), seam, width: 0.7)
-                }
-                for y in stride(from: -0.5 + shift, through: 0.55, by: 0.2) {
-                    pt.line(pt.p(0.8, y, zz), pt.p(0.8, y, zz + 4.2), seam, width: 0.7)
-                }
+        sprite("shelter.regolith", shelterCanvas) { pt in
+            pt.softShadow(cx: 0.3, cy: 0.06, r: 1.0)
+            // A ring of soil-filled bags holds the mound's edge.
+            pt.cylinder(cx: 0, cy: 0, r: 0.92, z0: 0, z1: 4, side: (0xB4ACA0, 0x7F786E), top: 0xA39B8F)
+            let mound = pt.domePath(cx: 0, cy: 0, r: 0.88, z: 4, height: 30)
+            let base = pt.ellipseRect(cx: 0, cy: 0, z: 4, r: 0.88)
+            pt.gradient(mound, from: CGPoint(x: base.minX, y: base.minY - 26), to: CGPoint(x: base.maxX, y: base.maxY),
+                        colors: [UIColor(hex: 0xD2CBBF), UIColor(hex: 0xA9A296), UIColor(hex: 0x6F695F)])
+            // Pebbles and soil texture, seeded so the mound looks the same every time.
+            var rng = SeededRandom(seed: 7)
+            pt.ctx.saveGState()
+            pt.ctx.addPath(mound)
+            pt.ctx.clip()
+            for i in 0..<46 {
+                let x = rng.range(base.minX, base.maxX)
+                let y = rng.range(base.midY - 34, base.maxY)
+                let d = rng.range(1.2, 3.2)
+                pt.ctx.setFillColor(i % 3 == 0 ? UIColor(white: 1, alpha: 0.28).cgColor : UIColor(hex: 0x4E4942, alpha: 0.28).cgColor)
+                pt.ctx.fillEllipse(in: CGRect(x: x, y: y, width: d * 1.4, height: d))
             }
-            pt.line(pt.p(-0.62, 0.44, 21), pt.p(0.62, 0.44, 21), seam, width: 0.7)
-            pt.line(pt.p(0.62, -0.44, 21), pt.p(0.62, 0.44, 21), seam, width: 0.7)
-            let entrance = [pt.p(-0.22, 0.6, 0), pt.p(0.22, 0.6, 0), pt.p(0.22, 0.6, 13), pt.p(-0.22, 0.6, 13)]
-            pt.fill(entrance, UIColor(hex: 0x1C2738))
-            pt.stroke(entrance, UIColor(hex: 0xF2B84B), width: 1.3, close: true)
-            let amberCrate = IsoPainter.BoxColors(0xF4C86F, 0xD9A441, 0xB5862F)
-            let grayCrate = IsoPainter.BoxColors(0xC3CAD3, 0x9FA8B4, 0x808A97)
-            pt.box(0.95, -0.35, 1.22, -0.08, z1: 9, colors: grayCrate)
-            pt.box(0.95, 0.12, 1.28, 0.45, z1: 11, colors: amberCrate)
-            pt.line(pt.p(0.95, 0.45, 7), pt.p(1.28, 0.45, 7), UIColor(hex: 0x9C7328), width: 0.8)
-            pt.box(1.0, 0.18, 1.22, 0.4, z0: 11, z1: 18, colors: grayCrate)
-            pt.box(0.92, 0.62, 1.12, 0.82, z1: 7, colors: amberCrate)
+            pt.ctx.restoreGState()
+            // Airlock tunnel to the front, with its door.
+            pt.box(-0.2, 0.52, 0.2, 1.0, z1: 12, colors: .init(0xE3E8ED, 0xBAC3CE, 0x8F9AAA), edge: UIColor(hex: 0x7D8898, alpha: 0.6))
+            pt.box(-0.22, 0.96, 0.22, 1.02, z1: 13, colors: .init(0xF2B84B, 0xD9A441, 0xB5862F))
+            let door = [pt.p(-0.12, 1.02, 1), pt.p(0.12, 1.02, 1), pt.p(0.12, 1.02, 10), pt.p(-0.12, 1.02, 10)]
+            pt.fill(door, UIColor(hex: 0x1C2738))
+            // A short beacon mast on top.
+            pt.line(pt.p(0, 0, 32), pt.p(0, 0, 44), UIColor(hex: 0x6E7A8B), width: 1.6)
+            pt.ctx.setFillColor(UIColor(hex: 0xF2B84B).cgColor)
+            let tip = pt.p(0, 0, 45)
+            pt.ctx.fillEllipse(in: CGRect(x: tip.x - 2.2, y: tip.y - 2.2, width: 4.4, height: 4.4))
         }
     }
 
     static func shelterGlow() -> SKSpriteNode {
-        sprite("shelter.glow", shelterCanvas) { pt in
-            let pool = pt.ellipseRect(cx: 0, cy: 0.95, z: 0, r: 0.42)
+        sprite("shelter.regolith.glow", shelterCanvas) { pt in
+            let pool = pt.ellipseRect(cx: 0, cy: 1.3, z: 0, r: 0.4)
             pt.radial(CGPath(ellipseIn: pool, transform: nil), center: CGPoint(x: pool.midX, y: pool.midY), radius: pool.width / 2,
                       colors: [UIColor(hex: 0x8BE3EE, alpha: 0.55), UIColor(hex: 0x53C6D7, alpha: 0)])
-            let entrance = [pt.p(-0.16, 0.6, 1), pt.p(0.16, 0.6, 1), pt.p(0.16, 0.6, 11), pt.p(-0.16, 0.6, 11)]
+            let door = [pt.p(-0.09, 1.02, 1.5), pt.p(0.09, 1.02, 1.5), pt.p(0.09, 1.02, 9), pt.p(-0.09, 1.02, 9)]
             pt.ctx.setShadow(offset: .zero, blur: 8, color: UIColor(hex: 0x53C6D7).cgColor)
-            pt.fill(entrance, UIColor(hex: 0x8BE3EE, alpha: 0.9))
+            pt.fill(door, UIColor(hex: 0x8BE3EE, alpha: 0.9))
             pt.ctx.setShadow(offset: .zero, blur: 0, color: nil)
         }
     }

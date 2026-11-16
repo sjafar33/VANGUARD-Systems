@@ -317,9 +317,9 @@ enum ExplanationWriter {
                         let sunlit = r.trace.first { $0.phaseID == "sunlit" }
                         let wereFull = sunlit.map { $0.after.batteryKWh >= $0.after.batteryCapacityKWh - 1e-9 } ?? false
                         if wereFull {
-                            paragraphs.append("Your batteries were already full when the shadow started, and it still wasn't enough. Back at your base, another battery or a battery upgrade would store more.")
+                            paragraphs.append("Your batteries were already full when the shadow started, and it still wasn't enough. Back at your base, another battery would store more.")
                         } else {
-                            paragraphs.append("Your batteries were not full when the shadow started. Back at your base, another solar array or a solar array upgrade would fill them faster.")
+                            paragraphs.append("Your batteries were not full when the shadow started. Back at your base, another solar array would fill them faster.")
                         }
                         paragraphs.append("Or turn the air maker down in the shadow. That saves power, but the crew then breathes from the tank.")
                     } else {

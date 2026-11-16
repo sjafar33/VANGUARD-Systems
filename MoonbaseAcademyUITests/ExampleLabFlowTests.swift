@@ -6,10 +6,13 @@ final class ExampleLabFlowTests: XCTestCase {
     private func tap(_ label: String) {
         if app.buttons["planning.section.plan"].exists {
             if label.hasPrefix("Shadow drill") || label.hasPrefix("Storm rising") || label.hasPrefix("Storm fading") {
-                app.buttons["planning.section.plan"].tap()
                 let index = label.hasPrefix("Shadow drill") || label.hasPrefix("Storm fading") ? 1 : 0
+                // Plan toggles; open it only when it is closed.
+                if !app.buttons["planning.phase.\(index)"].exists { app.buttons["planning.section.plan"].tap() }
                 app.buttons["planning.phase.\(index)"].tap()
-            } else if ["Starter base", "Extra battery", "Extra array", "How this test works", "Reset lab to starter plan"].contains(label) {
+            } else if (["How this test works", "Reset lab to starter plan", "example.reset"].contains(label) || label.hasPrefix("cargo.")),
+                      app.buttons["planning.section.equipment"].exists {
+                // The plan opens as a panel above the shop; close it to reach the equipment.
                 app.buttons["planning.section.equipment"].tap()
             }
         }
@@ -64,11 +67,13 @@ final class ExampleLabFlowTests: XCTestCase {
         runExperiment()
         XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 5))
         shot("08-reserve-result")
+        tap("Replay") // back to planning; equipment is changed on the base, not on the result
         tap("example.reset")
-        tap("example.moreStorage")
+        tap("cargo.add.battery") // 1 array, 2 batteries: more empty storage cannot create energy
         runExperiment()
         XCTAssertTrue(app.staticTexts["The power ran out"].waitForExistence(timeout: 5))
-        tap("example.moreSunlight")
+        tap("Try again")
+        tap("cargo.add.solarArray") // 2 arrays, 2 batteries
         runExperiment()
         XCTAssertTrue(app.buttons["Continue"].waitForExistence(timeout: 5))
         shot("03-more-generation-passes")
@@ -109,7 +114,7 @@ final class ExampleLabFlowTests: XCTestCase {
         tap("Skip to the result")
         XCTAssertTrue(app.staticTexts["Your forecast matched. The mission still needs a working plan."].waitForExistence(timeout: 5))
         shot("correct-forecast-failed-mission")
-        tap("Try one change")
+        tap("Try again")
         let suggestion = app.staticTexts["Suggested part for your next test"].firstMatch
         for _ in 0..<6 where !suggestion.isHittable { app.swipeUp() }
         XCTAssertTrue(suggestion.exists)

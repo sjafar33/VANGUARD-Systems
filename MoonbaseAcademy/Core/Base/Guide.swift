@@ -16,7 +16,6 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
     case playStorm
     case buildDish
     case playSignal
-    case upgradeHabitat
 
     static let reward = 25
 
@@ -35,7 +34,6 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .playStorm: return "Play the Storm Drill"
         case .buildDish: return "Build the radio dish"
         case .playSignal: return "Play the Signal Lag drill"
-        case .upgradeHabitat: return "Upgrade your habitat"
         }
     }
 
@@ -55,7 +53,6 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .playStorm: return "Keep the crew safe through the storm drill. Tap Show me."
         case .buildDish: return "Time to talk to Earth! Build the radio dish. Tap Show me."
         case .playSignal: return "Drive the rover from Earth, with a signal delay. Tap Show me."
-        case .upgradeHabitat: return "Upgrade the habitat to build more and unlock harder drills. Tap Show me."
         }
     }
 
@@ -71,7 +68,6 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .decorate: return "paintpalette.fill"
         case .buildShelter: return "shield.lefthalf.filled"
         case .buildDish: return "antenna.radiowaves.left.and.right"
-        case .upgradeHabitat: return "arrow.up.circle.fill"
         }
     }
 
@@ -93,7 +89,6 @@ enum GuideGoal: String, CaseIterable, Codable, Sendable {
         case .playStorm: return progress.isCompleted(.stormDrill)
         case .buildDish: return base.count(.dish) > 0
         case .playSignal: return progress.isCompleted(.signalLag)
-        case .upgradeHabitat: return base.habitatLevel >= 2
         }
     }
 

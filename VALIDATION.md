@@ -1,5 +1,9 @@
 # Validation — November 15, 2026
 
+## Changes not yet re-verified
+
+After the regression below (commit `a3dae33`), the planning screen became a building-game shop bar, building upgrades were removed and building art was redrawn. The app builds and runs on the owner's iPad, but the automated suite has not been rerun on these changes, and the upgrade tests listed in the results file were replaced. Rerun the suite before quoting the numbers below for the current code.
+
 ## Final regression
 
 **156 unique tests verified**: 147 unit tests and 9 UI tests, with every latest result passing. Xcode 27.0, iOS Simulator 27.0, iPad Air 11-inch (M4), arm64, Debug, MoonbaseAcademy scheme. [Machine-readable latest results](Submission/final-test-summary.json).
@@ -9,7 +13,7 @@ The full regression initially had one obsolete UI navigation failure: the origin
 | Check | Verified behavior |
 |---|---|
 | Cargo interaction and original mission | Add and Remove hit separately; placement fixture avoids the landing station; failed plan can be revised to pass; progress survives relaunch |
-| Base experiment | Actual failure hour is recorded; upgrades change comparison totals; an extra empty battery cannot fix generation shortage; extra generation or an air/oxygen trade-off can succeed |
+| Base experiment | Actual failure hour is recorded; comparisons name the added or removed equipment; an extra empty battery cannot fix generation shortage; extra generation or an air/oxygen trade-off can succeed |
 | Save isolation | Example labs leave progress, coins, unlocked content, drafts, preferences and the on-disk save unchanged; legacy records decode with missing timing marked unavailable |
 | Bounded own-base storm | Working shelter/battery requirements; explicit setup cost; science task required; continuous reserves across phases; repeatable pinned event; reserve-spending and extra-storage strategies |
 | Science sensitivity | Changed crew demand, crop reference, Moon distance and archived timestamps change the engine's outcomes |

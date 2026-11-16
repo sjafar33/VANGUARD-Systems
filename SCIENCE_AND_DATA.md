@@ -57,15 +57,15 @@ Production data is never modified by tests.
 
 Game rules (not NASA data), shown to the player on the result card:
 - Each working solar array counts as one Lights Out array (1 kW in sunlight). Each working battery counts as one Lights Out battery (4 kWh, starts empty). At most four of each.
-- Array and battery levels scale power and capacity: level 1 = 1×, level 2 = 1.5×, level 3 = 2× (game rules, not NASA hardware figures). Other building levels, colour, position and the robot buddy do not change any number. A damaged building counts for nothing.
+- Buildings have no upgrades (changed 2026-11-15). Colour, position, decorations and the robot buddy do not change any number. A damaged building counts for nothing.
 - The landing station is fictional. Repairing it costs Moon coins and only opens the test. It adds no power, oxygen, supplies or communication.
 - Coins (repair price, the one-time reward for a first pass) never enter the simulation.
 
 Limits: this is still a phase-averaged training model, not an electrical simulator. Board distance and layout are not modelled, so no cables or adjacency are implied. The reference drills, their harder versions and their test fixtures are unchanged.
 
-## Upgrades in Test My Base (added 2026-11-14, evening)
+## Upgrades removed (2026-11-15)
 
-Game rule, shown on the building panel and on the test result: a level 1 solar array or battery is exactly the Lights Out equipment (1 kW in sunlight, 4 kWh). Level 2 counts 1.5 times and level 3 counts 2 times. The engine receives the base's arrays and batteries as that many items of their average strength, so the totals are exact. Levels of other buildings, colours and decorations change nothing. These multipliers are invented for play; they are not NASA hardware figures.
+Building upgrades and their 1.5× / 2× multipliers were removed. Every base starts with room for four solar arrays and four batteries, and each counts exactly as Lights Out equipment. Saves from earlier versions load with every building at level 1, and old saved results that listed levels still load (the levels are ignored). Each drill's harder version now opens after the normal drill has been finished once.
 
 ## Eight real archived storms (added 2026-11-14, evening)
 
@@ -89,7 +89,7 @@ This is a separate definition, `stormDrill.myBaseStorm`, using the same resource
 
 Authored game rules: batteries start fully charged, level multipliers remain 1 / 1.5 / 2, and preparing the already-built shelter uses 3 kWh. This represents fictional emergency preparation, not powered radiation shielding. An independent training backup supplies 0.8 kW; the player's arrays do not generate power in this rehearsal. The training station supplies the science instrument. Success requires shelter throughout, at least 24 hours of stored oxygen remaining, and 0.5 kWh supplied to the science task. NASA does not prescribe these equipment or objective values.
 
-The crew-safe/science-off plan does not complete the task. With one level-1 battery, Full air plus science during the rising phase runs out of power at hour 10. Half air plus science during rising, followed by Full air and science Off during fading, succeeds while spending oxygen reserves. A second battery permits the early science task at Full air. Engine checks cover both strategies, missing shelter, boundary continuity without resource refills, deterministic retry, all eight archived timings, and saved-record isolation. The quick Storm example uses the same rules without modifying the player's base or save.
+The crew-safe/science-off plan does not complete the task. With one battery, Full air plus science during the rising phase runs out of power at hour 10. Half air plus science during rising, followed by Full air and science Off during fading, succeeds while spending oxygen reserves. A second battery permits the early science task at Full air. Engine checks cover both strategies, missing shelter, boundary continuity without resource refills, deterministic retry, all eight archived timings, and saved-record isolation. The quick Storm example uses the same rules without modifying the player's base or save.
 
 No dose, shielding attenuation, individual health risk, or lunar radiation measurement is calculated. The near-Earth event timestamps supply a replay clock, not a prediction of dose on the Moon. The original Storm Drill retains its original optional-science objective.
 

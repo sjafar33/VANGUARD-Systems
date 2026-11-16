@@ -188,20 +188,6 @@ final class AppModel {
         updateBase { $0.coins = max(0, min(999_999, $0.coins + amount)) }
     }
 
-    func devSetLevel(_ id: String, _ level: Int) {
-        updateBase { base in
-            guard let index = base.buildings.firstIndex(where: { $0.id == id }) else { return }
-            base.buildings[index].level = max(1, min(BuildingKind.maxLevel, level))
-        }
-    }
-
-    func devSetAllLevels(_ level: Int) {
-        updateBase { base in
-            for index in base.buildings.indices where UpgradeArt.applies(to: base.buildings[index].kind) {
-                base.buildings[index].level = max(1, min(BuildingKind.maxLevel, level))
-            }
-        }
-    }
 
     /// Opens every drill and blueprint and repairs the station, for showing the whole game quickly.
     func devUnlockEverything() {
@@ -225,6 +211,30 @@ final class AppModel {
 
     /// A temporary equipment snapshot. Never writes campaign progress, rewards, or a draft.
     func openExampleMission(_ preset: ExampleBase = .starter, resetHistory: Bool = true, kind: BaseTestKind = .shadow) {
+        openExampleMission(inputs: preset.inputs, resetHistory: resetHistory, kind: kind)
+    }
+
+    /// The most of each kind an example lab can hold: the same as a real base.
+    static let exampleRange = 1...BaseExperiment.maxPerKind
+
+    /// Adds or removes one solar array or battery in the example lab, like building on a base.
+    /// Air and science settings carry over, and the last result stays for comparison.
+    /// Returns false (nothing changes) at the lab's limits.
+    @discardableResult
+    func changeExampleGear(_ kind: CargoKind, by delta: Int) -> Bool {
+        guard let test = session?.baseTest, test.isExample, session?.stage == .planning else { return false }
+        var inputs = test.inputs
+        switch kind {
+        case .solarArray: inputs.arrays += delta
+        case .battery: inputs.batteries += delta
+        default: return false
+        }
+        guard Self.exampleRange.contains(inputs.arrays), Self.exampleRange.contains(inputs.batteries) else { return false }
+        openExampleMission(inputs: inputs, resetHistory: false, kind: test.kind)
+        return true
+    }
+
+    func openExampleMission(inputs startingInputs: BaseTestInputs, resetHistory: Bool, kind: BaseTestKind) {
         guard let science else { return }
         let continuing = !resetHistory && kind == exampleKind && session?.baseTest?.isExample == true
         let priorPlan = continuing ? session?.configuration : nil
@@ -232,7 +242,7 @@ final class AppModel {
         if !continuing { exampleRecord = nil }
         exampleKind = kind
         session?.leave()
-        var inputs = preset.inputs
+        var inputs = startingInputs
         if kind == .storm { inputs.shelter = true }
         var definition = kind == .storm ? BaseExperiment.stormTest(inputs: inputs, science: science) : BaseExperiment.shadowTest(inputs: inputs)
         definition.title = kind == .storm ? "Storm example" : "Example lab"
@@ -584,9 +594,8 @@ final class AppModel {
             baseMessage = nil
             coinHelpNeeded = needed
         case .blocked: baseMessage = "That spot is taken or off the board. Try another spot."
-        case .limitReached: baseMessage = "You have as many as your habitat allows. Upgrade the habitat to build more."
+        case .limitReached: baseMessage = "Your base has room for 4 of these. Move or keep the ones you have."
         case .locked(let reason): baseMessage = reason
-        case .maxLevel: baseMessage = "This building is already at the top level."
         }
         if result != .ok { Haptics.warning() }
     }
@@ -673,17 +682,6 @@ final class AppModel {
         return true
     }
 
-    @discardableResult
-    func upgradeBuilding(_ id: String) -> Bool {
-        let result = updateBase { $0.upgrade(id) }
-        explain(result)
-        if result == .ok {
-            Haptics.success()
-            SoundFX.shared.play(.upgrade)
-        }
-        return result == .ok
-    }
-
     /// Repairs the landing station. One charge, however many times it is tapped.
     @discardableResult
     func repairBuilding(_ id: String) -> Bool {
@@ -727,7 +725,7 @@ final class AppModel {
     /// The board in words, for VoiceOver.
     var boardSummary: String {
         let base = progress.baseState
-        var parts = ["Your base board, level \(base.habitatLevel)"]
+        var parts = ["Your base board"]
         for kind in BuildingKind.allCases where kind != .habitat {
             let count = base.count(kind)
             if count > 0 { parts.append("\(count) \(kind.name.lowercased())\(count == 1 ? "" : "s")") }

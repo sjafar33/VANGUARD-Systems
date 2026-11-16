@@ -98,7 +98,7 @@ struct SourcesView: View {
         "Storm drill: 0.8 kW available on average; shelter takes 3 kWh to build; the crew must be inside for the whole storm. The lander holds 4 crates (3 in the harder version).",
         "Rover: drives at a steady 1 m/s (0.75 m/s in the harder version) and stops instantly. The yellow bay is 5 to 6 m.",
         "Power and air use stay the same within each drill step. This is a training model, not an electrical simulator.",
-        "Building the base, Moon coins, upgrades and styles are game rules. They unlock reference drills and looks. Array and battery levels also change equipment strength in own-base tests; reference drill definitions stay unchanged."
+        "Building the base, Moon coins and styles are game rules. They unlock reference drills and looks. In own-base tests every working solar array and battery counts the same as in Lights Out; reference drill definitions stay unchanged."
     ]
 
     static let limits = [
@@ -322,7 +322,7 @@ struct SettingsView: View {
                     name = model.progress.baseName
                 }
             } message: {
-                Text("This removes all completed drills, stars and base upgrades on this device. This can't be undone.")
+                Text("This removes all completed drills, stars and base buildings on this device. This can't be undone.")
             }
         }
         .preferredColorScheme(.light)
@@ -343,24 +343,11 @@ struct SettingsView: View {
                 Button("Zero", role: .destructive) { model.devAddCoins(-model.baseState.coins) }
             }
             .buttonStyle(.bordered)
-            HStack(spacing: 10) {
-                Text("All buildings")
-                Spacer()
-                ForEach(1...BuildingKind.maxLevel, id: \.self) { level in
-                    Button("L\(level)") { model.devSetAllLevels(level) }
-                }
-            }
-            .buttonStyle(.bordered)
-            ForEach(model.baseState.buildings.filter { UpgradeArt.applies(to: $0.kind) }) { building in
-                Stepper("\(building.kind.name): level \(building.level)",
-                        value: Binding(get: { building.level }, set: { model.devSetLevel(building.id, $0) }),
-                        in: 1...BuildingKind.maxLevel)
-            }
             Button("Unlock every drill, lesson and blueprint") { model.devUnlockEverything() }
         } header: {
             Text("Developer mode (demo only)")
         } footer: {
-            Text("Changes coins, building levels and unlocks so the whole game can be shown quickly. It never changes a science number or a test result. It turns off when the app is closed.")
+            Text("Changes coins and unlocks so the whole game can be shown quickly. It never changes a science number or a test result. It turns off when the app is closed.")
         }
     }
 }

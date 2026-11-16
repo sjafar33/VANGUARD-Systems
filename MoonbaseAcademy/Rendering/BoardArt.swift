@@ -92,18 +92,12 @@ enum BoardArt {
         }
     }
 
-    /// The building, standing on a plate whose rim colour shows its level (grey, blue, gold),
-    /// with level pips above it. Level is also announced in words by the SwiftUI panels.
+    /// The building, standing on its plate. Buildings have no upgrades, so every one is drawn the same way.
     static func building(_ b: PlacedBuilding, habitatTint: UInt32, animated: Bool = false) -> SKNode {
         let node = SKNode()
         let size = b.kind.footprint
         node.addChild(plate(w: size.w, h: size.h, level: b.level))
-        // Levels 2 and 3 are different buildings, drawn in UpgradeArt. Level 1 is the original art below.
-        let upgraded = UpgradeArt.body(kind: b.kind, level: b.level, tint: habitatTint, animated: animated)
         let body: SKNode
-        if let upgraded {
-            body = upgraded
-        } else {
         switch b.kind {
         case .habitat:
             let group = SKNode()
@@ -213,33 +207,8 @@ enum BoardArt {
         case .rockGarden:
             body = rockGarden(animated: animated)
         }
-        }
         body.zPosition = 1
-        // Upgraded buildings stand on a lit deck.
-        let lift = UpgradeArt.applies(to: b.kind) ? UpgradeArt.lift(b.level) : 0
-        body.position = CGPoint(x: body.position.x, y: body.position.y + lift)
-        if let deck = UpgradeArt.platform(kind: b.kind, level: b.level) {
-            node.addChild(deck)
-        }
         node.addChild(body)
-        // The landing station has no levels: it is either a ruin or repaired.
-        if b.kind != .landingStation && !b.kind.isDecoration {
-            let height = max(pipHeight(b.kind), UpgradeArt.top(b.kind, level: b.level)) + lift
-            node.addChild(levelPips(b.level, height: height))
-        }
-        if animated && b.level >= BuildingKind.maxLevel {
-            // Top level: a few gold sparkles now and then.
-            node.run(.repeatForever(.sequence([.wait(forDuration: 1.2, withRange: 1), .run { [weak node] in
-                guard let node else { return }
-                let star = SKSpriteNode(texture: Art.glowDot(color: 0xFFE27A, diameter: 10))
-                star.position = CGPoint(x: CGFloat.random(in: -30...30), y: CGFloat.random(in: 10...60))
-                star.blendMode = .add
-                star.zPosition = 6
-                star.alpha = 0
-                node.addChild(star)
-                star.run(.sequence([.fadeIn(withDuration: 0.25), .fadeOut(withDuration: 0.5), .removeFromParent()]))
-            }])))
-        }
         return node
     }
 
@@ -300,18 +269,6 @@ enum BoardArt {
         return Art.sprite(texture, robotCanvas)
     }
 
-    private static func pipHeight(_ kind: BuildingKind) -> CGFloat {
-        switch kind {
-        case .habitat: return 120
-        case .greenhouse: return 70
-        case .shelter: return 58
-        case .dish: return 82
-        case .solarArray: return 52
-        case .battery: return 60
-        case .landingStation: return 64
-        case .flag, .lamp, .rockGarden: return 60
-        }
-    }
 
     // MARK: Decorations (looks only)
 
@@ -508,20 +465,6 @@ enum BoardArt {
             badge.run(.repeatForever(.sequence([.moveBy(x: 0, y: 7, duration: 0.6), .moveBy(x: 0, y: -7, duration: 0.6)])))
         }
         return group
-    }
-
-    private static func levelPips(_ level: Int, height: CGFloat) -> SKNode {
-        let node = SKNode()
-        node.zPosition = 5
-        for i in 0..<BuildingKind.maxLevel {
-            let pip = SKShapeNode(circleOfRadius: 4.5)
-            pip.fillColor = i < level ? UIColor(hex: 0xFFD66B) : UIColor(white: 1, alpha: 0.25)
-            pip.strokeColor = UIColor(hex: 0x0B1426, alpha: 0.8)
-            pip.lineWidth = 1.5
-            pip.position = CGPoint(x: CGFloat(i - 1) * 12, y: height)
-            node.addChild(pip)
-        }
-        return node
     }
 
     private static func plate(w: Int, h: Int, level: Int) -> SKNode {

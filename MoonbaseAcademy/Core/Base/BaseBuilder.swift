@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: Buildings
 
-/// Things the player can build on the base board. Building and upgrading unlock drills and new looks.
+/// Things the player can build on the base board. Building unlocks drills. There are no upgrades.
 /// Working arrays, batteries and their levels also feed Test My Base through authored game rules;
 /// the reference drills and NASA science inputs stay unchanged.
 enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
@@ -61,7 +61,7 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
 
     var blurb: String {
         switch self {
-        case .habitat: return "Home for the crew. Upgrade it to build more solar arrays and batteries."
+        case .habitat: return "Home for the crew: an inflatable dome with room for up to 4 solar arrays and 4 batteries."
         case .solarArray: return "Makes power while the Sun shines."
         case .battery: return "Stores energy for when the Sun is gone."
         case .greenhouse: return "Grows fresh lettuce for the crew."
@@ -94,7 +94,21 @@ enum BuildingKind: String, Codable, CaseIterable, Sendable, Identifiable {
         }
     }
 
-    static let maxLevel = 3
+    /// Buildings have no upgrades. Every building is level 1; the field stays in saves so old ones load.
+    static let maxLevel = 1
+}
+
+/// Buildings have no upgrades: a save from an older version loads with every building at level 1.
+extension PlacedBuilding {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        kind = try c.decode(BuildingKind.self, forKey: .kind)
+        x = try c.decode(Int.self, forKey: .x)
+        y = try c.decode(Int.self, forKey: .y)
+        level = 1
+        damaged = try c.decodeIfPresent(Bool.self, forKey: .damaged)
+    }
 }
 
 struct PlacedBuilding: Codable, Equatable, Sendable, Identifiable {
@@ -190,7 +204,6 @@ enum BaseActionResult: Equatable {
     case blocked
     case limitReached
     case locked(String)
-    case maxLevel
 }
 
 enum BlueprintStatus: Equatable {
@@ -236,39 +249,11 @@ struct BaseState: Codable, Equatable, Sendable {
         }
     }
 
-    /// Cost to go from `level` to `level + 1`, or nil at the top level.
-    static func upgradeCost(_ kind: BuildingKind, from level: Int) -> Int? {
-        guard level < BuildingKind.maxLevel else { return nil }
-        switch kind {
-        case .habitat: return level == 1 ? 150 : 300
-        case .solarArray, .battery: return level == 1 ? 60 : 100
-        case .greenhouse, .shelter, .dish: return level == 1 ? 120 : 200
-        case .landingStation, .flag, .lamp, .rockGarden: return nil
-        }
-    }
-
-    /// What reaching a level gives. Never a change to a drill's science numbers.
-    static func levelReward(_ kind: BuildingKind, level: Int) -> String {
-        switch (kind, level) {
-        case (.habitat, 2): return "Build up to 3 solar arrays and 3 batteries. Adds light pylons and a new module."
-        case (.habitat, 3): return "Build up to 4 solar arrays and 4 batteries. Adds a spire, a second module and a hologram ring."
-        case (.solarArray, 2): return "Makes 1.5 times the power in Test My Base (game rule). Opens the harder Lights Out drill."
-        case (.solarArray, 3): return "Makes 2 times the power in Test My Base (game rule). Becomes a solar tree."
-        case (.battery, 2): return "Stores 1.5 times the energy in Test My Base (game rule). Opens the harder Lights Out drill."
-        case (.battery, 3): return "Stores 2 times the energy in Test My Base (game rule). Becomes a power core."
-        case (_, 2): return kind.drill.map { _ in "Unlocks the harder version of its drill, and adds a tech deck and new equipment." } ?? "A bigger, brighter building."
-        case (_, 3): return "The futuristic look: gold deck, glowing core and a hologram ring. Looks only."
-        default: return ""
-        }
-    }
-
-    var habitatLevel: Int { buildings.first { $0.kind == .habitat }?.level ?? 1 }
-
     func count(_ kind: BuildingKind) -> Int { buildings.filter { $0.kind == kind }.count }
 
     func maxCount(_ kind: BuildingKind) -> Int {
         switch kind {
-        case .solarArray, .battery: return habitatLevel + 1
+        case .solarArray, .battery: return 4
         case .lamp: return 4
         case .rockGarden: return 3
         case .flag: return 2
@@ -319,11 +304,6 @@ struct BaseState: Codable, Equatable, Sendable {
         }
     }
 
-    /// Upgrading a drill's building to level 2 opens its harder version.
-    func harderReady(_ id: MissionID) -> Bool {
-        buildings.contains { $0.kind.drill == id && $0.level >= 2 }
-    }
-
     // MARK: Board geometry
 
     func occupied(excluding id: String? = nil) -> Set<BoardTile> {
@@ -371,16 +351,6 @@ struct BaseState: Codable, Equatable, Sendable {
         guard canPlace(buildings[index].kind, x: x, y: y, excluding: id) else { return .blocked }
         buildings[index].x = x
         buildings[index].y = y
-        return .ok
-    }
-
-    mutating func upgrade(_ id: String) -> BaseActionResult {
-        guard let index = buildings.firstIndex(where: { $0.id == id }) else { return .blocked }
-        let building = buildings[index]
-        guard let cost = Self.upgradeCost(building.kind, from: building.level) else { return .maxLevel }
-        guard coins >= cost else { return .notEnoughCoins(needed: cost - coins) }
-        coins -= cost
-        buildings[index].level += 1
         return .ok
     }
 

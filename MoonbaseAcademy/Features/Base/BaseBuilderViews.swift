@@ -11,7 +11,7 @@ struct BuildShopView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Label("Tap a building on your base to upgrade or move it.", systemImage: "hand.tap.fill")
+                    Label("Tap a building on your base to see what it does or move it.", systemImage: "hand.tap.fill")
                         .font(.system(.subheadline, design: .rounded).weight(.heavy))
                         .foregroundStyle(.secondary)
                     ForEach(BuildingKind.allCases.filter { $0 != .habitat && $0 != .landingStation && !$0.isDecoration }) { kind in
@@ -83,13 +83,13 @@ private struct BuildCardRow: View {
                         if full && kind.isDecoration {
                             Label("You've placed them all", systemImage: "checkmark")
                         } else if full {
-                            Label("Upgrade the habitat to build more", systemImage: "house.fill")
+                            Label("Base is full: 4 is the most", systemImage: "checkmark")
                         } else {
                             CoinLabel(title: "Build for", amount: cost)
                         }
                     }
                     .buttonStyle(GameButtonStyle(bevel: base.coins >= cost && !full ? GamePalette.go : GamePalette.steel, height: 48, font: .game(.headline)))
-                    .accessibilityLabel(full ? "\(kind.name): upgrade the habitat to build more" : "Build \(kind.name.lowercased()) for \(cost) Moon coins")
+                    .accessibilityLabel(full ? "\(kind.name): you have the most your base holds, 4" : "Build \(kind.name.lowercased()) for \(cost) Moon coins")
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -161,7 +161,7 @@ struct PlacementBar: View {
 
 // MARK: Building panel
 
-/// What a building does, its level, the next upgrade, and actions.
+/// What a building does and what you can do with it. Buildings have no upgrades.
 struct BuildingPanel: View {
     let model: AppModel
     let building: PlacedBuilding
@@ -169,8 +169,6 @@ struct BuildingPanel: View {
     let onLearn: () -> Void
 
     var body: some View {
-        let cost = BaseState.upgradeCost(building.kind, from: building.level)
-        let coins = model.baseState.coins
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -179,18 +177,10 @@ struct BuildingPanel: View {
                         Label("Decoration: looks only", systemImage: "paintbrush.fill")
                             .font(.system(.subheadline, design: .rounded).weight(.heavy))
                             .foregroundStyle(Theme.inkSecondary)
-                    } else {
-                        HStack(spacing: 4) {
-                            ForEach(0..<BuildingKind.maxLevel, id: \.self) { i in
-                                Image(systemName: i < building.level ? "star.fill" : "star")
-                                    .foregroundStyle(i < building.level ? Color(hex: 0xF5B92E) : Theme.inkSecondary)
-                            }
-                            Text("Level \(building.level) of \(BuildingKind.maxLevel)")
-                                .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                                .foregroundStyle(Theme.inkSecondary)
-                        }
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("Level \(building.level) of \(BuildingKind.maxLevel)")
+                    } else if let drill = building.kind.drill {
+                        Label("Used in \(GameCopy.of(drill).title)", systemImage: "play.circle.fill")
+                            .font(.system(.subheadline, design: .rounded).weight(.heavy))
+                            .foregroundStyle(Theme.inkSecondary)
                     }
                 }
                 Spacer()
@@ -200,15 +190,9 @@ struct BuildingPanel: View {
                 .font(.system(.subheadline, design: .rounded))
                 .foregroundStyle(Theme.ink)
                 .fixedSize(horizontal: false, vertical: true)
-            if let cost {
-                Label("Next level: \(BaseState.levelReward(building.kind, level: building.level + 1))", systemImage: "arrow.up.circle.fill")
-                    .font(.system(.subheadline, design: .rounded).weight(.heavy))
-                    .foregroundStyle(Theme.energyInk)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { actions(cost: cost, coins: coins) }
-                VStack(spacing: 8) { actions(cost: cost, coins: coins) }
+                HStack(spacing: 10) { actions }
+                VStack(spacing: 8) { actions }
             }
         }
         .padding(14)
@@ -216,21 +200,7 @@ struct BuildingPanel: View {
         .accessibilityElement(children: .contain)
     }
 
-    @ViewBuilder private func actions(cost: Int?, coins: Int) -> some View {
-        if let cost {
-            Button {
-                model.upgradeBuilding(building.id)
-            } label: {
-                CoinLabel(title: "Upgrade", amount: cost, size: 22)
-            }
-            .buttonStyle(GameButtonStyle(bevel: coins >= cost ? GamePalette.gold : GamePalette.steel, height: 50, font: .game(.headline)))
-            .accessibilityLabel("Upgrade for \(cost) Moon coins")
-        } else if !building.kind.isDecoration {
-            Label("Top level!", systemImage: "crown.fill")
-                .font(.game(.headline))
-                .foregroundStyle(Theme.amberInk)
-                .frame(maxWidth: .infinity, minHeight: 50)
-        }
+    @ViewBuilder private var actions: some View {
         Button {
             model.startMoving(building.id)
         } label: {
@@ -466,44 +436,69 @@ struct LearnListView: View {
 struct DrillsListView: View {
     let model: AppModel
     let close: () -> Void
+    /// Why a tapped drill cannot start yet. A locked tile always explains itself instead of doing nothing.
+    @State private var blocked: (title: String, message: String)?
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Try the engineering experiment")
-                        .font(.headline)
-                    Text("An example base, ready now. No coins or unlocks needed. Your own base stays unchanged.")
-                        .font(.subheadline)
-                    Button("Start storm example") {
-                        close()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openExampleMission(kind: .storm) }
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Practice labs").font(.game(.title3)).foregroundStyle(.primary)
+                    Text("Free example bases: build, test, then change one thing. Your own base stays unchanged.")
+                        .font(.system(.subheadline, design: .rounded)).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 12) { labCards }
+                        VStack(spacing: 12) { labCards }
                     }
-                    .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 50, font: .game(.headline)))
-                    Button("Start example lab") {
-                        close()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openExampleMission() }
+                    if model.baseState.stationRestored {
+                        HStack(spacing: 14) {
+                            Image(systemName: "bolt.shield.fill")
+                                .font(.system(size: 34, weight: .black))
+                                .gameText(Color(hex: 0xFFE27A))
+                                .frame(width: 56)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Your real base").font(.game(.headline)).foregroundStyle(Theme.ink)
+                                Text("A shadow test with the solar arrays and batteries you built.")
+                                    .font(.system(.caption, design: .rounded).weight(.semibold))
+                                    .foregroundStyle(Theme.inkSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 8)
+                            Button {
+                                close()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openBaseTest() }
+                            } label: {
+                                Label("Test my base", systemImage: "play.fill")
+                            }
+                            .buttonStyle(GameButtonStyle(bevel: GamePalette.gold, height: 50, font: .game(.headline)))
+                            .frame(maxWidth: 220)
+                            .accessibilityLabel("Test my base")
+                            .accessibilityHint("A shadow test that uses your real solar arrays and batteries")
+                        }
+                        .padding(14)
+                        .background(GameCardBackground(corner: 20))
                     }
-                    .buttonStyle(GameButtonStyle(bevel: GamePalette.energy, height: 54, font: .game(.headline)))
+                    Text("Drills").font(.game(.title3)).foregroundStyle(.primary).padding(.top, 6)
                 }
-                .padding(16)
-                if model.baseState.stationRestored {
-                    Button {
-                        close()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openBaseTest() }
-                    } label: {
-                        Label("Test my base", systemImage: "bolt.shield.fill")
-                    }
-                    .buttonStyle(GameButtonStyle(bevel: GamePalette.gold, height: 54, font: .game(.headline)))
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .accessibilityHint("A shadow test that uses your real solar arrays and batteries")
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
                     ForEach(MissionID.allCases) { id in
                         VStack(spacing: 6) {
                             MissionTile(id: id, progress: model.progress, isNext: model.nextMission == id) {
-                                guard model.progress.isUnlocked(id), model.baseState.drillReady(id) else { return }
+                                if !model.progress.isUnlocked(id) {
+                                    Haptics.warning()
+                                    blocked = ("Not open yet", "Finish the drill before it first.")
+                                    return
+                                }
+                                if let needs = model.baseState.drillNeeds(id) {
+                                    Haptics.warning()
+                                    blocked = ("Your base needs one more building",
+                                               "\(needs) Close this list, tap Build, place it on your base, then come back.")
+                                    return
+                                }
                                 close()
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.selectedMission = id }
                             }
@@ -528,6 +523,56 @@ struct DrillsListView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done", action: close) } }
         }
         .presentationDetents([.medium, .large])
+        .alert(blocked?.title ?? "", isPresented: Binding(get: { blocked != nil }, set: { if !$0 { blocked = nil } })) {
+            Button("OK", role: .cancel) { blocked = nil }
+        } message: {
+            Text(blocked?.message ?? "")
+        }
+    }
+}
+
+extension DrillsListView {
+    @ViewBuilder var labCards: some View {
+        PracticeLabCard(icon: .solarArray, title: "Shadow lab", detail: "Keep the power on through 6 hours of shadow.",
+                        bevel: GamePalette.energy, startLabel: "Start example lab") {
+            close()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openExampleMission() }
+        }
+        PracticeLabCard(icon: .shelterKit, title: "Storm lab", detail: "Shelter the crew through the real solar storm of September 2017.",
+                        bevel: GamePalette.steel, startLabel: "Start storm example") {
+            close()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.openExampleMission(kind: .storm) }
+        }
+    }
+}
+
+/// A practice lab as a game card: building art, what it tests, and a Play button.
+struct PracticeLabCard: View {
+    let icon: CargoKind
+    let title: String
+    let detail: String
+    let bevel: GamePalette.Bevel
+    let startLabel: String
+    let start: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            CargoIconView(kind: icon).frame(height: 70).accessibilityHidden(true)
+            Text(title).font(.game(.headline)).foregroundStyle(Theme.ink)
+            Text(detail)
+                .font(.system(.caption, design: .rounded).weight(.semibold))
+                .foregroundStyle(Theme.inkSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Button(action: start) { Label("Play", systemImage: "play.fill") }
+                .buttonStyle(GameButtonStyle(bevel: bevel, height: 48, font: .game(.headline)))
+                .accessibilityLabel(startLabel)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(GameCardBackground(corner: 20))
+        .accessibilityElement(children: .contain)
     }
 }
 

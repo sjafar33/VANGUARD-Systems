@@ -2,7 +2,7 @@ import SpriteKit
 import SwiftUI
 
 /// The home base: a Clash-style board you build on. Earn Moon coins from lessons and drills, then build,
-/// move, upgrade and decorate. Drills open when the base has what they need.
+/// move and decorate. Drills open when the base has what they need.
 struct BaseView: View {
     let model: AppModel
     let package: SciencePackage
@@ -182,7 +182,6 @@ struct BaseView: View {
         case .learnPlants:
             lesson = model.lesson(LessonLibrary.plantsAndAirID)
         case .decorate: sheet = .style
-        case .upgradeHabitat: model.selectBuilding("habitat")
         }
     }
 
@@ -213,12 +212,11 @@ struct BaseView: View {
                         .font(.system(size: 50))
                         .foregroundStyle(LinearGradient(colors: [GamePalette.energy.top, GamePalette.energy.bottom], startPoint: .top, endPoint: .bottom))
                         .shadow(color: GamePalette.night.opacity(0.6), radius: 0, x: 0, y: 3)
-                    Text("\(base.habitatLevel)")
-                        .font(.game(.title2))
+                    Image(systemName: "moon.stars.fill")
+                        .font(.system(size: 20, weight: .black))
                         .gameText()
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Base level \(base.habitatLevel)")
+                .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.progress.baseName)
                         .font(.game(.headline))
@@ -254,7 +252,7 @@ struct BaseView: View {
     var novaText: String {
         if let goal = model.currentGoal { return goal.detail }
         guard let next = model.nextMission else {
-            return "Every drill done, Commander! Upgrade buildings to open harder drills, or decorate your base in Style."
+            return "Every drill done, Commander! Try the Harder version of any drill, or decorate your base in Style."
         }
         let title = GameCopy.of(next).title
         if base.drillReady(next) {
@@ -358,7 +356,7 @@ struct BoardView: View {
             .onChange(of: isActive, initial: true) { _, active in coordinator.scene.isPaused = !active }
             .accessibilityElement()
             .accessibilityLabel(summary)
-            .accessibilityHint("Use the buttons below to build, move and upgrade.")
+            .accessibilityHint("Use the buttons below to build and move.")
             .accessibilityAddTraits(.isImage)
     }
 }
@@ -492,7 +490,8 @@ struct MissionBriefCard: View {
                     }
                 }
                 HStack(spacing: 12) {
-                    if done && model.baseState.harderReady(mission) {
+                    // The harder version opens once the normal drill has been finished.
+                    if done {
                         Button("Harder") { model.openMission(mission, variant: true) }
                             .buttonStyle(GameButtonStyle(bevel: GamePalette.steel))
                     }

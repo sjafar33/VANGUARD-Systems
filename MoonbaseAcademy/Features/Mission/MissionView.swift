@@ -12,7 +12,7 @@ struct MissionView: View {
     @State private var bottomHeight: CGFloat = 0
     @State private var banner: String?
     @State private var showSettings = false
-    @State private var planningSection = 0
+    @State private var planOpen = false
     @State private var planningPhase = 0
     @Environment(\.appReduceMotion) private var reduceMotion
     @Environment(\.focusView) private var focusView
@@ -70,9 +70,12 @@ struct MissionView: View {
                                     .onAppear { topHeight = 0; updateInsets() }
                                 } else if !session.isRover {
                                     MissionPlanningWorkspace(model: model, session: session,
-                                                             section: $planningSection, phaseIndex: $planningPhase,
-                                                             openPlan: { planPhase = $0 })
-                                        .frame(height: min(430, proxy.size.height * (proxy.size.width < 600 ? 0.48 : 0.43)))
+                                                             planOpen: $planOpen, phaseIndex: $planningPhase,
+                                                             narrow: proxy.size.width < 600,
+                                                             panelMaxHeight: min(340, proxy.size.height * 0.3),
+                                                             openPlan: { planPhase = $0 }) {
+                                        launchControl(prominent: proxy.size.width >= 600)
+                                    }
                                 } else {
                                     ViewThatFits(in: .vertical) {
                                         bottomArea
@@ -80,7 +83,7 @@ struct MissionView: View {
                                             .frame(maxHeight: max(140, proxy.size.height * 0.52))
                                     }
                                 }
-                                launchControl
+                                if textSize.isAccessibilitySize || session.isRover { launchControl() }
                             }
                         } else {
                             ViewThatFits(in: .vertical) {
@@ -90,7 +93,7 @@ struct MissionView: View {
                             }
                         }
                     }
-                        .frame(maxWidth: 760)
+                        .frame(maxWidth: 860)
                         .readHeight { height in
                             bottomHeight = height + proxy.safeAreaInsets.bottom
                             updateInsets()
@@ -253,18 +256,25 @@ struct MissionView: View {
             EmptyView()
         }
     }
-    private var launchControl: some View {
+    /// `prominent` is the big corner button beside the shop bar, like a building game's battle button.
+    private func launchControl(prominent: Bool = false) -> some View {
         Button {
             session.goToPrediction()
         } label: {
             if textSize.isAccessibilitySize {
                 Text("Launch test")
+            } else if prominent {
+                VStack(spacing: 4) {
+                    Image(systemName: "flame.fill").font(.system(size: 34, weight: .black))
+                    Text("Launch test")
+                }
             } else {
                 Label("Launch test", systemImage: "flame.fill")
             }
         }
-        .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 62,
-                                     font: .game(textSize.isAccessibilitySize ? .headline : .title2)))
+        .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: prominent ? 132 : 62,
+                                     font: .game(textSize.isAccessibilitySize ? .headline : prominent ? .title3 : .title2)))
+        .accessibilityLabel("Launch test")
         .disabled(!session.canLaunch)
         .accessibilityFocused($launchFocused)
         .accessibilityHint(session.canLaunch ? "Then you predict what will happen" : "Finish the plan first")
@@ -313,7 +323,6 @@ struct MissionTopHUD: View {
                 TimelineStrip(session: session)
             }
         }
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(GamePalette.hud))
         }
     }
 
@@ -565,27 +574,7 @@ struct BaseGearCard: View {
         .padding(embedded ? 0 : 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background { if !embedded { GameCardBackground() } }
-        .sheet(isPresented: $showRules) {
-            NavigationStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        Text(storm ? "Protect the crew and finish the science task" : "Generate energy, then store it")
-                            .font(.title2.bold())
-                        Text(storm
-                             ? "This rehearsal lasts \(Format.hours(session.definition.totalHours)), using an archived storm. Stay sheltered, leave \(Format.wholeHours(session.definition.success.minimumAirHours)) of air, and supply \(Format.kWh(session.definition.success.minimumResearchUnits)) to the science task."
-                             : "Solar arrays make electricity in sunlight. Batteries store energy for the shadow. More empty storage cannot create energy.")
-                        Text(storm
-                             ? "Batteries start charged. Preparing the shelter uses \(Format.kWh(session.definition.item(.shelterKit)?.assemblyEnergyKWh ?? 0)). An independent training backup supplies \(Format.kW(session.definition.phases.first?.baseSupplyKW ?? 0)); solar arrays do not supply this rehearsal."
-                             : "Working arrays and batteries count, including upgrades. Level 2 is 1.5 times level 1; level 3 is twice level 1. Positions and decorations do not change these calculations.")
-                        Text("Equipment values are training rules. Crew oxygen demand comes from NASA references. Storm timing comes from archived observations near Earth; this game does not calculate radiation dose.")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading).padding()
-                }
-                .navigationTitle("How this test works")
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showRules = false } } }
-            }
-        }
+        .sheet(isPresented: $showRules) { BaseTestRulesSheet(session: session) { showRules = false } }
     }
 }
 
@@ -685,7 +674,7 @@ struct BaseTestCard: View {
                     Text("Game rules: \(Format.kWh(session.definition.initial.batteryKWh)) charged storage; 3 kWh shelter preparation; 0.8 kW backup supply independent of arrays. The training station supplies the science instrument. No radiation dose is calculated.")
                         .font(.caption)
                 } else {
-                Text("Game rules: \(Format.kW((session.definition.phases.map(\.solarKWPerArray).max() ?? 0) * Double(context.inputs.arrays))) of sunlight power; \(Format.kWh((session.definition.item(.battery)?.batteryCapacityKWh ?? 0) * Double(context.inputs.batteries))) of storage. Levels 1 / 2 / 3 count 1× / 1.5× / 2×. Positions and decoration change nothing.")
+                Text("Game rules: \(Format.kW((session.definition.phases.map(\.solarKWPerArray).max() ?? 0) * Double(context.inputs.arrays))) of sunlight power; \(Format.kWh((session.definition.item(.battery)?.batteryCapacityKWh ?? 0) * Double(context.inputs.batteries))) of storage. Each counts the same; positions and decoration change nothing.")
                         .font(.caption)
                 }
             }
@@ -1288,20 +1277,23 @@ struct ResultOverlay: View {
                     NovaBubble(text: explanationLead, compact: true)
                     InvestigationResultCard(session: session)
                     whySection
-                    if session.baseTest?.isExample == true { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
                     HStack(spacing: 10) {
                         if success {
-                            Button("Replay") { session.reviseExperiment() }
-                                .buttonStyle(GameButtonStyle(bevel: GamePalette.steel))
+                            Button { session.reviseExperiment() } label: { Label("Replay", systemImage: "arrow.counterclockwise") }
+                                .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 56, font: .game(.headline)))
+                                .accessibilityLabel("Replay")
                             Button { model.leaveMission() } label: { Label("Continue", systemImage: "arrow.right") }
-                                .buttonStyle(GameButtonStyle(bevel: GamePalette.go))
+                                .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 56, font: .game(.headline)))
                                 .accessibilityLabel("Continue")
                         } else {
-                            Button(session.isBaseTest ? "Improve base" : "Base") { model.leaveMission() }
-                                .buttonStyle(GameButtonStyle(bevel: GamePalette.steel))
+                            Button { model.leaveMission() } label: { Label(leaveTitle, systemImage: leaveIcon) }
+                                .buttonStyle(GameButtonStyle(bevel: GamePalette.steel, height: 56, font: .game(.headline)))
+                                .accessibilityLabel(leaveTitle)
+                            // Back to planning with the suggested part highlighted: change one thing, then test again.
                             Button { session.reviseExperiment() } label: { Label("Try again", systemImage: "arrow.counterclockwise") }
-                                .buttonStyle(GameButtonStyle(bevel: GamePalette.gold))
+                                .buttonStyle(GameButtonStyle(bevel: GamePalette.gold, height: 56, font: .game(.headline)))
                                 .accessibilityLabel("Try again")
+                                .accessibilityHint("Change one thing, then test again")
                         }
                     }
                 }
@@ -1328,6 +1320,16 @@ struct ResultOverlay: View {
         }
     }
 
+    private var leaveTitle: String {
+        if session.baseTest?.isExample == true { return "Leave lab" }
+        return session.isBaseTest ? "Improve base" : "Base"
+    }
+
+    private var leaveIcon: String {
+        if session.baseTest?.isExample == true { return "xmark" }
+        return session.isBaseTest ? "hammer.fill" : "house.fill"
+    }
+
     private var explanationLead: String {
         let paragraphs = session.explanation?.paragraphs ?? []
         return paragraphs.prefix(session.isBaseTest ? 1 : 2).joined(separator: " ")
@@ -1339,11 +1341,20 @@ struct ResultOverlay: View {
                 Button {
                     withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { showWhy.toggle() }
                 } label: {
-                    Label(showWhy ? "Hide the numbers" : "Why? See the numbers", systemImage: "magnifyingglass")
-                        .font(.system(.subheadline, design: .rounded).weight(.black))
-                        .foregroundStyle(Theme.energyInk)
-                        .frame(minHeight: 44)
+                    HStack {
+                        Label(showWhy ? "Hide the numbers" : "Why? See the numbers", systemImage: "chart.bar.fill")
+                        Spacer(minLength: 8)
+                        Image(systemName: showWhy ? "chevron.up" : "chevron.down").accessibilityHidden(true)
+                    }
+                    .font(.system(.subheadline, design: .rounded).weight(.black))
+                    .foregroundStyle(Theme.energyInk)
+                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.energyInk.opacity(0.1)))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.energyInk.opacity(0.35), lineWidth: 1.5))
                 }
+                .buttonStyle(PressableStyle())
+                .accessibilityLabel(showWhy ? "Hide the numbers" : "Why? See the numbers")
                 if showWhy {
                     if session.isBaseTest { BaseTestCard(session: session) }
                     ForEach(e.numbers, id: \.self) { row in

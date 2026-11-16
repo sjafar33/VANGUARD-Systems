@@ -131,6 +131,8 @@ final class MissionSession {
     var resumedFromDraft = false
     private(set) var stars: StarResult?
     private(set) var shakeToken = 0
+    /// A placed building the player tapped on the Moon. The planning bar then offers to remove it.
+    private(set) var selectedPad: PadID?
     var hintVisible = false
     private(set) var sameSettingsForAllBlocks = true
 
@@ -434,17 +436,42 @@ final class MissionSession {
         }
         guard stage == .planning, definition.missionID == .lightsOut else { return }
         if tutorial == .powered { tutorial = .done }
-        switch pad {
-        case .array(let index):
-            setCount(.solarArray, index < count(.solarArray) ? count(.solarArray) - 1 : count(.solarArray) + 1)
-        case .battery(let index):
-            setCount(.battery, index < count(.battery) ? count(.battery) - 1 : count(.battery) + 1)
+        let (kind, index): (CargoKind, Int) = {
+            switch pad {
+            case .array(let index): return (.solarArray, index)
+            case .battery(let index): return (.battery, index)
+            }
+        }()
+        if index < count(kind) {
+            // Like a building game: tapping something already built selects it instead of deleting it.
+            selectedPad = selectedPad == pad ? nil : pad
+        } else {
+            selectedPad = nil
+            addCargo(kind)
         }
     }
+
+    /// The equipment type of the selected building, while it still exists.
+    var selectedKind: CargoKind? {
+        guard let selectedPad else { return nil }
+        switch selectedPad {
+        case .array(let index): return index < count(.solarArray) ? .solarArray : nil
+        case .battery(let index): return index < count(.battery) ? .battery : nil
+        }
+    }
+
+    func removeSelected() {
+        guard let kind = selectedKind else { selectedPad = nil; return }
+        selectedPad = nil
+        removeCargo(kind)
+    }
+
+    func clearSelection() { selectedPad = nil }
 
     func goToPrediction() {
         guard stage == .planning, canLaunch else { return }
         notice = nil
+        selectedPad = nil
         prediction = nil
         predictionReason = nil
         pendingPrediction = nil
@@ -801,11 +828,6 @@ final class MissionSession {
                 if a.airFraction != b.airFraction { changes.append("\(label) air: \(Self.airLabel(a.airFraction)) → \(Self.airLabel(b.airFraction))") }
                 if a.researchLevel != b.researchLevel { changes.append("\(label) science: \(a.researchLevel > 0 ? "On" : "Off") → \(b.researchLevel > 0 ? "On" : "Off")") }
                 if a.gardenFraction != b.gardenFraction { changes.append("\(label) greenhouse light changed") }
-            }
-            if let a = old.inputs, let b = now.inputs,
-               a.arrays == b.arrays, a.batteries == b.batteries,
-               (a.arrayFactor != b.arrayFactor || a.batteryFactor != b.batteryFactor) {
-                changes.append(BaseExperiment.change(from: a, to: b))
             }
             return changes
         }

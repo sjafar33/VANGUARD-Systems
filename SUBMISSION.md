@@ -22,7 +22,7 @@ https://github.com/sjafar33/VANGUARD-Systems
 
 A base builder that becomes an engineering experiment
 
-Moonbase Academy turns the question “Would your base keep working?” into a repeatable experiment for children aged 7–12. The player places and upgrades buildings, sets an operating plan, predicts what will happen, chooses a reason, watches a deterministic simulation, and revises one choice using evidence from the actual result.
+Moonbase Academy turns the question “Would your base keep working?” into a repeatable experiment for children aged 7–12. The player places buildings, sets an operating plan, predicts what will happen, chooses a reason, watches a deterministic simulation, and revises one choice using evidence from the actual result.
 
 One concrete lesson
 
@@ -40,11 +40,11 @@ Drills → Start example lab and Start storm example provide ready-to-use equipm
 
 Traceable science and honest scope
 
-NASA BVAD oxygen and dry-food references set adult crew consumption; NASA Veggie information sets garden power and a crop reference period; CCMC timestamps set storm phases; NASA's average Earth–Moon distance and the SI speed of light set radio delay. Equipment capacities and level multipliers are authored game rules. Historical records are embedded and labeled archived. There are no live-feed claims. Lettuce is a fresh extra, not a replacement for packed meals. Water, CO2, temperature, full nutrition, radiation transport and realistic rover braking are outside this prototype.
+NASA BVAD oxygen and dry-food references set adult crew consumption; NASA Veggie information sets garden power and a crop reference period; CCMC timestamps set storm phases; NASA's average Earth–Moon distance and the SI speed of light set radio delay. Equipment capacities are authored game rules. Historical records are embedded and labeled archived. There are no live-feed claims. Lettuce is a fresh extra, not a replacement for packed meals. Water, CO2, temperature, full nutrition, radiation transport and realistic rover braking are outside this prototype.
 
 Implementation and validation
 
-The application uses Swift, SwiftUI, SpriteKit, Core Graphics, Foundation and XCTest. The resource engine is deterministic and independent of animation timing. Save migration preserves older records. Engine tests cover boundary failures, source sensitivity, equipment upgrades, the storm task, event timing, and example-save isolation. End-to-end simulator flows exercise a failed attempt, a reasoned revision, success and persisted progress. iPhone, iPad and very large text have been exercised. Full validation and reproducible examples are linked in the public repository. These are technical and usability checks; no child learning-effectiveness study is claimed.
+The application uses Swift, SwiftUI, SpriteKit, Core Graphics, Foundation and XCTest. The resource engine is deterministic and independent of animation timing. Save migration preserves older records. Engine tests cover boundary failures, source sensitivity, own-base equipment counts, the storm task, event timing, and example-save isolation. End-to-end simulator flows exercise a failed attempt, a reasoned revision, success and persisted progress. iPhone, iPad and very large text have been exercised. Full validation and reproducible examples are linked in the public repository. These are technical and usability checks; no child learning-effectiveness study is claimed.
 
 Intended impact
 

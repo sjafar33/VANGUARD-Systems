@@ -36,31 +36,22 @@ final class BaseBuilderTests: MoonbaseTestCase {
         XCTAssertEqual(base.coins, BaseState.startingCoins, "A refused build costs nothing")
     }
 
-    func testHabitatLevelLimitsArraysAndBatteries() throws {
+    func testBaseHoldsFourArraysAndFourBatteriesWithoutUpgrades() throws {
         var base = fresh
         base.coins = 10_000
         let progress = CampaignProgress()
-        for _ in 0..<2 {
-            let spot = try XCTUnwrap(base.firstFreeSpot(for: .solarArray))
-            XCTAssertEqual(base.build(.solarArray, x: spot.x, y: spot.y, progress: progress), .ok)
+        for kind in [BuildingKind.solarArray, .battery] {
+            for _ in 0..<4 {
+                let spot = try XCTUnwrap(base.firstFreeSpot(for: kind))
+                XCTAssertEqual(base.build(kind, x: spot.x, y: spot.y, progress: progress), .ok)
+            }
+            if let spot = base.firstFreeSpot(for: kind) {
+                XCTAssertEqual(base.build(kind, x: spot.x, y: spot.y, progress: progress), .limitReached)
+            }
+            XCTAssertEqual(base.count(kind), 4)
         }
-        let spot = try XCTUnwrap(base.firstFreeSpot(for: .solarArray))
-        XCTAssertEqual(base.build(.solarArray, x: spot.x, y: spot.y, progress: progress), .limitReached)
-        XCTAssertEqual(base.upgrade("habitat"), .ok)
-        XCTAssertEqual(base.build(.solarArray, x: spot.x, y: spot.y, progress: progress), .ok)
-    }
-
-    func testUpgradesCostCoinsAndStopAtTheTop() {
-        var base = fresh
-        base.coins = 1_000
-        XCTAssertEqual(base.upgrade("habitat"), .ok)
-        XCTAssertEqual(base.upgrade("habitat"), .ok)
-        XCTAssertEqual(base.upgrade("habitat"), .maxLevel)
-        XCTAssertEqual(base.coins, 1_000 - 150 - 300)
-        base.coins = 0
-        var other = fresh
-        other.coins = 10
-        XCTAssertEqual(other.upgrade("habitat"), .notEnoughCoins(needed: 140))
+        XCTAssertTrue(base.buildings.allSatisfy { $0.level == 1 }, "Buildings have no upgrades")
+        XCTAssertEqual(BaseExperiment.inputs(from: base), BaseTestInputs(arrays: 4, batteries: 4))
     }
 
     func testMovingKeepsTheBuildingAndChecksTheSpot() throws {
@@ -70,7 +61,7 @@ final class BaseBuilderTests: MoonbaseTestCase {
         XCTAssertEqual(base.move("habitat", x: 4, y: 4), .blocked, "3x3 at 4,4 runs off a board that ends at 5")
     }
 
-    func testGreenhouseNeedsTheLessonAndHarderDrillsNeedLevelTwo() throws {
+    func testGreenhouseNeedsTheLesson() throws {
         var base = fresh
         base.coins = 1_000
         let progress = CampaignProgress()
@@ -80,10 +71,6 @@ final class BaseBuilderTests: MoonbaseTestCase {
         let spot = try XCTUnwrap(base.firstFreeSpot(for: .greenhouse))
         XCTAssertEqual(base.build(.greenhouse, x: spot.x, y: spot.y, progress: progress), .ok)
         XCTAssertTrue(base.drillReady(.livingBase))
-        XCTAssertFalse(base.harderReady(.livingBase))
-        let id = try XCTUnwrap(base.buildings.first { $0.kind == .greenhouse }?.id)
-        XCTAssertEqual(base.upgrade(id), .ok)
-        XCTAssertTrue(base.harderReady(.livingBase))
     }
 
     func testLessonCoinsArePaidFullyOnceThenSmall() {
@@ -253,8 +240,8 @@ final class BaseBuilderTests: MoonbaseTestCase {
     func testRunningOutOfCoinsOpensHelpInsteadOfAMessage() {
         let model = AppModel(store: SaveStore(fileURL: FileManager.default.temporaryDirectory
             .appendingPathComponent("moonbase-help-\(UUID().uuidString)").appendingPathComponent("save.json")))
-        model.upgradeBuilding("habitat") // 150: affordable at the start
-        model.upgradeBuilding("habitat") // 300: not affordable
+        model.devAddCoins(-model.baseState.coins)
+        model.startBuilding(.solarArray) // 40 coins, with none left
         XCTAssertNotNil(model.coinHelpNeeded)
         XCTAssertNil(model.baseMessage)
         XCTAssertFalse(model.earnOptions.isEmpty)
