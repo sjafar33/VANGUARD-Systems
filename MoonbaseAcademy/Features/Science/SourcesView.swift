@@ -226,6 +226,30 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Button {
+                        nameFocused = false
+                        dismiss()
+                        // Start once the sheet has closed, like the practice labs do.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { model.startGuidedTour() }
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "map.fill").font(.title3).foregroundStyle(.tint).accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Guided mission tour").font(.headline).foregroundStyle(Color.primary)
+                                Text("A quick, hands-on introduction · about 25 seconds")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 4)
+                            Image(systemName: "play.circle.fill").font(.title2).foregroundStyle(.tint).accessibilityHidden(true)
+                        }
+                    }
+                    .accessibilityLabel("Guided mission tour. A quick, hands-on introduction, about 25 seconds")
+                    .accessibilityHint("Starts the tour on an example base")
+                    .accessibilityIdentifier("settings.guidedTour")
+                } footer: {
+                    Text("Uses an example base. Your coins, stars, buildings and progress stay unchanged.")
+                }
                 Section("Your base") {
                     TextField("Base name", text: $name)
                         .focused($nameFocused)

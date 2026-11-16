@@ -1,0 +1,977 @@
+{
+  "date": "2026-11-15",
+  "platform": "iPad Air 11-inch (M4), iOS Simulator 27, Debug",
+  "latestUniqueCounts": {
+    "passed": 157,
+    "failed": 0,
+    "skipped": 0,
+    "unit": 154,
+    "ui": 3
+  },
+  "scope": "All unit tests, ExampleLabFlowTests/testExampleCanFailChangeEquipmentAndPassWithoutUnlocks, and GuidedTourFlowTests. This is not every UI test or a human timing/learning study.",
+  "initialRun": {
+    "status": "FAILED",
+    "durationMs": 180851,
+    "counts": {
+      "passed": 156,
+      "failed": 1,
+      "skipped": 0
+    },
+    "target": "simulator"
+  },
+  "initialFailure": "The takeaway container overrode the Replay tour and Return to base accessibility identifiers. Removed the unused parent identifier; no physics changed.",
+  "focusedRerun": {
+    "status": "SUCCEEDED",
+    "durationMs": 61472,
+    "counts": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0
+    },
+    "target": "simulator"
+  },
+  "cases": [
+    {
+      "suite": "AmbientMusicTests",
+      "test": "testAmbientLoopIsDeterministicAndNeverClips",
+      "status": "passed",
+      "durationMs": 1956
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testANewPlayerCanAlwaysAffordTheFirstGoals",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testBaseHoldsFourArraysAndFourBatteriesWithoutUpgrades",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testBaseSurvivesASaveRoundTrip",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testBuildingsCannotOverlapOrLeaveTheBoard",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testBuildingSpendsCoinsAndOpensTheDrill",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testCosmeticsCostCoinsOnceAndCanBeWornAfter",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testDrillCoinsRewardLearningNotFailingFast",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testEarnAdvisorAlwaysOffersAWayAndPutsTheBiggestFirst",
+      "status": "passed",
+      "durationMs": 7
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testGoalBonusesArePaidOnceAndOldSavesDontGetBackPay",
+      "status": "passed",
+      "durationMs": 60
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testGreenhouseNeedsTheLesson",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testGuideAlwaysHasOneConcreteNextGoalInOrder",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testLessonCoinsArePaidFullyOnceThenSmall",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testLessonFactsAreBuiltFromTheScienceInputs",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testMovingKeepsTheBuildingAndChecksTheSpot",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testNewPlayerStartsWithAHabitatAndEnoughForTheFirstDrill",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testOlderSavesGetTheBuildingsTheyAlreadyEarned",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testRunningOutOfCoinsOpensHelpInsteadOfAMessage",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "BaseBuilderTests",
+      "test": "testStylePreviewNeverSpendsOrSaves",
+      "status": "passed",
+      "durationMs": 12
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testAnotherArrayFixesItAtFullAir",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testAnotherBatteryAloneDoesNotHelpWhenThereIsNothingExtraToStore",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testASaveFromBeforeTheStationKeepsEverythingAndGainsTheRuin",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testAShortStormAndALongStormNeedDifferentPlans",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testBaseTestNeedsSayWhatToDo",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testComparisonNamesTheChangedEquipment",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testCosmeticsPositionsAndOtherBuildingsNeverChangeTheTest",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testDecorationsAreLooksOnly",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testEveryArchivedStormIsUsableAndCanBeSurvived",
+      "status": "passed",
+      "durationMs": 19
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testEveryLessonQuestionIsValidAtEveryLevel",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testEveryWorkingArrayAndBatteryCountsExactlyAsLightsOutEquipment",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testOldSavesLoadEveryBuildingAtLevelOne",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testOneArrayOneBatteryRunsOutAtFullAir",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testOnlyWorkingPowerGearBecomesTestInputs",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testRepairChargesExactlyOnce",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testRepairWithTooFewCoinsChangesNothing",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTheEquipmentCannotBeChangedInsideTheTest",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTheFirstPassPaysOnceAndFailuresCostNothing",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTheLearnLevelIsSavedAndOldSavesDefaultToBuilder",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testThePowerLessonReadsItsNumbersFromTheDrill",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTheReferenceDrillIsLeftAlone",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTheSameBaseAndPlanAlwaysGiveTheSameResult",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTheStationIsARuinThatNeverOverlapsAndCannotBeBought",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTheWholeLoopRestoreTestFailReviseAndPass",
+      "status": "passed",
+      "durationMs": 51
+    },
+    {
+      "suite": "BaseExperimentTests",
+      "test": "testTurningTheAirDownSavesPowerButSpendsOxygen",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "BaseStormTests",
+      "test": "testAllArchivedStormsSupportTheReserveStrategyAndKeepReferenceRules",
+      "status": "passed",
+      "durationMs": 14
+    },
+    {
+      "suite": "BaseStormTests",
+      "test": "testOwnBaseStormRecordsArePinnedSeparateAndSurviveRelaunch",
+      "status": "passed",
+      "durationMs": 7
+    },
+    {
+      "suite": "BaseStormTests",
+      "test": "testStormHasARealOpportunityCostAndTwoFeasibleStrategies",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "ExperimentLearningTests",
+      "test": "testExampleEquipmentExperimentsPreserveThePlayersSave",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "ExperimentLearningTests",
+      "test": "testShadowReportsActualStoppingTimeAndReserveCost",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testEachSettingIsIndependentAndPersists",
+      "status": "passed",
+      "durationMs": 5
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testFocusSuggestionsAreOnlyAStartingPoint",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testHarderVersionIsRestoredAsTheHarderVersion",
+      "status": "passed",
+      "durationMs": 5
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testInterruptedPlanReopensAtPlanningWithoutRecording",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testInvalidSavedPlanIsIgnored",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testMotionSettingReachesAnOpenDrill",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testNarrationReadsUnitsAsWords",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "FocusAccessibilityTests",
+      "test": "testSettingsNeverChangeTheScience",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "GuidedTourTests",
+      "test": "testAnUnsureForecastChangesNothingPhysical",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "GuidedTourTests",
+      "test": "testBackRepeatedNextAndDeviationsStayConsistent",
+      "status": "passed",
+      "durationMs": 9
+    },
+    {
+      "suite": "GuidedTourTests",
+      "test": "testFirstTestFailsAndOneChangePassesWithAnOxygenCost",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "GuidedTourTests",
+      "test": "testLeavingDuringATestStopsTheTourCleanly",
+      "status": "passed",
+      "durationMs": 910
+    },
+    {
+      "suite": "GuidedTourTests",
+      "test": "testPlaybackIsShortenedButTheResultIsTheEngineResult",
+      "status": "passed",
+      "durationMs": 2111
+    },
+    {
+      "suite": "GuidedTourTests",
+      "test": "testStartingTheTourFromADrillKeepsThatPlanResumable",
+      "status": "passed",
+      "durationMs": 11
+    },
+    {
+      "suite": "GuidedTourTests",
+      "test": "testTheTourNeverChangesASavedGame",
+      "status": "passed",
+      "durationMs": 10
+    },
+    {
+      "suite": "InvestigationTests",
+      "test": "testChangingOnlyTheForecastRepeatsTheSamePhysics",
+      "status": "passed",
+      "durationMs": 5
+    },
+    {
+      "suite": "InvestigationTests",
+      "test": "testEquipmentPreservesThePlanAndResetIsExplicit",
+      "status": "passed",
+      "durationMs": 6
+    },
+    {
+      "suite": "InvestigationTests",
+      "test": "testRevisionRetainsTheOriginalIdeaAndIdentifiesOneChange",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testConsumptionScalesWithCrewAndTime",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testExactZeroEnergyAtPhaseEndIsValidButEarlierShortageFails",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testFailedAttemptIsNotResurrectedByLaterGeneration",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testFivePointConfigurationIsRejectedWithoutSimulation",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testFourArraysNoBatteryFailsInShadow",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testInvalidInputsAreRejected",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testLowAirReserveIsAFailedConstraintWithoutExhaustion",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testNineHourVariantIsSeparateAndHarder",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testOneArrayThreeBatteriesSpendsOxygenReserve",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testOxygenCapacityBoundary",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testOxygenExhaustionFails",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testReplayIsDeterministic",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testThreeArraysOneBatteryCapsStorage",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LightsOutTests",
+      "test": "testTwoArraysTwoBatteriesSucceeds",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testFullAirFullGardenSucceeds",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testHalfAirRunsOutOfOxygen",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testHalfLightSurvivesButHasNoHarvest",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testHarvestIsNeverAddedToPackagedFood",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testHorizonDerivesFromCropReference",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testOneResearchUnitPerDayStillSucceeds",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testSensitivityLongerCropReferenceMeansNoHarvestInThe33DayDrill",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testTightEnergyVariant",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "LivingBaseTests",
+      "test": "testTwoResearchUnitsFailDuringDaySeven",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "MusicTests",
+      "test": "testLofiLoopIsDeterministicAudibleAndNeverClips",
+      "status": "passed",
+      "durationMs": 1092
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testAirStoryMatchesATankThatWentDown",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testCopyFollowsTheScienceInputs",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testGardenSuccessNoLongerClaimsAFullTankUnlessTrue",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testLightsOutOxygenSentenceOnlyWhenTheTankWentDown",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testNoBatteryCopyOnlyWhenTheShadowCausedIt",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testStormShortageNamesWhatWasRunning",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testStormSuccessStatesTheDoseLimitAndRealOxygenChange",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "NarrationTests",
+      "test": "testVariantCopyUsesTheVariantsNumbers",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "PlanningRatesTests",
+      "test": "testPlanningRatesIncludeScienceAndNASAConsumption",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "PlaybackScriptTests",
+      "test": "testGardenFailureCheckpointsEndOnTheFailureDay",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "PlaybackScriptTests",
+      "test": "testGardenFailureLeadNamesTheDailyGap",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "PlaybackScriptTests",
+      "test": "testGardenSuccessCheckpointsIncludeMilestones",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "PlaybackScriptTests",
+      "test": "testStepMissionsGetOneCheckpointPerStep",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "PlaybackSessionTests",
+      "test": "testLeavingTheAppPausesUntilThePlayerResumes",
+      "status": "passed",
+      "durationMs": 4703
+    },
+    {
+      "suite": "PlaybackSessionTests",
+      "test": "testModeChangeIsReportedForSaving",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "PlaybackSessionTests",
+      "test": "testRetryAndLeaveNeverRecordAStaleAttempt",
+      "status": "passed",
+      "durationMs": 709
+    },
+    {
+      "suite": "PlaybackSessionTests",
+      "test": "testSkipRecordsExactlyOnce",
+      "status": "passed",
+      "durationMs": 362
+    },
+    {
+      "suite": "PlaybackSessionTests",
+      "test": "testStepByStepReachesTheSameResultAsSkip",
+      "status": "passed",
+      "durationMs": 1635
+    },
+    {
+      "suite": "PredictionReasonTests",
+      "test": "testForecastAndReasonNeverChangeThePhysicalResult",
+      "status": "passed",
+      "durationMs": 15
+    },
+    {
+      "suite": "PredictionReasonTests",
+      "test": "testPredictionChecksOxygenGoalAsWellAsElectricity",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "PredictionReasonTests",
+      "test": "testPredictionMetadataLoadsFromNewAndOldRecords",
+      "status": "passed",
+      "durationMs": 4
+    },
+    {
+      "suite": "PredictionStarSessionTests",
+      "test": "testCorrectNoOnAFailedDrillIsRecognisedAndSaved",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "PredictionStarSessionTests",
+      "test": "testNotSureEarnsNoPredictionStar",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "ProgressTests",
+      "test": "testCompletionIsAwardedOnce",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ProgressTests",
+      "test": "testDamagedSaveIsReportedAndPreserved",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "ProgressTests",
+      "test": "testMissionsUnlockInOrder",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ProgressTests",
+      "test": "testReplayFailureKeepsCompletion",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "ProgressTests",
+      "test": "testResetClearsTheSave",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ProgressTests",
+      "test": "testSaveAndReloadRoundTrip",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ProgressTests",
+      "test": "testUnsupportedSchemaIsNotLoaded",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "RewardTests",
+      "test": "testAchievementsAddUpAcrossAttemptsAndSurviveAFailedReplay",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "RewardTests",
+      "test": "testAnOlderSaveFileLoadsWithoutLoss",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "RewardTests",
+      "test": "testCompletedIsNeverKeptWithoutARealSuccess",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "RewardTests",
+      "test": "testCorrectPredictionOfAFailureEarnsOnlyThePredictionStar",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "RewardTests",
+      "test": "testLegacyStarCountsAreRebuiltExactly",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "RewardTests",
+      "test": "testSavesFromBeforeStarsGetCreditForWhatTheyFinished",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "RewardTests",
+      "test": "testStarResultMapsToAchievements",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testBadTimestampsAndMissingEventFailValidation",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testBundledPackageValidatesAndCarriesReferenceValues",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testDelayIsDistanceOverLightSpeed",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testEveryValueHasUnitProvenanceAndVerification",
+      "status": "passed",
+      "durationMs": 0
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testMissingRequiredValueFailsValidation",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testStormDurationsDeriveFromUTCTimestamps",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testUndecodableDataIsAnErrorNotADefault",
+      "status": "passed",
+      "durationMs": 6
+    },
+    {
+      "suite": "ScienceContentTests",
+      "test": "testWrongUnitNonPositiveAndUnknownSourceFailValidation",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testCameraObservationNeedsASuccessfulStop",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testDelayIsExactlyTwoOneWayJourneys",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testMarkerMustBeOffered",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testOnboardComputerStopsLocallyButUsesTheCargo",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testReferenceMarkers",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testResourceEngineRefusesTheRoverMission",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testSensitivityDistanceDrivesTheStop",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "SignalLagTests",
+      "test": "testSlowRoverVariantIsDerivedNotMemorized",
+      "status": "passed",
+      "durationMs": 3
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testAllThreeItemsExceedCargo",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testHalfAirDuringRisingPhase",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testNoShelterFailsProtectionObjective",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testResearchNeedsTheScienceKit",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testResearchPlusFullAirFailsAboutTenHoursIn",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testReserveTradeOffSucceeds",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testSensitivityHigherOxygenUseBreaksTheReservePlan",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testSensitivityMovingTheArchivedEndChangesDurationAndConsumables",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testShelterAndBatteryIsSafe",
+      "status": "passed",
+      "durationMs": 1
+    },
+    {
+      "suite": "StormDrillTests",
+      "test": "testSmallLanderVariantKeepsTheEventRecord",
+      "status": "passed",
+      "durationMs": 2
+    },
+    {
+      "suite": "ExampleLabFlowTests",
+      "test": "testExampleCanFailChangeEquipmentAndPassWithoutUnlocks",
+      "status": "passed",
+      "durationMs": 76092
+    },
+    {
+      "suite": "GuidedTourFlowTests",
+      "test": "testExitDuringTheTourReturnsToBase",
+      "status": "passed",
+      "durationMs": 15226
+    },
+    {
+      "suite": "GuidedTourFlowTests",
+      "test": "testTourRunsFromSettingsFailsThenPassesAndReturnsToBase",
+      "status": "passed",
+      "durationMs": 34805
+    }
+  ]
+}

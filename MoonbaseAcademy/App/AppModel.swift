@@ -144,6 +144,7 @@ final class AppModel {
 
     func openMission(_ id: MissionID, variant: Bool = false, restoring draft: MissionDraft? = nil) {
         guard let science, progress.isUnlocked(id) else { return }
+        endTour()
         session?.leave()
         // Once the Storm Drill has been finished, each replay faces a different real archived storm.
         // The first play always uses the same one, so everyone starts from the same drill.
@@ -204,6 +205,58 @@ final class AppModel {
         }
     }
 
+    // MARK: Guided mission tour
+
+    /// The tour in progress, if any. Lives only in memory and is never saved.
+    private(set) var tour: GuidedTour?
+
+    /// Opens the guided mission tour: the starter example base with Full air, on the shared engine.
+    /// Like an example lab, it never writes progress, coins, stars, history, a draft or a playback preference.
+    /// Calling it again starts the same scenario from the beginning.
+    func startGuidedTour() {
+        guard let science else { return }
+        // A drill plan that was open stays resumable, exactly as when the app is interrupted.
+        if tour == nil { saveDraftForInterruption() }
+        endTour()
+        Narrator.shared.stop()
+        session?.leave()
+        let inputs = ExampleBase.starter.inputs
+        var definition = BaseExperiment.shadowTest(inputs: inputs)
+        definition.title = "Guided mission tour"
+        definition.drillLabel = "Tour example • your save stays unchanged"
+        let startPlan = BaseExperiment.configuration(for: definition, inputs: inputs)
+        let shadow = definition.phases.firstIndex { $0.id == "shadow" } ?? max(0, definition.phases.count - 1)
+        let half = definition.phases.indices.contains(shadow)
+            ? (definition.phases[shadow].allowedAirFractions.first { $0 > 0.25 && $0 < 0.75 } ?? 0.5) : 0.5
+        let guide = GuidedTour(start: startPlan, shadowIndex: shadow, halfAir: half,
+                               phaseLabels: definition.phases.map(\.label))
+        lastDrillCoins = 0
+        let tourSession = MissionSession(definition: definition, science: science, world: missionWorld,
+                                         decor: BaseDecor(progress: CampaignProgress()), reduceMotion: reduceMotion,
+                                         firstVisit: false, playbackMode: .automatic,
+                                         baseTest: BaseTestContext(inputs: inputs, previous: nil, isExample: true, kind: .shadow, eventID: nil),
+                                         previousAttempt: nil) { [weak self, weak guide] _, _, _ in
+            // A late callback from a tour that has ended, or from another session, changes nothing.
+            guard let self, let guide, self.tour === guide, let current = self.session else { return false }
+            guide.attemptFinished(current)
+            return false
+        }
+        tourSession.quickStart = true
+        tourSession.setPlaybackSpeed(5)
+        tourSession.beginPlanning()
+        session = tourSession
+        tour = guide
+        selectedMission = nil
+        selectedBuildingID = nil
+        route = .mission
+    }
+
+    /// Stops the tour's own work. The mission session is closed by whoever replaces or leaves it.
+    private func endTour() {
+        tour?.cancel()
+        tour = nil
+    }
+
     // MARK: Test My Base
 
     private var exampleRecord: BaseTestRecord?
@@ -241,6 +294,7 @@ final class AppModel {
         let priorAttempt = continuing ? session?.currentAttempt : nil
         if !continuing { exampleRecord = nil }
         exampleKind = kind
+        endTour()
         session?.leave()
         var inputs = startingInputs
         if kind == .storm { inputs.shelter = true }
@@ -282,6 +336,7 @@ final class AppModel {
             Haptics.warning()
             return
         }
+        endTour()
         session?.leave()
         let inputs = BaseExperiment.inputs(from: base)
         let definition = kind == .storm ? BaseExperiment.stormTest(inputs: inputs, science: science) : BaseExperiment.shadowTest(inputs: inputs)
@@ -356,6 +411,7 @@ final class AppModel {
             save()
         }
         Narrator.shared.stop()
+        endTour()
         session?.leave()
         session = nil
         route = .base
@@ -457,6 +513,7 @@ final class AppModel {
     }
 
     func resetProgress() {
+        endTour()
         session?.leave()
         session = nil
         route = .base

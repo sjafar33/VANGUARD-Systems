@@ -1,16 +1,16 @@
 # Review Moonbase Academy
 
-[Watch the 29-second demo](media/moonbase-academy-demo.mp4) · [Caption transcript](media/captions.srt) · [Science and limits](../SCIENCE_AND_DATA.md) · [Validation](../VALIDATION.md) · [AI/tool disclosure](../AI_USE.md)
+[Watch the 27-second gameplay demo](https://youtube.com/shorts/OFn2BLQ81js) · [Science and limits](../SCIENCE_AND_DATA.md) · [Validation](../VALIDATION.md) · [AI/tool disclosure](../AI_USE.md)
 
 Native iPhone/iPad prototype for ages 7–12. Build and run in Xcode using the instructions in the [project README](../README.md). No account, backend or downloads are needed by the running app. Browser and App Store versions are not available.
 
 ## A quick investigation
 
-1. Open **Drills → Start example lab**. Use **Equipment** to inspect the setup, then **Operating plan** to inspect the numbered sunlight/shadow stages. Leave the air maker at Full. Launch, choose a forecast and a reason, then tap **Start test**. Use Step by step to watch each checkpoint or skip to the result. The starter test fails at hour 10: sunlight stored 2.4 kWh; shadow needs 3.6 kWh.
-2. Read **You expected / We observed** and check the explanation of your reason. Tap **Try one change**. The **Operating plan → 2. Shadow drill** controls are highlighted. Set shadow air to **Half**, make a fresh prediction, and test. It reaches 12 hours, saving 1.5 kWh against Full and withdrawing 0.1975 kg of oxygen. The comparison identifies exactly one change.
-3. To compare equipment at Full air, use **Reset lab to starter plan**, run the starter test, then choose **Extra battery**. It still fails: empty capacity does not generate energy. For a one-variable solar comparison, choose Starter base and run it again before choosing Extra array; it completes 12 hours. Equipment buttons show their counts and preserve air/science settings. The result reports every change if you switch several variables.
-4. Open **Drills → Start storm example**. Full air with science Off keeps the crew safe but leaves the task unfinished. Open **Operating plan → 1. Storm rising** and retry with **air Half, science On**; leave fading at **air Full, science Off**. The crew completes the pinned 98-hour-5-minute event and science task. Inspect the oxygen and energy trade-off.
-5. A correct forecast of failure receives recognition while the engineering objective remains unfinished. An incorrect mechanism receives corrective feedback even when the forecast was right. **I'm not sure yet** allows observation, and **Change my plan** returns without consuming a trial or changing its settings.
+1. Open **Drills → Shadow lab → Play**, then **Reset lab**. Keep one solar array and one battery. Open **Plan** and leave both sunlight and shadow air at Full, with science Off. Launch, choose a forecast and reason, then tap **Start test**. In Step by step playback, use Next and See result. The starter test fails at hour 10: sunlight stored 2.4 kWh; shadow needs 3.6 kWh.
+2. Read **Your idea vs. what happened** and check your reason. Tap **Try again**, open **Plan → 2. Shadow drill**, and set air to **Half**. Keep equipment and the sunlight plan unchanged. Make a fresh prediction and test. It reaches 12 hours, saving 1.5 kWh against Full and withdrawing approximately 0.1975 kg of oxygen. Open **Why? See the numbers** to inspect the comparison.
+3. For an equipment experiment, reset to one array, one battery and Full air. Adding an empty battery alone does not fix insufficient generation. Reset again and add one solar array while retaining one battery: increased generation completes the test at Full air. Separate additions and removals preserve operating settings.
+4. Open **Drills → Storm lab → Play**. Full air with science Off leaves the task unfinished. In **Plan → 1. Storm rising**, retry with air Half and science On; leave fading at air Full and science Off. Inspect the science, oxygen and energy trade-off across the archived 98-hour-5-minute event.
+5. A correct forecast of failure is distinct from mission completion. Reason feedback addresses the proposed mechanism. **I'm not sure yet** allows observation, and **Change my plan** returns from prediction without changing the configuration.
 
 Example labs use the same resource engine as the player's base tests. They never write campaign progress, rewards, drafts or playback preferences. Equipment capacities, science objectives and the backup supply are labeled game rules.
 
@@ -20,7 +20,7 @@ The app uses NASA adult crew oxygen/food demand, a Veggie crop reference, archiv
 
 ## Demonstration material
 
-The 29.000-second, 1080 × 1920 H.264 video contains edited actual iPad Simulator capture. Captions are burned in, with a separate SRT transcript. There is no narration or music. AI-assisted captions/editing are disclosed visibly throughout and in file metadata. The Swift renderer is included as `render_demo.swift`; the longer raw capture is kept outside this repository.
+The final 27-second demonstration is actual gameplay recorded by the project owner on an iPad Air and edited by the owner in DaVinci Resolve. It is not AI-generated video. Watch it on [YouTube](https://youtube.com/shorts/OFn2BLQ81js). The old simulator montage and its caption/renderer assets have been superseded by this direct video link.
 
 | Screenshot | What to inspect |
 |---|---|

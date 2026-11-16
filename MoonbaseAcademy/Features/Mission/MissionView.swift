@@ -14,6 +14,7 @@ struct MissionView: View {
     @State private var showSettings = false
     @State private var planOpen = false
     @State private var planningPhase = 0
+    @State private var tourBannerHeight: CGFloat = 0
     @Environment(\.appReduceMotion) private var reduceMotion
     @Environment(\.focusView) private var focusView
     @Environment(\.dynamicTypeSize) private var textSize
@@ -22,6 +23,19 @@ struct MissionView: View {
     /// True while a dialog covers the drill; the controls underneath are hidden from VoiceOver.
     private var overlayShown: Bool {
         session.stage == .predicting || session.stage == .results || (planPhase != nil && session.stage == .planning)
+    }
+
+    /// The guided tour's current step, or nil outside the tour.
+    private var tourStep: TourStep? { model.tour?.step(for: session.stage) }
+
+    /// Why the tour holds Launch back right now (nil outside the tour or when the plan is ready).
+    private var tourLaunchBlock: String? {
+        model.tour?.launchBlock(stage: session.stage, configuration: session.configuration)
+    }
+
+    /// Where the tour's instruction area starts: just under the top bar.
+    private func tourBannerTop(_ proxy: GeometryProxy) -> CGFloat {
+        max(0, topHeight - proxy.safeAreaInsets.top) + 8
     }
 
     /// What Read aloud says for the current moment. The same words are always on screen.
@@ -54,6 +68,8 @@ struct MissionView: View {
                                 updateInsets()
                             }
                     }
+                    // Room for the tour's instruction area, which is drawn above every dialog.
+                    if model.tour != nil { Color.clear.frame(height: tourBannerHeight + 8).accessibilityHidden(true) }
                     Spacer(minLength: 0)
                     Group {
                         if session.stage == .planning {
@@ -121,7 +137,9 @@ struct MissionView: View {
                         .accessibilityLabel(number == 0 ? "Go" : "\(number)")
                 }
                 if session.stage == .predicting {
-                    BetOverlay(session: session, readAloud: model.readAloud).transition(.opacity).zIndex(5)
+                    BetOverlay(session: session, readAloud: model.readAloud, guided: model.tour != nil,
+                               topInset: model.tour == nil ? 0 : tourBannerTop(proxy) + tourBannerHeight + 8)
+                        .transition(.opacity).zIndex(5)
                 }
                 if let index = planPhase, session.stage == .planning {
                     PlanPopup(session: session, index: index) { planPhase = nil }
@@ -129,9 +147,10 @@ struct MissionView: View {
                         .zIndex(5)
                 }
                 if session.stage == .results {
-                    ResultOverlay(model: model, session: session)
-                        .transition(reduceMotion ? .opacity : .scale(scale: 0.9).combined(with: .opacity))
-                        .zIndex(6)
+                    resultLayer(proxy).zIndex(6)
+                }
+                if let tour = model.tour {
+                    tourBannerLayer(tour, proxy).zIndex(8)
                 }
             }
             .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.72), value: session.stage)
@@ -158,7 +177,20 @@ struct MissionView: View {
         .onDisappear { Narrator.shared.stop(); model.missionWorld.setPlanningFocus(false) }
         .onChange(of: session.stage, initial: true) { _, stage in
             if stage == .planning { model.missionWorld.setPlanningFocus(!session.isRover) }
-            else if stage == .playback { model.missionWorld.setPlanningFocus(false) }
+            else if stage == .playback {
+                model.missionWorld.setPlanningFocus(false)
+                model.tour?.playbackStarted(session, reduceMotion: reduceMotion)
+            }
+        }
+        // The tour opens the plan at the shadow part when it asks for the one change, and closes it at the start.
+        .onChange(of: tourStep) { _, step in
+            guard let tour = model.tour, let step else { return }
+            if step == .question {
+                planOpen = false
+            } else if step == .change {
+                planningPhase = tour.shadowIndex
+                planOpen = true
+            }
         }
         // Return VoiceOver focus to the main action when a dialog closes.
         .onChange(of: planPhase) { old, new in
@@ -181,6 +213,34 @@ struct MissionView: View {
         .sheet(isPresented: $showSources) { SourcesView(package: package, focus: session.definition) }
     }
 
+    /// The result screen, or the tour's compact evidence while the guided tour is running.
+    @ViewBuilder private func resultLayer(_ proxy: GeometryProxy) -> some View {
+        if let tour = model.tour {
+            TourEvidenceLayer(tour: tour, session: session,
+                              topInset: tourBannerTop(proxy) + tourBannerHeight + 12,
+                              onReplay: { model.startGuidedTour() },
+                              onLeave: { model.leaveMission() })
+                .transition(.opacity)
+        } else {
+            ResultOverlay(model: model, session: session)
+                .transition(reduceMotion ? .opacity : .scale(scale: 0.9).combined(with: .opacity))
+        }
+    }
+
+    /// The tour's instruction area, kept above every dialog so Back, Next and Exit always work.
+    private func tourBannerLayer(_ tour: GuidedTour, _ proxy: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            TourBanner(tour: tour, session: session) { model.leaveMission() }
+                .readHeight { height in
+                    tourBannerHeight = height
+                    updateInsets()
+                }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, tourBannerTop(proxy))
+        .padding(.horizontal, 12)
+    }
+
     private var missionHUD: some View {
         MissionTopHUD(session: session, readAloud: model.readAloud, narration: narrationText,
                       onBack: { model.leaveMission() }, onSources: { showSources = true },
@@ -191,7 +251,8 @@ struct MissionView: View {
         // While a dialog covers the screen there are no bottom controls to measure. Keep the world framed
         // as it was, so it does not shrink or jump behind the dialog.
         guard session.stage != .predicting, session.stage != .results else { return }
-        model.missionWorld.setHUDInsets(top: topHeight + 4, bottom: bottomHeight + 4)
+        let tourSpace = model.tour == nil ? 0 : tourBannerHeight + 8
+        model.missionWorld.setHUDInsets(top: topHeight + 4 + tourSpace, bottom: bottomHeight + 4)
     }
 
     private func showBanner(for phaseID: String) {
@@ -246,7 +307,7 @@ struct MissionView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if session.baseTest?.isExample == true { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
+                if session.baseTest?.isExample == true, model.tour == nil { ExampleLabControls(model: model, kind: session.baseTest?.kind ?? .shadow) }
                 InvestigationReminder(session: session)
                 BuildTray(session: session) { planPhase = $0 }
             }
@@ -275,9 +336,10 @@ struct MissionView: View {
         .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: prominent ? 132 : 62,
                                      font: .game(textSize.isAccessibilitySize ? .headline : prominent ? .title3 : .title2)))
         .accessibilityLabel("Launch test")
-        .disabled(!session.canLaunch)
+        .disabled(!session.canLaunch || tourLaunchBlock != nil)
+        .tourHighlight(model.tour?.wantsLaunch(stage: session.stage, configuration: session.configuration) ?? false, corner: 18)
         .accessibilityFocused($launchFocused)
-        .accessibilityHint(session.canLaunch ? "Then you predict what will happen" : "Finish the plan first")
+        .accessibilityHint(tourLaunchBlock ?? (session.canLaunch ? "Then you predict what will happen" : "Finish the plan first"))
     }
 
 }
@@ -872,6 +934,8 @@ struct QuickPlanCard: View {
     let openDetails: () -> Void
     var fullWidth = false
     var embedded = false
+    /// An air setting the guided tour is pointing at, if any.
+    var highlightAir: Double? = nil
     @ScaledMetric(relativeTo: .footnote) private var cardWidth: CGFloat = 270
 
     var body: some View {
@@ -922,7 +986,8 @@ struct QuickPlanCard: View {
             HStack(spacing: 6) {
                 ForEach(phase.allowedAirFractions, id: \.self) { value in
                     chip(MissionSession.airLabel(value), selected: abs(value - plan.airFraction) < 1e-9,
-                         label: "\(title), air maker: \(MissionSession.airLabel(value))") {
+                         label: "\(title), air maker: \(MissionSession.airLabel(value))",
+                         highlighted: highlightAir.map { abs($0 - value) < 1e-9 } ?? false) {
                         session.setAir(index, value)
                     }
                 }
@@ -969,7 +1034,7 @@ struct QuickPlanCard: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func chip(_ text: String, selected: Bool, label: String, action: @escaping () -> Void) -> some View {
+    private func chip(_ text: String, selected: Bool, label: String, highlighted: Bool = false, action: @escaping () -> Void) -> some View {
         Button {
             Haptics.tap()
             SoundFX.shared.play(.tap)
@@ -986,6 +1051,7 @@ struct QuickPlanCard: View {
                     .strokeBorder(selected ? Color.white.opacity(0.7) : Theme.panelLine, lineWidth: 1.5))
         }
         .buttonStyle(PressableStyle())
+        .tourHighlight(highlighted, corner: 12)
         .accessibilityLabel(label)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

@@ -3,6 +3,9 @@ import SwiftUI
 struct BetOverlay: View {
     let session: MissionSession
     var readAloud = false
+    /// In the guided tour: the pace is set by the tour, and the card sits below the tour's instructions.
+    var guided = false
+    var topInset: CGFloat = 0
     private var forecast: Prediction? { session.pendingPrediction }
     private var reason: PredictionReason? { session.pendingReason }
     @AccessibilityFocusState private var titleFocused: Bool
@@ -21,6 +24,7 @@ struct BetOverlay: View {
                 card
                 ScrollView { card.padding(.vertical, 18) }
             }
+            .padding(.top, topInset)
         }
         .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { titleFocused = true } }
         .accessibilityAction(.escape) { session.backToPlanning() }
@@ -62,9 +66,11 @@ struct BetOverlay: View {
             .buttonStyle(GameButtonStyle(bevel: GamePalette.go, height: 50, font: .game(.headline)))
             .disabled(!ready)
             .accessibilityHint(ready ? "Test this plan and compare with your prediction" : "Choose a prediction and a reason first")
-            PlaybackModePicker(session: session)
-            Button("Change my plan") { session.backToPlanning() }
-                .font(.subheadline.weight(.bold)).foregroundStyle(Theme.energyInk).frame(minHeight: 44)
+            if !guided {
+                PlaybackModePicker(session: session)
+                Button("Change my plan") { session.backToPlanning() }
+                    .font(.subheadline.weight(.bold)).foregroundStyle(Theme.energyInk).frame(minHeight: 44)
+            }
         }
         .foregroundStyle(Theme.ink)
         .fixedSize(horizontal: false, vertical: true)

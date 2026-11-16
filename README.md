@@ -26,7 +26,9 @@ The investigation loop is **plan → predict and explain → observe evidence �
 
 ## Review it quickly
 
-[29-second demonstration](Submission/media/moonbase-academy-demo.mp4) · [Reviewer example missions](Submission/README.md) · [Validation and limits](VALIDATION.md)
+[Public project website](https://aliceblue-raven-887879.hostingersite.com/) · [Written submission](Submission/WRITTEN_SUBMISSION.md) · [Website source](Website/index.html)
+
+[27-second gameplay demonstration](https://youtube.com/shorts/OFn2BLQ81js) · [Reviewer example missions](Submission/README.md) · [Validation and limits](VALIDATION.md)
 
 The project is a native iOS prototype. Source and demonstration are public; running it requires Xcode and a simulator or a signed device build.
 
@@ -61,7 +63,7 @@ MoonbaseAcademyUITests/  original mission, example labs and largest-text flows
 
 ## Status
 
-Verified November 15, 2026: **156 unique tests** (147 unit + 9 UI) have passing latest results across the iPad regression and focused rerun. The original mission navigation test was updated for the new Equipment tab and then passed through success and relaunch. Phone verification is recorded separately. See [VALIDATION.md](VALIDATION.md) for evidence, reproducible checks and limits. Physical-device checks, a full VoiceOver pass and a child learning study are not claimed. Older handoffs are historical checkpoints.
+Verified November 15, 2026: **157 distinct checks have passing latest results** (154 unit tests and 3 selected UI tests) on iPad Simulator. The current checks cover the regular Shadow lab experiment and both guided-tour flows. The tour's final accessibility-identifier collision was corrected and its UI flows rerun successfully. Earlier broader UI/phone checks are recorded separately in [VALIDATION.md](VALIDATION.md). A complete device/accessibility matrix and a child learning study are not claimed. Older handoffs are historical checkpoints.
 
 ## Credits and licenses
 

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moonbase Academy — a junior astronaut mission trainer</title>
+<meta name="description" content="Moonbase Academy is an offline iPhone and iPad mission trainer for ages 7–12. Led by Sam Jafari, principal developer and team leader of VANGUARD Systems, for the NASA Space Apps Challenge 2026.">
+<meta name="author" content="Sam Jafari (Sadegh Jafari)">
+<meta property="og:title" content="Moonbase Academy">
+<meta property="og:description" content="Build a lunar base. Predict. Test. Change one thing. A junior astronaut mission trainer for ages 7–12.">
+<meta property="og:image" content="images/build.png">
+<meta name="theme-color" content="#000000">
+<style>
+  :root {
+    --ink: #1d1d1f; --soft: #6e6e73; --line: #d2d2d7; --paper: #ffffff; --mist: #f5f5f7;
+    --night: #000000; --night-soft: #a1a1a6; --gold: #f2a93b; --sky: #2997ff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; color: var(--ink); background: var(--paper);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 19px; line-height: 1.47; letter-spacing: -0.012em; -webkit-font-smoothing: antialiased;
+  }
+  a { color: #0066cc; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .dark a { color: var(--sky); }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; border-radius: 6px; }
+
+  /* Navigation */
+  nav {
+    position: sticky; top: 0; z-index: 10; height: 52px; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.78); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+  nav .row { width: min(1020px, 100% - 40px); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  nav .name { color: #f5f5f7; font-weight: 600; font-size: 17px; white-space: nowrap; }
+  nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 26px; }
+  nav ul a { color: #d2d2d7; font-size: 13px; }
+  nav ul a:hover { color: #fff; text-decoration: none; }
+  @media (max-width: 720px) { nav ul li:not(.keep) { display: none; } }
+
+  section { padding: 110px 20px; }
+  .wrap { width: min(1020px, 100%); margin: 0 auto; }
+  .narrow { width: min(760px, 100%); margin: 0 auto; }
+  .center { text-align: center; }
+  .dark { background: var(--night); color: #f5f5f7; }
+  .mist { background: var(--mist); }
+
+  .eyebrow { font-size: 17px; font-weight: 600; color: var(--gold); margin: 0 0 10px; letter-spacing: 0; }
+  h1 { font-size: clamp(46px, 8.4vw, 92px); line-height: 1.03; font-weight: 700; letter-spacing: -0.035em; margin: 0; }
+  h2 { font-size: clamp(34px, 5.4vw, 60px); line-height: 1.07; font-weight: 700; letter-spacing: -0.03em; margin: 0 0 18px; }
+  h3 { font-size: 26px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .lede { font-size: clamp(21px, 2.6vw, 28px); line-height: 1.3; font-weight: 500; color: var(--soft); margin: 18px auto 0; max-width: 780px; letter-spacing: -0.015em; }
+  .dark .lede { color: var(--night-soft); }
+  p { margin: 0 0 16px; }
+  .soft { color: var(--soft); }
+  .dark .soft { color: var(--night-soft); }
+
+  .buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 34px; }
+  .btn { display: inline-block; padding: 13px 26px; border-radius: 980px; font-size: 17px; font-weight: 500; }
+  .btn.fill { background: #0071e3; color: #fff; }
+  .btn.fill:hover { background: #0077ed; text-decoration: none; }
+  .btn.line { border: 1px solid var(--sky); color: var(--sky); }
+  .btn.line:hover { background: var(--sky); color: #000; text-decoration: none; }
+
+  /* Hero */
+  .hero { padding: 96px 20px 0; overflow: hidden; }
+  .hero figure { margin: 64px auto 0; width: min(560px, 100%); }
+  .hero img { display: block; width: 100%; height: auto; border-radius: 34px 34px 0 0; border: 1px solid #2a2a2e; border-bottom: 0; }
+  .hero-credit { margin: 22px 0 0; font-size: 15px; color: var(--night-soft); }
+  .hero-credit a { color: #f5f5f7; }
+
+  /* Screenshots: shown as they are. No animation, no filter, no scaling up. */
+  img.shot { display: block; width: 100%; height: auto; border-radius: 28px; border: 1px solid var(--line); background: #0b1426; }
+  .dark img.shot { border-color: #2a2a2e; }
+  figure { margin: 0; }
+  figcaption { font-size: 14px; color: var(--soft); margin-top: 12px; text-align: center; }
+  .dark figcaption { color: var(--night-soft); }
+
+  /* The loop */
+  .loop { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 54px; text-align: left; }
+  .loop div { background: var(--mist); border-radius: 22px; padding: 24px 20px; }
+  .loop .n { font-size: 15px; font-weight: 600; color: var(--gold); }
+  .loop h3 { font-size: 22px; margin: 6px 0 6px; }
+  .loop p { font-size: 16px; color: var(--soft); margin: 0; line-height: 1.4; }
+  @media (max-width: 900px) { .loop { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .loop { grid-template-columns: 1fr; } }
+
+  /* Feature rows */
+  .feature { display: grid; grid-template-columns: 1fr minmax(0, 470px); gap: 72px; align-items: center; }
+  .feature.flip { grid-template-columns: minmax(0, 470px) 1fr; }
+  .feature.flip .copy { order: 2; }
+  .feature .copy p { font-size: 21px; line-height: 1.4; color: var(--soft); }
+  .dark .feature .copy p { color: var(--night-soft); }
+  .feature ul { padding-left: 20px; margin: 18px 0 0; color: var(--soft); }
+  .dark .feature ul { color: var(--night-soft); }
+  .feature li { margin-bottom: 8px; }
+  @media (max-width: 860px) {
+    .feature, .feature.flip { grid-template-columns: 1fr; gap: 40px; }
+    .feature.flip .copy { order: 0; }
+    .feature figure { width: min(470px, 100%); margin: 0 auto; }
+  }
+
+  /* Numbers */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 36px 28px; margin-top: 60px; text-align: left; }
+  .stat .big { font-size: clamp(38px, 4.6vw, 56px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+  .stat .unit { font-size: 19px; font-weight: 600; color: var(--gold); margin-top: 2px; }
+  .stat p { font-size: 15px; line-height: 1.4; color: var(--night-soft); margin: 10px 0 0; }
+  @media (max-width: 860px) { .stats { grid-template-columns: 1fr 1fr; } }
+
+  /* Cards */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 54px; text-align: left; }
+  .card { background: var(--paper); border-radius: 26px; padding: 34px 32px; }
+  .card .tag { font-size: 14px; font-weight: 600; color: var(--gold); }
+  .card p { font-size: 17px; color: var(--soft); margin: 0; }
+  @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 44px; font-size: 16px; text-align: left; }
+  th, td { padding: 16px 14px 16px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; font-weight: 600; color: var(--soft); text-transform: uppercase; letter-spacing: 0.04em; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  @media (max-width: 640px) { td:first-child { white-space: normal; } table { font-size: 15px; } }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 50px; text-align: left; }
+  .two p, .two li { font-size: 17px; color: var(--soft); }
+  .two ul { padding-left: 20px; margin: 0; }
+  .two li { margin-bottom: 8px; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; gap: 36px; } }
+
+  .demo-link { margin-top: 36px; }
+
+  /* Team: a clear lead credit, followed by understated team acknowledgments. */
+  #team { scroll-margin-top: 52px; }
+  .team-lead {
+    display: grid; grid-template-columns: 1fr 1.15fr; align-items: center; gap: 48px;
+    margin-top: 48px; padding: 48px; background: var(--paper); border-radius: 28px; text-align: left;
+  }
+  .team-role { color: #0066cc; font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+  .team-lead h3 { font-size: clamp(36px, 4.6vw, 50px); line-height: 1.08; letter-spacing: -0.03em; }
+  .team-legal { color: var(--soft); font-size: 15px; margin: 12px 0 0; }
+  .team-bio { font-size: 21px; line-height: 1.45; color: var(--soft); margin: 0; }
+  .team-bio strong { color: var(--ink); font-weight: 600; }
+  .team-members { margin-top: 40px; text-align: left; }
+  .team-members > h3 { font-size: 17px; margin-bottom: 20px; }
+  .team-roster { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; list-style: none; margin: 0; padding: 0; }
+  .team-roster li { border-top: 1px solid var(--line); padding-top: 20px; min-width: 0; }
+  .team-roster h4 { font-size: 21px; line-height: 1.3; letter-spacing: -0.02em; font-weight: 600; margin: 0 0 5px; overflow-wrap: anywhere; }
+  .team-roster p, .team-note { color: var(--soft); font-size: 15px; }
+  .team-roster p { margin: 0; }
+  .team-note { margin: 28px 0 0; }
+  @media (max-width: 760px) {
+    .team-lead { grid-template-columns: 1fr; gap: 28px; padding: 32px 26px; }
+    .team-bio { font-size: 19px; }
+    .team-roster { grid-template-columns: 1fr; }
+  }
+
+  footer { background: var(--mist); padding: 40px 20px 56px; font-size: 13px; color: var(--soft); line-height: 1.5; }
+  footer p { margin: 0 0 10px; }
+
+  /* Text arrives softly, the way a product page does. Pictures never animate. */
+  .js .rise { opacity: 0; transform: translateY(26px); transition: opacity 0.9s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .js .rise.in { opacity: 1; transform: none; }
+  .js .rise.d1 { transition-delay: 0.12s; } .js .rise.d2 { transition-delay: 0.24s; } .js .rise.d3 { transition-delay: 0.36s; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .js .rise { opacity: 1; transform: none; transition: none; }
+  }
+</style>
+<script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+
+<nav aria-label="Page sections">
+  <div class="row">
+    <span class="name">Moonbase Academy</span>
+    <ul>
+      <li><a href="#idea">The idea</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#drills">Drills</a></li>
+      <li><a href="#science">Science</a></li>
+      <li><a href="#built">How we built it</a></li>
+      <li><a href="#team">Team</a></li>
+      <li class="keep"><a href="https://github.com/sjafar33/VANGUARD-Systems">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+
+<section class="hero dark center">
+  <div class="wrap">
+    <p class="eyebrow rise">NASA Space Apps Challenge 2026 · Build a Junior Astronaut Mission Trainer</p>
+    <h1 class="rise d1">Moonbase Academy</h1>
+    <p class="lede rise d2">Build a lunar base. Predict what happens. Test it. Change one thing. A mission trainer for ages 7 to 12, where every choice has a cost you can see.</p>
+    <p class="hero-credit rise d2">Led by <a href="#team">Sam Jafari</a> · VANGUARD Systems</p>
+    <div class="buttons rise d3">
+      <a class="btn fill" href="#demo">Watch the demo</a>
+      <a class="btn line" href="https://github.com/sjafar33/VANGUARD-Systems">View the source</a>
+    </div>
+    <figure>
+      <img src="images/build.png" width="1640" height="2360" alt="Moonbase Academy on iPad: a lunar base with a habitat, solar array and batteries, an equipment shop along the bottom, and a green Launch test button.">
+    </figure>
+  </div>
+</section>
+
+<section id="idea" class="center">
+  <div class="wrap">
+    <p class="eyebrow rise">The idea</p>
+    <h2 class="rise">A base builder that becomes<br>an engineering experiment.</h2>
+    <p class="lede rise">Space games for children usually skip the trade-offs, or bury them in detail. Moonbase Academy asks one question a child can hold in their head, “Would your base keep working?”, and lets them find out the way an engineer does.</p>
+    <div class="loop">
+      <div class="rise"><span class="n">1</span><h3>Build</h3><p>Place solar arrays, batteries and shelter, then set an operating plan.</p></div>
+      <div class="rise d1"><span class="n">2</span><h3>Predict</h3><p>Say what will happen, and choose a reason why.</p></div>
+      <div class="rise d1"><span class="n">3</span><h3>Test</h3><p>Watch a deterministic simulation run the mission.</p></div>
+      <div class="rise d2"><span class="n">4</span><h3>Explain</h3><p>Compare the idea with the evidence, including when the idea was wrong.</p></div>
+      <div class="rise d2"><span class="n">5</span><h3>Improve</h3><p>Change one thing and test again, so the cause is clear.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="dark center">
+  <div class="wrap">
+    <p class="eyebrow rise">One lesson, in real numbers</p>
+    <h2 class="rise">Saving electricity<br>spends something else.</h2>
+    <p class="lede rise">A starter base has one solar array and one battery. In six hours of sunlight it stores 2.4 kWh. Six hours of shadow with the air maker on Full needs 3.6 kWh. The test stops at hour 10 of 12.</p>
+    <div class="stats">
+      <div class="stat rise"><div class="big">Hour 10</div><div class="unit">of 12</div><p>Where the starter base runs out of power at Full air.</p></div>
+      <div class="stat rise d1"><div class="big">0</div><div class="unit">extra kWh</div><p>What a second, empty battery adds. Storage does not create energy.</p></div>
+      <div class="stat rise d2"><div class="big">1.5</div><div class="unit">kWh saved</div><p>By running the air maker at Half during shadow. The base now lasts all 12 hours.</p></div>
+      <div class="stat rise d3"><div class="big">0.2</div><div class="unit">kg of oxygen</div><p>Drawn from the tank to pay for it (0.1975 kg). The cost is shown, never hidden.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap feature">
+    <div class="copy">
+      <p class="eyebrow rise">Build and plan</p>
+      <h2 class="rise">The base stays in view. The choices stay simple.</h2>
+      <p class="rise">Equipment comes from a shop bar, like a building game. The operating plan opens as a panel above it: one part of the mission at a time, with the air maker on Off, Half or Full.</p>
+      <ul class="rise">
+        <li>Each setting says what it does in a sentence a child can read.</li>
+        <li>Live notes show whether batteries are draining and whether the crew is using tank oxygen.</li>
+        <li>Example labs need no coins or unlocks, and never touch the player's saved game.</li>
+      </ul>
+    </div>
+    <figure>
+      <img class="shot" src="images/plan.png" width="1640" height="2360" alt="The operating plan panel open over the base, with the shadow part selected and the air maker set to Half. Notes say battery energy is being used and the crew uses some tank oxygen.">
+      <figcaption>The operating plan for the six-hour shadow, air maker on Half.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="mist">
+  <div class="wrap feature flip">
+    <div class="copy">
+      <p class="eyebrow rise">Predict with a reason</p>
+      <h2 class="rise">A guess is not enough. Say why.</h2>
+      <p class="rise">Before every test the player picks an outcome and a reason. Some reasons are common misconceptions, such as “adding a battery makes more electricity.” The prediction never changes the physics: equipment and settings decide the result.</p>
+    </div>
+    <figure>
+      <img class="shot" src="images/predict.png" width="1640" height="2360" alt="The prediction card. The player has chosen ‘Power and oxygen goals met’ and the reason ‘Adding a battery makes more electricity’, above a green Start test button.">
+      <figcaption>Choosing a forecast and a reason before starting the test.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap feature">
+    <div class="copy">
+      <p class="eyebrow rise">Evidence, not punishment</p>
+      <h2 class="rise">“Not yet” is a result you can use.</h2>
+      <p class="rise">The result screen puts the player's idea beside what happened, checks the reason separately from the outcome, and suggests the next experiment. A correct forecast of failure is recognised as a good prediction, but it does not complete the mission.</p>
+      <ul class="rise">
+        <li>“Batteries store energy; they cannot create it.”</li>
+        <li>Every number can be opened and inspected.</li>
+        <li>Try again returns to the plan, at the part worth changing.</li>
+      </ul>
+    </div>
+    <figure>
+      <img class="shot" src="images/evidence.png" width="1640" height="2360" alt="A ‘Not yet’ result. It shows the batteries held 2.4 kWh while the shadow plan needed 3.6 kWh, compares what the player expected with what happened, explains why the chosen reason was wrong, and suggests a next experiment.">
+      <figcaption>The power ran out: the idea, the evidence, and the next experiment.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="mist">
+  <div class="wrap feature flip">
+    <div class="copy">
+      <p class="eyebrow rise">Example labs</p>
+      <h2 class="rise">Ready to test in one tap.</h2>
+      <p class="rise">A teacher or a judge can open the Shadow lab or the Storm lab straight from the Drills list. Add or remove arrays and batteries for free, keep the plan, and compare each test with the last one.</p>
+    </div>
+    <figure>
+      <img class="shot" src="images/lab.png" width="1640" height="2360" alt="The Example lab: the base with a solar array and two battery cells, a shop bar with solar array and battery tiles, ‘How this test works’ and ‘Reset lab’ tiles, and the Launch test button.">
+      <figcaption>The Shadow example lab. The save stays unchanged.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="drills" class="mist center" style="padding-top: 0;">
+  <div class="wrap">
+    <p class="eyebrow rise">Four drills</p>
+    <h2 class="rise">Power, air, food, shelter, signal.</h2>
+    <p class="lede rise">Each drill isolates one trade-off of running an outpost, and each has a harder version that unlocks after the first success.</p>
+    <div class="cards">
+      <div class="card rise"><span class="tag">Power and life support</span><h3>Lights Out</h3><p>Six hours of sunlight, six of shadow. Balance generation, storage and the air maker so the base never goes dark.</p></div>
+      <div class="card rise d1"><span class="tag">Food production</span><h3>The Living Base</h3><p>Grow lettuce through a 33-day crop period. Greenhouse light, research and the crew all draw on the same daily energy budget.</p></div>
+      <div class="card rise"><span class="tag">Radiation shelter</span><h3>Storm Drill</h3><p>Shelter the crew through an archived solar particle event from 10 September 2017, lasting 98 hours 5 minutes, and still finish a science task.</p></div>
+      <div class="card rise d1"><span class="tag">Communication delay</span><h3>Signal Lag</h3><p>Stop a rover from Earth. A radio signal takes about 1.28 seconds each way, so the rover keeps moving after you decide.</p></div>
+    </div>
+    <p class="soft rise" style="margin-top: 34px;">Plus <strong>Test My Base</strong>, which runs the shadow and storm tests on the base the player actually built, and short lessons at three question levels.</p>
+  </div>
+</section>
+
+<section id="science">
+  <div class="wrap feature">
+    <div class="copy">
+      <p class="eyebrow rise">Traceable science</p>
+      <h2 class="rise">Every number says where it came from.</h2>
+      <p class="rise">Inside the app, each value carries a label: a NASA reference, worked out from references, a fixed constant of nature, or made up for this training game. Children and judges can tell the difference.</p>
+    </div>
+    <figure>
+      <img class="shot" src="images/sources.png" width="1640" height="2360" alt="The ‘Where the numbers come from’ screen. It lists evidence labels and shows oxygen use of 0.895 kg per person per day marked as a NASA reference.">
+      <figcaption>The in-app sources screen.</figcaption>
+    </figure>
+  </div>
+  <div class="wrap">
+    <table class="rise">
+      <thead><tr><th>Input</th><th>Value used</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>Crew oxygen use</td><td>0.895 kg per person per day, adult crew of two</td><td><a href="https://ntrs.nasa.gov/citations/20210024855">NASA Life Support Baseline Values and Assumptions (BVAD)</a></td></tr>
+        <tr><td>Crop period and garden power</td><td>33-day reference crop, 70 W</td><td><a href="https://science.nasa.gov/wp-content/uploads/2023/04/veggie_fact_sheet_508.pdf">NASA Veggie fact sheet</a></td></tr>
+        <tr><td>Solar storm timing</td><td>Archived event timestamps, 10 September 2017</td><td><a href="https://ccmc.gsfc.nasa.gov/challenges/sep/events/">NASA CCMC SEP archive</a></td></tr>
+        <tr><td>Radio delay</td><td>About 2.56 s round trip</td><td><a href="https://science.nasa.gov/moon/facts/">NASA Moon Facts</a> (average distance) and the <a href="https://www.bipm.org/en/publications/si-brochure">SI speed of light</a></td></tr>
+      </tbody>
+    </table>
+    <div class="two">
+      <div class="rise">
+        <h3>What is a game rule</h3>
+        <p>Equipment sizes (1 kW per solar array in sunlight, 4 kWh per battery), the simple air maker, and the six-hour shadow are training rules written for this game. A real lunar night is far longer.</p>
+      </div>
+      <div class="rise d1">
+        <h3>What we do not claim</h3>
+        <ul>
+          <li>No live data feeds: historical records are embedded and labelled archived.</li>
+          <li>No radiation dose is calculated.</li>
+          <li>Water, CO₂, temperature and full nutrition are outside this prototype.</li>
+          <li>No study of learning effectiveness with children has been run.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="demo" class="dark center">
+  <div class="wrap">
+    <p class="eyebrow rise">Demo</p>
+    <h2 class="rise">The experiment in 27 seconds.</h2>
+    <p class="lede rise">Actual gameplay recorded on an iPad Air and edited by the project owner in DaVinci Resolve. Watch a prediction, a failed test, and one changed setting that saves electricity while using stored oxygen.</p>
+    <p class="demo-link rise"><a class="btn fill" href="https://youtube.com/shorts/OFn2BLQ81js" target="_blank" rel="noopener noreferrer">Watch the 27-second demo on YouTube</a></p>
+  </div>
+</section>
+
+<section id="built" class="center">
+  <div class="wrap">
+    <p class="eyebrow rise">How we built it</p>
+    <h2 class="rise">Native, offline, and honest.</h2>
+    <p class="lede rise">A native iPhone and iPad app for iOS 17 and later. No accounts, no ads, no analytics, no network.</p>
+    <div class="two">
+      <div class="rise">
+        <h3>Technology</h3>
+        <ul>
+          <li>Swift, SwiftUI and SpriteKit, with Core Graphics for all artwork.</li>
+          <li>A deterministic resource engine, independent of animation timing.</li>
+          <li>Art and audio are drawn and synthesised by project code.</li>
+          <li>XCTest unit tests for the engine, and UI tests for the main flows.</li>
+          <li>Open source under the MIT license.</li>
+        </ul>
+      </div>
+      <div class="rise d1">
+        <h3>Made for different learners</h3>
+        <ul>
+          <li>Optional read-aloud for the guide's words.</li>
+          <li>Reduced motion, a calmer Focus view, and step-by-step pacing.</li>
+          <li>Layouts for very large text sizes.</li>
+          <li>Three question levels in the lessons.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="two">
+      <div class="rise">
+        <h3>Use of AI</h3>
+        <p>AI coding tools (Claude Code and Codex) assisted with implementation, tests, debugging, procedural artwork code and documentation under Sam Jafari's direction. The app itself has no AI feature at runtime. The full disclosure is in <a href="https://github.com/sjafar33/VANGUARD-Systems/blob/main/AI_USE.md">AI_USE.md</a>.</p>
+      </div>
+      <div class="rise d1">
+        <h3>Explore the engineering</h3>
+        <p>The implementation, tests and validation notes are available in the project repository.</p>
+        <p><a href="https://github.com/sjafar33/VANGUARD-Systems">Source code and validation notes on GitHub</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="team" class="mist center" aria-labelledby="team-heading">
+  <div class="wrap">
+    <p class="eyebrow rise">VANGUARD Systems</p>
+    <h2 id="team-heading" class="rise">The people behind<br>Moonbase Academy.</h2>
+    <article class="team-lead" aria-labelledby="team-lead-name">
+      <div class="rise">
+        <p class="team-role">Team leader &amp; principal developer</p>
+        <h3 id="team-lead-name">Sam Jafari</h3>
+        <p class="team-legal">Legal name: Sadegh Jafari</p>
+      </div>
+      <p class="team-bio rise d1"><strong>Led the project from concept to working app.</strong> Sam drove the project’s direction, product design and core application development, serving as the principal contributor to Moonbase Academy.</p>
+    </article>
+    <div class="team-members">
+      <h3 class="rise">Team members</h3>
+      <ul class="team-roster">
+        <li class="rise">
+          <h4>Arshia Erfanianvahabian</h4>
+          <p>VANGUARD Systems · Team member</p>
+        </li>
+        <li class="rise d1">
+          <h4>Mani Sabaghi</h4>
+          <p>VANGUARD Systems · Team member</p>
+        </li>
+      </ul>
+      <p class="team-note rise">With thanks to the wider VANGUARD Systems team for their contributions to the project.</p>
+    </div>
+  </div>
+</section>
+
+<section class="dark center">
+  <div class="narrow">
+    <h2 class="rise">Predict. Test.<br>Explain. Improve.</h2>
+    <p class="lede rise">A small engineering habit, practised on the Moon.</p>
+    <div class="buttons rise">
+      <a class="btn fill" href="https://github.com/sjafar33/VANGUARD-Systems">Explore the project</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Moonbase Academy is a student project by VANGUARD Systems for the NASA Space Apps Challenge 2026. NASA does not endorse this project. NASA references are used as cited sources only.</p>
+    <p>Project leadership, design and principal development: Sam Jafari (Sadegh Jafari).</p>
+    <p>Screenshots are from the iPad simulator. Equipment values are game rules, not hardware specifications.</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var items = document.querySelectorAll('.rise');
+    if (!('IntersectionObserver' in window)) { items.forEach(function (el) { el.classList.add('in'); }); return; }
+    var seen = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) { entry.target.classList.add('in'); seen.unobserve(entry.target); }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -6% 0px' });
+    items.forEach(function (el) { seen.observe(el); });
+  })();
+</script>
+</body>
+</html>

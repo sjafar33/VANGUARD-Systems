@@ -31,9 +31,14 @@ struct MissionPlanningWorkspace<Launch: View>: View {
     /// A reference drill whose equipment is already built (The Living Base): every choice is in the plan.
     private var nothingToLoad: Bool { !session.isBaseTest && session.definition.catalog.isEmpty }
 
+    /// The guided tour uses fixed starter equipment, so it shows no shop: only the plan and Launch.
+    private var guided: Bool { model.tour != nil }
+    private var guidedPlanOffered: Bool { model.tour?.step(for: session.stage) == .change }
+
     var body: some View {
         VStack(spacing: 8) {
-            goalBar
+            // In the guided tour the goal is shown in the tour's instruction area at the top instead.
+            if !guided { goalBar }
             if planOpen {
                 planPanel.transition(.move(edge: .bottom).combined(with: .opacity))
             } else if let kind = session.selectedKind {
@@ -47,6 +52,17 @@ struct MissionPlanningWorkspace<Launch: View>: View {
                     HStack(alignment: .bottom, spacing: 10) {
                         planButton.frame(width: 150)
                         rulesButton.frame(width: 210)
+                        Spacer(minLength: 0)
+                        launch().frame(width: launchWidth)
+                    }
+                }
+            } else if guided {
+                if narrow {
+                    if guidedPlanOffered { planButton }
+                    launch()
+                } else {
+                    HStack(alignment: .bottom, spacing: 10) {
+                        if guidedPlanOffered { planButton.frame(width: 150) }
                         Spacer(minLength: 0)
                         launch().frame(width: launchWidth)
                     }
@@ -306,7 +322,9 @@ struct MissionPlanningWorkspace<Launch: View>: View {
                             PlanCard(session: session, index: phaseIndex) { openPlan(phaseIndex) }
                         } else {
                             QuickPlanCard(session: session, index: phaseIndex,
-                                          openDetails: { openPlan(phaseIndex) }, fullWidth: true, embedded: true)
+                                          openDetails: { openPlan(phaseIndex) }, fullWidth: true, embedded: true,
+                                          highlightAir: model.tour?.airToHighlight(stage: session.stage, phase: phaseIndex,
+                                                                                    configuration: session.configuration))
                         }
                     }
                 }

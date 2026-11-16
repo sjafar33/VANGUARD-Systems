@@ -134,6 +134,8 @@ final class MissionSession {
     /// A placed building the player tapped on the Moon. The planning bar then offers to remove it.
     private(set) var selectedPad: PadID?
     var hintVisible = false
+    /// Skips the 3-2-1 countdown (guided tour). Presentation only: the result is computed the same way.
+    var quickStart = false
     private(set) var sameSettingsForAllBlocks = true
 
     @ObservationIgnored private let world: WorldCoordinator
@@ -530,7 +532,7 @@ final class MissionSession {
         stars = nil
         stage = .playback
         world.setSpeed(CGFloat(playbackSpeed))
-        countdown = reduceMotion ? nil : 3
+        countdown = (reduceMotion || quickStart) ? nil : 3
         refreshWorld()
         startPlayback(token: token)
     }
@@ -559,7 +561,7 @@ final class MissionSession {
 
     private func startPlayback(token: Int) {
         playbackTask?.cancel()
-        let countdownSteps = reduceMotion ? [] : [3, 2, 1, 0]
+        let countdownSteps = (reduceMotion || quickStart) ? [] : [3, 2, 1, 0]
         playbackTask = Task { @MainActor [weak self] in
             for number in countdownSteps {
                 guard let self, self.attemptToken == token, !Task.isCancelled else { return }
